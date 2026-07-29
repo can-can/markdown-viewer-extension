@@ -23,10 +23,16 @@ import { ServiceChannel } from '../../../src/messaging/channels/service-channel'
 
 export const VIEW_TYPE = 'markdown-viewer-preview';
 
-/** What a leaf carries for this view. */
+/**
+ * What a leaf carries for this view.
+ *
+ * `prev` is whatever state the leaf held before this view took it over, kept
+ * opaque: restoring it is this plugin's job, understanding it is not.
+ */
 export interface ViewerLeafState {
   file?: string;
   follow?: boolean;
+  prev?: Record<string, unknown>;
 }
 
 export class MarkdownPreviewView extends ItemView {
@@ -36,6 +42,8 @@ export class MarkdownPreviewView extends ItemView {
 
   /** True for the sidecar panel, which mirrors whatever file is active. */
   private followActiveFile = false;
+  /** The leaf's previous state, parked here while this view owns the leaf. */
+  private prevViewState: Record<string, unknown> | undefined;
 
   private hostChannel: ServiceChannel | null = null;
   private isViewerReady = false;
@@ -65,6 +73,10 @@ export class MarkdownPreviewView extends ItemView {
 
     this.addAction('download', 'Export', () => {
       this.openExportMenu();
+    });
+
+    this.addAction('pencil', 'Edit as markdown', () => {
+      void this.plugin.toggleLeafView(this.leaf);
     });
   }
 
@@ -96,6 +108,7 @@ export class MarkdownPreviewView extends ItemView {
       ...super.getState(),
       file: this.currentFile?.path,
       follow: this.followActiveFile,
+      prev: this.prevViewState,
     };
   }
 
@@ -103,6 +116,7 @@ export class MarkdownPreviewView extends ItemView {
     const incoming = (state ?? {}) as ViewerLeafState;
 
     this.followActiveFile = incoming.follow ?? typeof incoming.file !== 'string';
+    this.prevViewState = incoming.prev;
 
     if (incoming.file && incoming.file !== this.currentFile?.path) {
       const file = this.app.vault.getAbstractFileByPath(incoming.file);
