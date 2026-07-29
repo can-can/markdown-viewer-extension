@@ -95,20 +95,30 @@ export default class MarkdownViewerPlugin extends Plugin {
    * Open the preview panel (or reveal if already open).
    */
   async showPreview(): Promise<void> {
-    const existing = this.app.workspace.getLeavesOfType(VIEW_TYPE);
-    if (existing.length > 0) {
-      this.app.workspace.revealLeaf(existing[0]);
+    const existing = this.app.workspace
+      .getLeavesOfType(VIEW_TYPE)
+      .find((leaf) => leaf.view instanceof MarkdownPreviewView && leaf.view.followsActiveFile());
+
+    if (existing) {
+      this.app.workspace.revealLeaf(existing);
       this.updatePreviewContent();
       return;
     }
 
     const leaf = this.app.workspace.getLeaf('split');
-    await leaf.setViewState({ type: VIEW_TYPE, active: true });
+    await leaf.setViewState({
+      type: VIEW_TYPE,
+      active: true,
+      state: { file: this.app.workspace.getActiveFile()?.path, follow: true },
+    });
     this.app.workspace.revealLeaf(leaf);
   }
 
   /**
-   * Push the current active markdown file content to all preview views.
+   * Push the current active file into the sidecar panel.
+   *
+   * Only leaves that asked to follow are touched; a leaf that carries a file of
+   * its own owns it the same way a markdown tab does.
    */
   updatePreviewContent(): void {
     const activeFile = this.app.workspace.getActiveFile();
@@ -116,7 +126,7 @@ export default class MarkdownViewerPlugin extends Plugin {
 
     for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE)) {
       const view = leaf.view;
-      if (view instanceof MarkdownPreviewView) {
+      if (view instanceof MarkdownPreviewView && view.followsActiveFile()) {
         view.setFile(activeFile);
       }
     }
