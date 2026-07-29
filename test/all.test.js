@@ -10,3 +10,4 @@ import './remark-super-sub.test.js';
 import './remark-github-alerts.test.js';
 import './theme-alert-css.test.ts';
 import './remark-mode.test.ts';
+import './markdown-table-code.test.ts';
