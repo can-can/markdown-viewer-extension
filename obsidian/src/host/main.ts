@@ -5,10 +5,16 @@
  * Registers a custom ItemView for Markdown Viewer with DOCX export and settings.
  */
 
-import { Plugin, WorkspaceLeaf, TFile, MarkdownView, addIcon } from 'obsidian';
+import { Plugin, WorkspaceLeaf, TFile, MarkdownView, Menu, addIcon } from 'obsidian';
 import { MarkdownPreviewView, VIEW_TYPE, ViewerLeafState } from './preview-view';
 import { getFileType } from '../../../src/utils/file-wrapper';
 import { ALL_FORMAT_EXTENSIONS } from '../../../src/types/formats';
+
+/**
+ * Marks the header buttons we graft onto Obsidian's own markdown views.
+ * Those views outlive the plugin, so the buttons must be removed on unload.
+ */
+const TOGGLE_ACTION_ATTR = 'data-markdown-viewer-toggle';
 
 // Custom icon derived from icons/icon.svg (M letter, scaled to 100×100)
 const MARKDOWN_VIEWER_ICON = '<path fill="currentColor" d="M15.2 77.8v-55.7h13.9L50 43l20.9-20.9h13.9v55.7H70.9V41.9L50 62.7 29 42v36z"/>';
@@ -82,6 +88,23 @@ export default class MarkdownViewerPlugin extends Plugin {
       },
     });
 
+    // Toggle button in the markdown view's header, beside the reading-view
+    // toggle. Markdown leaves come and go, so re-sweep whenever layout changes.
+    this.app.workspace.onLayoutReady(() => this.addHeaderToggles());
+    this.registerEvent(
+      this.app.workspace.on('layout-change', () => this.addHeaderToggles())
+    );
+
+    // File explorer / link context menus. The tab's own menu is skipped —
+    // the header button already covers it.
+    this.registerEvent(
+      this.app.workspace.on('file-menu', (menu, file, source) => {
+        if (source !== 'more-options' && file instanceof TFile && isSupportedFile(file)) {
+          this.addMenuEntry(menu, file);
+        }
+      })
+    );
+
     // Update preview when active file changes
     this.registerEvent(
       this.app.workspace.on('active-leaf-change', () => {
@@ -100,7 +123,11 @@ export default class MarkdownViewerPlugin extends Plugin {
   }
 
   onunload() {
-    // Obsidian automatically cleans up registered views
+    // Registered views are cleaned up by Obsidian, but the header buttons live
+    // on its own markdown views and have to be taken back off by hand.
+    for (const button of Array.from(document.querySelectorAll(`[${TOGGLE_ACTION_ATTR}]`))) {
+      button.remove();
+    }
   }
 
   /**
@@ -145,6 +172,45 @@ export default class MarkdownViewerPlugin extends Plugin {
   }
 
   /**
+   * Give every markdown view a header button next to the built-in view-mode
+   * toggle. Idempotent — the marker attribute is both the "already done" test
+   * and the handle used to strip the buttons back off on unload.
+   */
+  private addHeaderToggles(): void {
+    for (const leaf of this.app.workspace.getLeavesOfType('markdown')) {
+      const view = leaf.view;
+      if (!(view instanceof MarkdownView)) continue;
+      if (view.containerEl.querySelector(`[${TOGGLE_ACTION_ATTR}]`)) continue;
+
+      const button = view.addAction('markdown-viewer', 'Open in Markdown Viewer', () => {
+        void this.toggleLeafView(leaf);
+      });
+      button.setAttribute(TOGGLE_ACTION_ATTR, '');
+    }
+  }
+
+  /**
+   * Context-menu entry for the file explorer and link menus: open the file in
+   * the viewer in a new tab.
+   */
+  private addMenuEntry(menu: Menu, file: TFile): void {
+    menu.addItem((item) => {
+      item
+        .setTitle('Open in Markdown Viewer')
+        .setIcon('markdown-viewer')
+        .setSection('open')
+        .onClick(async () => {
+          const leaf = this.app.workspace.getLeaf('tab');
+          await leaf.setViewState({
+            type: VIEW_TYPE,
+            active: true,
+            state: { file: file.path },
+          });
+        });
+    });
+  }
+
+  /**
    * Open the preview panel (or reveal if already open).
    */
   async showPreview(): Promise<void> {
@@ -170,8 +236,8 @@ export default class MarkdownViewerPlugin extends Plugin {
   /**
    * Push the current active file into the sidecar panel.
    *
-   * Only leaves that asked to follow are touched; a leaf that carries a file of
-   * its own owns it the same way a markdown tab does.
+   * Only leaves that asked to follow are touched; a tab toggled in place owns
+   * its file the same way a markdown tab does, and must not be hijacked.
    */
   updatePreviewContent(): void {
     const activeFile = this.app.workspace.getActiveFile();
