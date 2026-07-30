@@ -1189,37 +1189,33 @@ async function pickAndOpen() {
 }
 
 async function openDroppedItems(dataTransfer: DataTransfer): Promise<void> {
-  const fileHandles: FileSystemFileHandle[] = [];
-
+  // Resolve handles synchronously: DataTransferItemList becomes invalid after
+  // the first await, so awaiting inside the loop drops every file but the first.
+  const handlePromises: Promise<FileSystemHandle | null>[] = [];
   for (const item of Array.from(dataTransfer.items)) {
     if (item.kind !== 'file') continue;
-
-    let handle: FileSystemHandle | null = null;
-    try {
-      handle = await (item as DataTransferItem & {
+    handlePromises.push(
+      (item as DataTransferItem & {
         getAsFileSystemHandle: () => Promise<FileSystemHandle | null>;
-      }).getAsFileSystemHandle();
-    } catch {
-      continue;
-    }
+      }).getAsFileSystemHandle()
+    );
+  }
+  const handles = await Promise.all(handlePromises);
 
+  for (const handle of handles) {
     if (handle?.kind === 'directory') {
       await openWorkspace(handle as FileSystemDirectoryHandle);
       return;
     }
-
-    if (handle?.kind === 'file') {
-      fileHandles.push(handle as FileSystemFileHandle);
-    }
   }
 
+  const fileHandles = handles.filter(
+    (h): h is FileSystemFileHandle => h?.kind === 'file'
+  );
   if (fileHandles.length === 0) return;
 
-  prepareWorkspaceView(
-    fileHandles.length === 1
-      ? fileHandles[0].name
-      : Localization.translate('workspace_title')
-  );
+  // 多文件：进入工作区，显示文件列表
+  prepareWorkspaceView(Localization.translate('workspace_title'));
   rootDirHandle = null;
   droppedFileHandles.clear();
   directoryReadCache.clear();
@@ -1269,6 +1265,21 @@ window.addEventListener('dragleave', () => {
 
 window.addEventListener('drop', (event: DragEvent) => {
   if (!event.dataTransfer?.types.includes('Files')) return;
+
+  // 单文件拖入：不拦截，让浏览器原生打开（content script 会用预览页面渲染，
+  // 地址栏显示文件名）。多文件或目录才进入工作区。
+  const fileItems = Array.from(event.dataTransfer.items).filter((i) => i.kind === 'file');
+  if (fileItems.length === 1) {
+    const entry = (fileItems[0] as DataTransferItem & {
+      webkitGetAsEntry?: () => FileSystemEntry | null;
+    }).webkitGetAsEntry?.();
+    if (entry?.isFile) {
+      dragDepth = 0;
+      setDropOverlayVisible(false);
+      return;
+    }
+  }
+
   event.preventDefault();
   dragDepth = 0;
   setDropOverlayVisible(false);
