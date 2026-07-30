@@ -8,7 +8,7 @@
  * Provides title-bar action buttons for export and settings.
  */
 
-import { ItemView, WorkspaceLeaf, TFile, Menu, Notice } from 'obsidian';
+import { ItemView, WorkspaceLeaf, TFile, Menu, Notice, ViewStateResult } from 'obsidian';
 import type MarkdownViewerPlugin from './main';
 import { getFileType } from '../../../src/utils/file-wrapper';
 import { rewriteObsidianSvgEmbeds } from './obsidian-svg-embed-rewrite';
@@ -23,10 +23,28 @@ import { ServiceChannel } from '../../../src/messaging/channels/service-channel'
 
 export const VIEW_TYPE = 'markdown-viewer-preview';
 
+/**
+ * What a leaf carries for this view.
+ *
+ * `prev` is whatever state the leaf held before this view took it over, kept
+ * opaque: restoring it is this plugin's job, understanding it is not.
+ */
+export interface ViewerLeafState {
+  file?: string;
+  follow?: boolean;
+  prev?: Record<string, unknown>;
+}
+
 export class MarkdownPreviewView extends ItemView {
   private plugin: MarkdownViewerPlugin;
   private currentFile: TFile | null = null;
   private openedDocumentPath: string | null = null;
+
+  /** True for the sidecar panel, which mirrors whatever file is active. */
+  private followActiveFile = false;
+  /** The leaf's previous state, parked here while this view owns the leaf. */
+  private prevViewState: Record<string, unknown> | undefined;
+
   private hostChannel: ServiceChannel | null = null;
   private isViewerReady = false;
   private pendingMessages: Array<{ type: string; payload?: unknown }> = [];
@@ -56,6 +74,10 @@ export class MarkdownPreviewView extends ItemView {
     this.addAction('download', 'Export', () => {
       this.openExportMenu();
     });
+
+    this.addAction('pencil', 'Edit as markdown', () => {
+      void this.plugin.toggleLeafView(this.leaf);
+    });
   }
 
   getViewType(): string {
@@ -70,6 +92,44 @@ export class MarkdownPreviewView extends ItemView {
 
   getIcon(): string {
     return 'markdown-viewer';
+  }
+
+  // ===========================================================================
+  // View state
+  //
+  // Persisting the file on the leaf is what lets a preview survive a workspace
+  // reload and lets Obsidian open a registered extension straight into this
+  // view. A leaf carrying no file of its own can only be the sidecar panel, so
+  // that is the default for states saved before this existed.
+  // ===========================================================================
+
+  getState(): Record<string, unknown> {
+    return {
+      ...super.getState(),
+      file: this.currentFile?.path,
+      follow: this.followActiveFile,
+      prev: this.prevViewState,
+    };
+  }
+
+  async setState(state: unknown, result: ViewStateResult): Promise<void> {
+    const incoming = (state ?? {}) as ViewerLeafState;
+
+    this.followActiveFile = incoming.follow ?? typeof incoming.file !== 'string';
+    this.prevViewState = incoming.prev;
+
+    if (incoming.file && incoming.file !== this.currentFile?.path) {
+      const file = this.app.vault.getAbstractFileByPath(incoming.file);
+      if (file instanceof TFile) {
+        await this.setFile(file);
+      }
+    }
+
+    await super.setState(state, result);
+  }
+
+  followsActiveFile(): boolean {
+    return this.followActiveFile;
   }
 
   // ===========================================================================
@@ -107,10 +167,13 @@ export class MarkdownPreviewView extends ItemView {
     // Initialize the viewer directly in the container (no iframe)
     await initializeViewer(container);
 
-    // Load current active file
-    const activeFile = this.app.workspace.getActiveFile();
-    if (activeFile && isSupportedFile(activeFile)) {
-      await this.setFile(activeFile);
+    // Fall back to the active file only when the leaf brought no file of its
+    // own — setState has already run for a restored or extension-opened leaf.
+    if (!this.currentFile) {
+      const activeFile = this.app.workspace.getActiveFile();
+      if (activeFile && isSupportedFile(activeFile)) {
+        await this.setFile(activeFile);
+      }
     }
   }
 
