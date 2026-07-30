@@ -11,6 +11,10 @@ function isTableDelimiterRow(line: string): boolean {
   return cells.length > 0 && cells.every((cell) => /^:?-+:?$/.test(cell.trim()));
 }
 
+function stripBlockquotePrefix(line: string): string {
+  return line.replace(/^ {0,3}> ?/, '');
+}
+
 function isEscaped(value: string, index: number): boolean {
   let backslashCount = 0;
   for (let i = index - 1; i >= 0 && value[i] === '\\'; i--) {
@@ -77,7 +81,8 @@ export function escapePipesInTableCodeSpans(markdown: string): string {
   let fence: { marker: string; length: number } | null = null;
 
   for (let i = 0; i < lines.length; i++) {
-    const fenceMatch = lines[i].match(/^ {0,3}(`{3,}|~{3,})/);
+    const stripped = stripBlockquotePrefix(lines[i]);
+    const fenceMatch = stripped.match(/^ {0,3}(`{3,}|~{3,})/);
     if (fenceMatch) {
       const marker = fenceMatch[1][0];
       const length = fenceMatch[1].length;
@@ -86,20 +91,21 @@ export function escapePipesInTableCodeSpans(markdown: string): string {
       } else if (
         fence.marker === marker &&
         length >= fence.length &&
-        lines[i].slice(fenceMatch[0].length).trim() === ''
+        stripped.slice(fenceMatch[0].length).trim() === ''
       ) {
         fence = null;
       }
       continue;
     }
 
-    if (fence || i === 0 || !isTableDelimiterRow(lines[i])) {
+    if (fence || i === 0 || !isTableDelimiterRow(stripped)) {
       continue;
     }
 
     tableRows.add(i - 1);
-    for (let row = i + 1; row < lines.length && lines[row].trim() !== ''; row++) {
-      if (!lines[row].includes('|')) {
+    for (let row = i + 1; row < lines.length; row++) {
+      const rowStripped = stripBlockquotePrefix(lines[row]);
+      if (rowStripped.trim() === '' || !rowStripped.includes('|')) {
         break;
       }
       tableRows.add(row);
