@@ -16,6 +16,7 @@ const createChromiumBuildOptions = (overrides = {}) => {
     platformTag = 'chrome',
     readyMessage = 'chrome://extensions/ -> Load unpacked -> select dist/chrome/',
     extraCopyDirectories = [],
+    development = false,
   } = overrides;
 
   return {
@@ -26,6 +27,7 @@ const createChromiumBuildOptions = (overrides = {}) => {
     platformTag,
     readyMessage,
     extraCopyDirectories,
+    development,
   };
 };
 
@@ -106,7 +108,7 @@ export const createBuildConfig = (overrides = {}) => {
     metafile: false, // Generate metafile for bundle analysis
     // Define globals
     define: {
-      'process.env.NODE_ENV': '"production"',
+      'process.env.NODE_ENV': options.development ? '"development"' : '"production"',
       'MV_PLATFORM': `"${options.platformTag}"`,
       'MV_RUNTIME': '"shared"',
       'global': 'globalThis', // Polyfill for global
@@ -123,8 +125,8 @@ export const createBuildConfig = (overrides = {}) => {
     assetNames: '[name]', // Use original filename without hash
     // Mermaid is loaded separately via script tag to keep bundle size manageable
     external: ['mermaid', 'web-worker'],
-    minify: true,
-    sourcemap: false,
+    minify: !options.development,
+    sourcemap: options.development,
     plugins: [
       dagreShimPlugin,
       // Redirect @markdown-viewer/drawio2svg and draw-uml imports to shims

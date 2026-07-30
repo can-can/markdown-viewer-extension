@@ -804,7 +804,7 @@
     "description": "Button to choose a directory"
   },
   "workspace_desc": {
-    "message": "Open a local directory to browse and preview supported files.",
+    "message": "Open a local directory or drop files and folders here to browse and preview supported files.",
     "description": "Description on the workspace landing page"
   },
   "workspace_open": {

@@ -804,7 +804,7 @@
     "description": "Button to open directory picker"
   },
   "workspace_desc": {
-    "message": "開啟本機目錄以瀏覽和預覽支援的檔案。",
+    "message": "開啟本機目錄，或將檔案、資料夾拖放到此處進行瀏覽和預覽。",
     "description": "Workspace landing page description"
   },
   "workspace_open": {

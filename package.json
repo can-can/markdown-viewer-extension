@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "build:chrome": "node chrome/build.js",
+    "dev:chrome": "node chrome/dev.js",
     "build:edge": "node edge/build.js",
     "build:firefox": "node firefox/build.js",
     "build:mobile": "node mobile/build.js",
@@ -80,6 +81,7 @@
     "eventemitter3": "^5.0.1",
     "file-type": "^20.5.0",
     "floating-vue": "^5.2.2",
+    "highlight.js": "^11.11.1",
     "katex": "^0.16.27",
     "markdown-it": "^14.1.1",
     "mathjax-full": "^3.2.2",

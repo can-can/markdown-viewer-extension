@@ -66,6 +66,7 @@ const $previewFrame = document.getElementById('preview-frame') as HTMLIFrameElem
 const $previewEmptyText = $previewEmpty.querySelector('p');
 const $recentWorkspaces = document.getElementById('recent-workspaces')!;
 const $recentList = document.getElementById('recent-list')!;
+const $dropOverlay = document.getElementById('drop-overlay')!;
 
 let rootDirHandle: FileSystemDirectoryHandle | null = null;
 let currentFileDir = '';
@@ -85,6 +86,7 @@ let lastExecutedContentQuery = '';
 let contentSearchInProgress = false;
 let contentSearchRunId = 0;
 const directoryReadCache = new Map<string, Promise<TreeNode[]>>();
+const droppedFileHandles = new Map<string, FileSystemFileHandle>();
 
 function postToPreviewFrame(message: ViewerIframeMessage | { type: string; [key: string]: unknown }): void {
   $previewFrame.contentWindow?.postMessage(message, '*');
@@ -936,7 +938,15 @@ function resolveRelativePath(fileDir: string, relativePath: string): string {
 }
 
 async function resolveFileFromRoot(path: string): Promise<File | null> {
-  if (!rootDirHandle) return null;
+  if (!rootDirHandle) {
+    const droppedHandle = droppedFileHandles.get(path);
+    if (!droppedHandle) return null;
+    try {
+      return await droppedHandle.getFile();
+    } catch {
+      return null;
+    }
+  }
   const segments = path.split('/').filter(Boolean);
   if (segments.length === 0) return null;
   let dir = rootDirHandle;
@@ -993,7 +1003,9 @@ async function openFile(fileHandle: FileSystemFileHandle, options?: { targetLine
   pushNavHistory(workspaceFilePath);
 
   // Save last opened file path
-  sessionStorage.setItem(`workspace-last-file:${rootDirHandle?.name}`, workspaceFilePath);
+  if (rootDirHandle) {
+    sessionStorage.setItem(`workspace-last-file:${rootDirHandle.name}`, workspaceFilePath);
+  }
 
   const ext = name.slice(name.lastIndexOf('.') + 1).toLowerCase();
 
@@ -1028,11 +1040,11 @@ async function openFile(fileHandle: FileSystemFileHandle, options?: { targetLine
 }
 
 // ─── Open workspace ───
-async function openWorkspace(dirHandle: FileSystemDirectoryHandle) {
+function prepareWorkspaceView(name: string): void {
   $landing.style.display = 'none';
   $workspace.style.display = 'flex';
   requestAnimationFrame(updateResizeHandlePosition);
-  $workspaceName.textContent = dirHandle.name;
+  $workspaceName.textContent = name;
   clearSearch(true);
   expandedPaths.clear();
   activeFilePath = '';
@@ -1047,8 +1059,12 @@ async function openWorkspace(dirHandle: FileSystemDirectoryHandle) {
   navIndex = -1;
   navInProgress = false;
   updateNavButtons();
+}
 
+async function openWorkspace(dirHandle: FileSystemDirectoryHandle) {
+  prepareWorkspaceView(dirHandle.name);
   rootDirHandle = dirHandle;
+  droppedFileHandles.clear();
   directoryReadCache.clear();
   workspaceTree = await getCachedDirectoryEntries(dirHandle, '');
   renderTreeView();
@@ -1171,6 +1187,93 @@ async function pickAndOpen() {
     // User cancelled picker
   }
 }
+
+async function openDroppedItems(dataTransfer: DataTransfer): Promise<void> {
+  const fileHandles: FileSystemFileHandle[] = [];
+
+  for (const item of Array.from(dataTransfer.items)) {
+    if (item.kind !== 'file') continue;
+
+    let handle: FileSystemHandle | null = null;
+    try {
+      handle = await (item as DataTransferItem & {
+        getAsFileSystemHandle: () => Promise<FileSystemHandle | null>;
+      }).getAsFileSystemHandle();
+    } catch {
+      continue;
+    }
+
+    if (handle?.kind === 'directory') {
+      await openWorkspace(handle as FileSystemDirectoryHandle);
+      return;
+    }
+
+    if (handle?.kind === 'file') {
+      fileHandles.push(handle as FileSystemFileHandle);
+    }
+  }
+
+  if (fileHandles.length === 0) return;
+
+  prepareWorkspaceView(
+    fileHandles.length === 1
+      ? fileHandles[0].name
+      : Localization.translate('workspace_title')
+  );
+  rootDirHandle = null;
+  droppedFileHandles.clear();
+  directoryReadCache.clear();
+  sessionStorage.removeItem('workspace-active');
+  currentFileDir = '';
+
+  workspaceTree = fileHandles.map((fileHandle) => {
+    droppedFileHandles.set(fileHandle.name, fileHandle);
+    return {
+      name: fileHandle.name,
+      kind: 'file',
+      handle: fileHandle,
+      path: fileHandle.name,
+    };
+  });
+
+  const firstFile = workspaceTree[0];
+  activeFilePath = firstFile.path;
+  renderTreeView();
+  await openFile(firstFile.handle as FileSystemFileHandle);
+}
+
+let dragDepth = 0;
+
+function setDropOverlayVisible(visible: boolean): void {
+  $dropOverlay.classList.toggle('visible', visible);
+  $dropOverlay.setAttribute('aria-hidden', String(!visible));
+}
+
+window.addEventListener('dragenter', (event: DragEvent) => {
+  if (!event.dataTransfer?.types.includes('Files')) return;
+  event.preventDefault();
+  dragDepth += 1;
+  setDropOverlayVisible(true);
+});
+
+window.addEventListener('dragover', (event: DragEvent) => {
+  if (!event.dataTransfer?.types.includes('Files')) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'copy';
+});
+
+window.addEventListener('dragleave', () => {
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (dragDepth === 0) setDropOverlayVisible(false);
+});
+
+window.addEventListener('drop', (event: DragEvent) => {
+  if (!event.dataTransfer?.types.includes('Files')) return;
+  event.preventDefault();
+  dragDepth = 0;
+  setDropOverlayVisible(false);
+  void openDroppedItems(event.dataTransfer);
+});
 
 $pickBtn.addEventListener('click', pickAndOpen);
 $changeBtn.addEventListener('click', pickAndOpen);

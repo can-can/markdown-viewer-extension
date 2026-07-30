@@ -15,7 +15,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Firefox does not support workspace — hide the entry button
   const projectBtn = document.getElementById('open-project-btn');
-  if (projectBtn?.parentElement) {
-    projectBtn.parentElement.style.display = 'none';
-  }
+  if (projectBtn) projectBtn.style.display = 'none';
 });

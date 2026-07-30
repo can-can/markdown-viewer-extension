@@ -388,6 +388,7 @@ h1.clickable-title:hover {
 .btn-project {
   width: 100%;
   padding: 10px 16px;
+  margin-bottom: 15px;
   gap: 8px;
   background: var(--color-primary-light);
   border-color: var(--color-primary-subtle);
@@ -530,14 +531,13 @@ h1.clickable-title:hover {
   cursor: pointer;
   transition: all var(--transition-fast);
   padding: 12px;
-  border-left: 3px solid transparent;
   position: relative;
   padding-right: 42px;
 }
 
 .history-item:hover {
   background: var(--gray-50);
-  border-left-color: var(--color-primary);
+  border-left: 3px solid var(--color-primary);
   transform: translateX(2px);
 }
 

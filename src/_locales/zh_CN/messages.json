@@ -804,7 +804,7 @@
     "description": "Button to open directory picker"
   },
   "workspace_desc": {
-    "message": "打开本地目录以浏览和预览支持的文件。",
+    "message": "打开本地目录，或将文件、文件夹拖到此处进行浏览和预览。",
     "description": "Workspace landing page description"
   },
   "workspace_open": {
