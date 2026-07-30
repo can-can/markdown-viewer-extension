@@ -224,7 +224,7 @@
     "description": "Описание расширения в Chrome Web Store"
   },
   "extensionName": {
-    "message": "Просмотрщик Markdown",
+    "message": "docu.md Просмотрщик Markdown",
     "description": "Название расширения"
   },
   "failed_to_open_file": {

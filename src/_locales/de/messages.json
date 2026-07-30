@@ -224,7 +224,7 @@
     "description": "Beschreibung der Erweiterung im Chrome Web Store"
   },
   "extensionName": {
-    "message": "Markdown-Viewer",
+    "message": "docu.md Markdown-Viewer",
     "description": "Name der Erweiterung"
   },
   "failed_to_open_file": {

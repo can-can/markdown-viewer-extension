@@ -224,7 +224,7 @@
     "description": "Descripción de la extensión mostrada en la Chrome Web Store"
   },
   "extensionName": {
-    "message": "Visor de Markdown",
+    "message": "docu.md Visor de Markdown",
     "description": "Nombre de la extensión"
   },
   "failed_to_open_file": {

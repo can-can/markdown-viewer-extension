@@ -224,7 +224,7 @@
     "description": "Chrome 웹 스토어에 표시되는 설명"
   },
   "extensionName": {
-    "message": "Markdown 뷰어",
+    "message": "docu.md Markdown 뷰어",
     "description": "확장 프로그램 이름"
   },
   "failed_to_open_file": {

@@ -224,7 +224,7 @@
     "description": "Chrome ウェブストアに表示される説明"
   },
   "extensionName": {
-    "message": "Markdown ビューア",
+    "message": "docu.md Markdown ビューア",
     "description": "拡張機能の名称"
   },
   "failed_to_open_file": {
