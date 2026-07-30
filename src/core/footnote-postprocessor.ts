@@ -1,5 +1,6 @@
 import type { Processor } from 'unified';
 import { normalizeMathBlocks, sanitizeRenderedHtml } from './markdown-processor';
+import { escapePipesInTableCodeSpans } from '../utils/markdown-table-code';
 import type { ParsedFootnotes, FootnoteDefinition } from './footnote-model.ts';
 
 function replaceReferenceTextNodes(container: HTMLElement, definitions: FootnoteDefinition[]): void {
@@ -62,7 +63,8 @@ function replaceReferenceTextNodes(container: HTMLElement, definitions: Footnote
 }
 
 async function renderFootnoteContent(content: string, processor: Processor): Promise<string> {
-  const file = await processor.process(normalizeMathBlocks(content));
+  const normalizedContent = escapePipesInTableCodeSpans(normalizeMathBlocks(content));
+  const file = await processor.process(normalizedContent);
   return sanitizeRenderedHtml(String(file));
 }
 

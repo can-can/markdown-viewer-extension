@@ -18,6 +18,7 @@ import {
   normalizeMathBlocks,
   type HeadingInfo,
 } from '../markdown-processor';
+import { escapePipesInTableCodeSpans } from '../../utils/markdown-table-code';
 
 import {
   MarkdownDocument,
@@ -418,7 +419,7 @@ function normalizeHeadingIds(container: HTMLElement): void {
  * Render a single block's content to HTML
  */
 async function renderBlockContent(content: string, processor: Processor): Promise<string> {
-  const normalizedContent = normalizeMathBlocks(content);
+  const normalizedContent = escapePipesInTableCodeSpans(normalizeMathBlocks(content));
   const file = await processor.process(normalizedContent);
   let html = String(file);
   html = sanitizeRenderedHtml(html);

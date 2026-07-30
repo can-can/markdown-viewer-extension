@@ -37,6 +37,7 @@ import { loadThemeForDOCX } from './theme-to-docx';
 import { rewriteObsidianLinks } from '../utils/obsidian-link-rewrite';
 import type { FrontmatterDisplay } from '../ui/popup/settings-tab';
 import themeManager from '../utils/theme-manager';
+import { escapePipesInTableCodeSpans } from '../utils/markdown-table-code';
 import { getPluginForNode, convertNodeToDOCX } from '../plugins/index';
 import type { PluginRenderer } from '../types/plugin';
 import type { DocumentService } from '../types/platform';
@@ -491,7 +492,7 @@ class DocxExporter {
       .use(remarkSuperSub)
       .use(remarkGithubAlerts);  // GitHub-style alert syntax
 
-    const ast = processor.parse(footnoteAwareMarkdown);
+    const ast = processor.parse(escapePipesInTableCodeSpans(footnoteAwareMarkdown));
     const transformed = processor.runSync(ast);
 
     this.linkDefinitions = new Map();
