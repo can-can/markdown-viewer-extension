@@ -220,7 +220,7 @@
     "description": "Toast shown during export"
   },
   "extensionDescription": {
-    "message": "Markdown 匯出完美 Word — Mermaid、PlantUML、Vega、drawio、canvas、資訊圖、Graphviz、LaTeX 公式可編輯，程式碼高亮，本地處理.",
+    "message": "本地預覽 Markdown，並匯出包含圖表、可編輯公式與程式碼高亮的精緻 Word 文件。",
     "description": "擴充功能簡介"
   },
   "extensionName": {

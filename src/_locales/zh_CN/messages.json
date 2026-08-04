@@ -220,7 +220,7 @@
     "description": "导出中提示"
   },
   "extensionDescription": {
-    "message": "Markdown 导出完美 Word — Mermaid、PlantUML、Vega、drawio、canvas、信息图、Graphviz、LaTeX 公式可编辑，代码高亮，本地处理.",
+    "message": "本地预览 Markdown，并导出包含图表、可编辑公式和代码高亮的精致 Word 文档。",
     "description": "扩展简介"
   },
   "extensionName": {

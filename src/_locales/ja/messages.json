@@ -220,7 +220,7 @@
     "description": "Toast shown during export"
   },
   "extensionDescription": {
-    "message": "Markdown を完璧な Word に — Mermaid、PlantUML、Vega、drawio、canvas、インフォグラフィック、Graphviz、LaTeX（編集可能）、コードハイライト、ローカル処理.",
+    "message": "Markdown をローカルでプレビューし、図表、編集可能な数式、コードハイライト付きの Word 文書を書き出せます。",
     "description": "Chrome ウェブストアに表示される説明"
   },
   "extensionName": {

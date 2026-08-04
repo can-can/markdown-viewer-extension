@@ -220,7 +220,7 @@
     "description": "Toast shown during export"
   },
   "extensionDescription": {
-    "message": "Markdown ke Word sempurna — Mermaid, PlantUML, Vega, drawio, infografis, Graphviz, LaTeX, penyorotan kode, pemrosesan lokal.",
+    "message": "Pratinjau Markdown secara lokal dan ekspor dokumen Word rapi dengan diagram, rumus, dan sorotan kode.",
     "description": "Extension description shown in Chrome Web Store"
   },
   "extensionName": {

@@ -1,377 +1,113 @@
-# ![Markdown Viewer](icons/icon48.png) Markdown Viewer
+# ![Markdown Viewer](icons/icon48.png) docu.md Markdown Viewer
 
-[English](https://github.com/markdown-viewer/docs/blob/main/readme/README.en.md) · [简体中文](https://github.com/markdown-viewer/docs/blob/main/readme/README.zh-CN.md) · [繁體中文](https://github.com/markdown-viewer/docs/blob/main/readme/README.zh-TW.md) · [Русский](https://github.com/markdown-viewer/docs/blob/main/readme/README.ru.md) · [日本語](https://github.com/markdown-viewer/docs/blob/main/readme/README.ja.md) · [हिन्दी](https://github.com/markdown-viewer/docs/blob/main/readme/README.hi.md) · [한국어](https://github.com/markdown-viewer/docs/blob/main/readme/README.ko.md) · [Deutsch](https://github.com/markdown-viewer/docs/blob/main/readme/README.de.md) · [Português (Brasil)](https://github.com/markdown-viewer/docs/blob/main/readme/README.pt-BR.md) · [Português (Portugal)](https://github.com/markdown-viewer/docs/blob/main/readme/README.pt-PT.md) · [Nederlands](https://github.com/markdown-viewer/docs/blob/main/readme/README.nl.md) · [Українська](https://github.com/markdown-viewer/docs/blob/main/readme/README.uk.md) · [Tiếng Việt](https://github.com/markdown-viewer/docs/blob/main/readme/README.vi.md) · [Беларуская](https://github.com/markdown-viewer/docs/blob/main/readme/README.be.md) · [Français](https://github.com/markdown-viewer/docs/blob/main/readme/README.fr.md) · [Italiano](https://github.com/markdown-viewer/docs/blob/main/readme/README.it.md) · [Bahasa Indonesia](https://github.com/markdown-viewer/docs/blob/main/readme/README.id.md) · [Español](https://github.com/markdown-viewer/docs/blob/main/readme/README.es.md) · [ไทย](https://github.com/markdown-viewer/docs/blob/main/readme/README.th.md) · [Svenska](https://github.com/markdown-viewer/docs/blob/main/readme/README.sv.md) · [Türkçe](https://github.com/markdown-viewer/docs/blob/main/readme/README.tr.md) · [Eesti](https://github.com/markdown-viewer/docs/blob/main/readme/README.et.md) · [Bahasa Melayu](https://github.com/markdown-viewer/docs/blob/main/readme/README.ms.md) · [Polski](https://github.com/markdown-viewer/docs/blob/main/readme/README.pl.md) · [Suomi](https://github.com/markdown-viewer/docs/blob/main/readme/README.fi.md) · [Lietuvių](https://github.com/markdown-viewer/docs/blob/main/readme/README.lt.md) · [Norsk](https://github.com/markdown-viewer/docs/blob/main/readme/README.no.md) · [Dansk](https://github.com/markdown-viewer/docs/blob/main/readme/README.da.md)
+[English](https://github.com/markdown-viewer/docs/blob/main/readme/README.en.md) · [简体中文](https://github.com/markdown-viewer/docs/blob/main/readme/README.zh-CN.md) · [繁體中文](https://github.com/markdown-viewer/docs/blob/main/readme/README.zh-TW.md) · [Русский](https://github.com/markdown-viewer/docs/blob/main/readme/README.ru.md) · [日本語](https://github.com/markdown-viewer/docs/blob/main/readme/README.ja.md) · [한국어](https://github.com/markdown-viewer/docs/blob/main/readme/README.ko.md) · [Deutsch](https://github.com/markdown-viewer/docs/blob/main/readme/README.de.md) · [Français](https://github.com/markdown-viewer/docs/blob/main/readme/README.fr.md) · [Español](https://github.com/markdown-viewer/docs/blob/main/readme/README.es.md)
 
-**Markdown to perfect Word in one click — PlantUML, Mermaid, Vega, Canvas, Infographic, Graphviz, LaTeX (editable), code highlighting, local processing**
+Preview Markdown. Preserve the complex parts. Export finished documents.
 
-*Completely Free · 29 Professional Themes · 28 Languages Support*
+docu.md Markdown Viewer opens local or online Markdown as a polished reading page and exports it when you need a document people can actually use. It keeps the source file simple while preserving the parts that usually break during handoff: tables, images, code blocks, math, diagrams, themes, and document spacing.
 
-![Install](icons/icon16.png) 🚀 **Install Now (Choose Your Platform):**
+It is built for technical documentation, engineering notes, research drafts, weekly reports, knowledge-base pages, README files, and AI-generated Markdown that needs final formatting.
+
+## Install
 
 - **Chrome / Chromium:** https://chromewebstore.google.com/detail/markdown-viewer/jekhhoflgcfoikceikgeenibinpojaoi
 - **Microsoft Edge:** https://microsoftedge.microsoft.com/addons/detail/documd-markdown-viewer/iphmkjlbnogmhofmmcahdhodiilokfca
 - **Firefox:** https://addons.mozilla.org/firefox/addon/markdown-viewer-extension/
 - **Obsidian:** https://community.obsidian.md/plugins/markdown-viewer-extension
-- **VS Code:** https://marketplace.visualstudio.com/items?itemName=xicilion.markdown-viewer-extension · [Open VSX](https://open-vsx.org/extension/xicilion/markdown-viewer-extension)
-- **Mobile (iOS/Android):** See [Mobile App](https://github.com/markdown-viewer/docs/blob/main/platforms/mobile.md)
+- **VS Code:** https://marketplace.visualstudio.com/items?itemName=xicilion.markdown-viewer-extension · https://open-vsx.org/extension/xicilion/markdown-viewer-extension
+- **Mobile:** See the [mobile app docs](https://github.com/markdown-viewer/docs/blob/main/platforms/mobile.md)
 
----
+## Highlights
 
-You love writing in Markdown — clean, efficient, version control friendly.  
-But eventually, you always need a Word document.
+- Clean Markdown preview for local files and supported web URLs.
+- DOCX export for editable Word documents.
+- PDF and self-contained HTML export where supported by the platform.
+- Editable formulas in Word output.
+- Syntax highlighting for code blocks.
+- Document themes for business reports, academic writing, technical notes, reading layouts, and Chinese typography.
+- Smart rendering and caching for large documents.
+- Local processing for normal preview and export workflows.
 
-**The old nightmare:**
+## Why It Exists
 
-😫 Manual screenshot flowcharts · Copy-paste formulas become messy · Format code by hand · Adjust tables cell by cell · Spend another 30 minutes tweaking fonts, spacing, and colors after export
+Markdown is fast to write and easy to version. It is also the default format for many AI assistants, developer notes, project reports, and technical drafts.
 
-**One document: 1 hour writing, 2 hours formatting.**
+The problem appears at the handoff stage. A `.md` file is not always acceptable when a colleague expects a Word document, a reviewer wants a printable PDF, or a client needs a self-contained page. Copying content into another editor often means rebuilding layout, screenshots, formulas, code formatting, and tables by hand.
 
----
+docu.md bridges that gap. Open the Markdown file, review the rendered result, choose a document style, and export when it is ready.
 
-**Now it takes just 1 second.**
+## Rich Content Support
 
-Click to download and get a perfect Word document:
-- ✅ PlantUML diagrams → High-resolution images
-- ✅ Mermaid diagrams → High-resolution images
-- ✅ Vega/Vega-Lite data charts → High-resolution images
-- ✅ drawio diagrams → High-resolution images
-- ✅ Canvas diagrams → High-resolution images
-- ✅ Infographic charts → High-resolution images
-- ✅ Graphviz DOT graphs → High-resolution images
-- ✅ LaTeX formulas → Word editable equations
-- ✅ Auto syntax highlighting (100+ languages)
-- ✅ 29 professional themes with one click
-- ✅ Completely free, local processing
+docu.md supports standard Markdown, GitHub-style tables and task lists, images, highlighted code, math formulas, SVG content, complex HTML tables, and diagrams or charts written in common text-based formats such as PlantUML, Mermaid, Vega/Vega-Lite, drawio, Canvas, Infographic, and Graphviz.
 
-**Spend time on writing, not on formatting.**
+That feature list appears here once because it is useful. The rest of the README focuses on workflows, platforms, and practical setup.
 
----
+## What You Can Do
 
-## 🌍 Available Platforms
+- Open local or online Markdown files in a clean reading view.
+- Export finished documents to DOCX, PDF, or self-contained HTML where supported by the platform.
+- Keep formulas editable in Word instead of flattening them into screenshots.
+- Render diagrams and charts directly from Markdown source blocks.
+- Preserve code highlighting, tables, images, headings, and long-form document structure.
+- Switch document themes for academic, business, technical, reading, and Chinese typography needs.
+- Work with local processing so your documents stay on your device.
 
-Markdown Viewer is not just a Chrome extension anymore — it's a unified rendering + export engine shipped across multiple platforms.
+## Common Workflows
 
-| Platform | Best for | Docs |
+### AI Draft to Shareable Document
+
+Paste or save Markdown from an AI assistant, open it with docu.md, review the formatted result, and export a polished document for colleagues, clients, classmates, or reviewers.
+
+### Technical Notes to Documentation
+
+Keep architecture notes, project READMEs, API drafts, and visual blocks in Markdown. Preview them with formatted code and rendered content before sharing.
+
+### Reports and Research Drafts
+
+Use Markdown for writing speed, then export documents with tables, formulas, headings, and document themes preserved for review or submission.
+
+## Document Output
+
+docu.md focuses on the handoff formats people ask for after the writing is done:
+
+- **DOCX** for editable Word documents.
+- **PDF** for print-ready sharing where supported.
+- **HTML** for self-contained publishing where supported.
+- **Image/vector exports** for rendered visual blocks where supported.
+
+Exact output options vary by platform. See the platform docs for the environment you use.
+
+## Platforms
+
+| Platform | Best For | Docs |
 |---|---|---|
-| **Chrome Extension** | Reading local/online Markdown in browser + export | [chrome.md](https://github.com/markdown-viewer/docs/blob/main/platforms/chrome.md) |
-| **Edge Extension** | Microsoft Edge users who want the native Edge Add-ons install path | [edge.md](https://github.com/markdown-viewer/docs/blob/main/platforms/edge.md) |
-| **Firefox Extension** | Firefox users, same core features | [firefox.md](https://github.com/markdown-viewer/docs/blob/main/platforms/firefox.md) |
-| **Obsidian Plugin** | Vault-native preview + export on desktop and mobile | [obsidian.md](https://github.com/markdown-viewer/docs/blob/main/platforms/obsidian.md) |
-| **VS Code Extension** | Writing + live preview + export inside editor | [vscode.md](https://github.com/markdown-viewer/docs/blob/main/platforms/vscode.md) |
-| **Mobile App** | Reading/export on the go (iOS/Android) | [mobile.md](https://github.com/markdown-viewer/docs/blob/main/platforms/mobile.md) |
+| Chrome / Chromium | Opening local or online Markdown in the browser | [Chrome docs](https://github.com/markdown-viewer/docs/blob/main/platforms/chrome.md) |
+| Microsoft Edge | Edge Add-ons installation and Edge-managed updates | [Edge docs](https://github.com/markdown-viewer/docs/blob/main/platforms/edge.md) |
+| Firefox | Firefox-based browser workflows | [Firefox docs](https://github.com/markdown-viewer/docs/blob/main/platforms/firefox.md) |
+| Obsidian | Vault-native preview and export | [Obsidian docs](https://github.com/markdown-viewer/docs/blob/main/platforms/obsidian.md) |
+| VS Code | Editor-side preview, commands, and writing workflows | [VS Code docs](https://github.com/markdown-viewer/docs/blob/main/platforms/vscode.md) |
+| Mobile | Opening and sharing Markdown on iOS and Android | [Mobile docs](https://github.com/markdown-viewer/docs/blob/main/platforms/mobile.md) |
 
-See the full feature matrix: [platform-comparison.md](https://github.com/markdown-viewer/docs/blob/main/platforms/platform-comparison.md)
+## Privacy
 
-## 💫 See It in Action
+Document processing is local. docu.md does not require uploading your Markdown files to a remote rendering service for normal preview and export workflows.
 
-### Technical Documentation: 15 Flowcharts, 2 Hours → 5 Minutes
+## Getting Started
 
-**Before:** draw.io diagram → Export PNG → Insert into Word → Resize → Repeat 15 times = **2 hours**
+1. Install docu.md on the platform you use.
+2. Open a Markdown file or choose it from your workspace.
+3. Review the rendered document.
+4. Pick a theme if needed.
+5. Export or share the finished result.
 
-**Now:** Write Mermaid code → Click download = **5 minutes**
+## Documentation
 
-## System Architecture
+- [Getting Started](https://github.com/markdown-viewer/docs/blob/main/getting-started/installation.md)
+- [Feature Guide](https://github.com/markdown-viewer/docs/blob/main/features/README.md)
+- [Platform Comparison](https://github.com/markdown-viewer/docs/blob/main/platforms/platform-comparison.md)
+- [FAQ](https://github.com/markdown-viewer/docs/blob/main/faq.md)
+- [Privacy Policy](PRIVACY.md)
 
-``````markdown
-```mermaid
-graph TB
-    A[User] --> B[Load Balancer]
-    B --> C[Server 1]
-    B --> D[Server 2]
-```
-``````
+## Open Source
 
-Need changes? Modify code and re-export. **Save 115 minutes.**
-
-### Academic Paper: 50+ Formulas, 3 Hours → 10 Minutes
-
-**Before:** Word equation editor one by one OR paid tool subscription = **3 hours + Paid subscription**
-
-**Now:** Write LaTeX syntax directly → Click download = **10 minutes + Free**
-
-Given mass $m$ and acceleration $a$, according to Newton's second law:
-
-```markdown
-$$
-F = ma = m\frac{dv}{dt} = m\frac{d^2x}{dt^2}
-$$
-```
-
-Export as native Word format, fully editable. **Not an image, but a real equation object.**
-
-### Team Collaboration: Weekly Reports, 1 Hour → 1 Minute
-
-**Before:** Copy content → Set format → Adjust lists → Add styling → Excel charts + screenshots = **1 hour weekly**
-
-**Now:** Open file → Choose theme → Click download = **1 minute**
-
-Choose "Business" theme, Vega-Lite data charts auto-convert to high-res images, professional look. **Save 59 minutes weekly.**
-
-**Business use cases:**
-- 📊 Sales trends (line charts)
-- 📈 Market share comparison (bar charts)
-- 🎯 KPI achievement (gauges)
-- 📉 Cost analysis (stacked charts)
-
-Let data speak, generate professional reports with one click.
-
----
-
-## 🎯 Three Core Features
-
-### 1. Automatic Diagram Conversion
-
-**PlantUML** · **Mermaid** · **Vega/Vega-Lite** · **drawio** · **Canvas** · **Infographic** · **Graphviz DOT** · SVG images · Complex HTML tables
-
-**PlantUML:** Class diagrams, sequence diagrams, use case diagrams, activity diagrams, component diagrams → Software design, UML modeling  
-**Mermaid:** Flowcharts, sequence diagrams, class diagrams, state diagrams → Technical docs, architecture design  
-**Vega/Vega-Lite:** Bar charts, line charts, scatter plots, heatmaps → Business reports, data analytics  
-**drawio:** Architecture diagrams, network topologies, UML diagrams → System design, technical documentation  
-**Canvas:** Mind maps, knowledge graphs, concept maps → Brainstorming, planning boards  
-**Infographic:** Statistical charts, infographics, data visualization → Data presentation, visual storytelling  
-**Graphviz DOT:** Directed/undirected graphs, network topology, state machines → Dependency analysis, complex graphs
-
-**Time comparison:** Complex sequence diagram (10 objects)
-- Traditional tools: Draw 30min + Modify 20min + Adjust 10min + Export 5min = **65 minutes**
-- Markdown Viewer: Write code 5min + Modify 30sec + Export 1sec = **6 minutes**
-
-**Business scenario:** Quarterly sales report (5 bar charts)
-- Excel charting + screenshots: Select data 15min + Format 10min + Screenshot 5min = **30 minutes**
-- Vega-Lite: JSON data 2min + One-click export = **3 minutes**
-
-**Precise, professional, reusable.**
-
-### 2. Perfect Formula Conversion
-
-LaTeX → Word editable equations (not images!)
-
-After export, you can:
-- ✅ Continue editing in Word
-- ✅ Adjust font size
-- ✅ Modify symbols and variables
-- ✅ Copy to other documents
-
-**One formula, two approaches:**
-- ❌ Word equation editor: Click...click...click...select symbols...adjust positions
-- ✅ LaTeX: `\int_0^\infty e^{-x^2}dx` Done
-
-### 3. 29 Professional Themes
-
-Different scenarios, different styles, one-click switch:
-
-- 📊 Business / Technical → Business reports, technical docs
-- 📚 Academic / Palatino → Academic papers, book typesetting  
-- 🇨🇳 Heiti / Mixed → Chinese documents
-- 🎨 Typewriter / Handwritten → Creative content
-
-**WYSIWYG:** Preview looks exactly like exported Word. No guessing, no trial.
-
-**No more manual adjustments:** Font, size, line spacing, paragraph spacing, code background...
-
----
-
-## ⚡ Lightning Fast Experience
-
-### Smart Cache: First Time 5s, Second Time 1s
-
-Document with 50 Mermaid diagrams:
-- **First open:** Text displays instantly, diagrams render in background, all done within 5s
-- **Second open:** Load from cache, instant display (<1s)
-- **Text modified:** Still instant (diagrams from cache)
-- **Diagram modified:** Only re-render changed diagrams
-
-**10x faster than Word, 100x smaller files.**
-
-### Reading Enhancement
-
-- **Three layouts:** Normal (1000px) / Full screen / Narrow (530px, preview Word effect)
-- **Flexible zoom:** 50%-400%, shortcuts `Ctrl/Cmd +` `-` `0`
-- **Smart TOC:** Auto-extract headings, sidebar navigation, `Ctrl/Cmd + B` to toggle
-- **Position memory:** Auto-save scroll position, continue reading next time
-- **History:** Track recently opened documents
-
----
-
-## 🚀 Quick Start - 3 Steps
-
-### Step 1: Install (30 seconds)
-
-Pick one platform and install:
-
-- **Chrome / Chromium:** Chrome Web Store link above
-- **Microsoft Edge:** Edge Add-ons link above
-- **Firefox:** Firefox Add-ons link above
-- **Obsidian:** Community Plugins → Browse → search "Markdown Viewer"
-- **VS Code:** Extensions panel → search "Markdown Viewer" (or `code --install-extension markdown-viewer`)
-- **Mobile:** Open App Store / Google Play and search "Markdown Viewer"
-
-### Step 2: Open a Markdown file (1 minute)
-
-**Browser (Chrome / Edge / Firefox) — local files:**
-
-1. Enable local file access in your browser extension settings
-2. ✅ Now you can double-click to open local `.md` files
-
-**VS Code:** Open any `.md` file → run the preview command (see [VS Code Extension](https://github.com/markdown-viewer/docs/blob/main/platforms/vscode.md))
-
-**Obsidian:** Open any note or supported diagram file → `Settings` → `Community plugins` → `Browse` → search `Markdown Viewer` → `Install` → `Enable`, then run **Open Markdown Viewer** from the Command Palette (see [Obsidian Plugin](https://github.com/markdown-viewer/docs/blob/main/platforms/obsidian.md))
-
-**Mobile:** Use file picker or open from cloud drive (details in [Mobile App](https://github.com/markdown-viewer/docs/blob/main/platforms/mobile.md))
-
-**Not needed if:**
-- Only viewing online docs (GitHub, blogs, etc.)
-- Using browser's "Open File" function
-
-### Quick Start
-
-**Open documents:** Local `.md` files / supported diagram files (`.mermaid` `.vega` `.vl` `.drawio` `.canvas` `.infographic` `.dot` `.gv`) depending on platform
-
-**Export to Word:** Click download button or `Ctrl/Cmd + S` → See progress → Auto-save
-
-**Switch themes:** Click toolbar → Choose theme → Apply instantly
-
-**Adjust view:** `+`/`-` zoom · Layout switch · `Ctrl/Cmd + B` TOC
-
----
-
-## 🎁 Complete Features
-
-### Full Markdown Syntax Support
-
-Headings · Paragraphs · Bold · Italic · Strikethrough · Lists · Task lists · Blockquotes · GitHub Alerts · Code blocks (100+ languages highlighted) · Tables · Links · Images · PlantUML diagrams · Mermaid diagrams · Vega / Vega-Lite charts · drawio diagrams · Canvas diagrams · Infographic charts · Graphviz DOT graphs · LaTeX formulas · HTML · GFM extensions
-
-### 29 Themes
-
-**Classic:** Default · Academic · Business · Manuscript · Newspaper  
-**Reading:** Palatino · Garamond · Typewriter · Elegant  
-**Modern:** Technical · Swiss · Minimal  
-**Creative:** Magazine · Century · Handwritten · Verdana  
-**Chinese:** Heiti · Mixed · Water  
-**Playful:** Rainbow · Starry · Candy · Dinosaur · Space · Garden  
-**Nature:** Forest · Ocean · Coral · Sunset
-
-### 28 Interface Languages
-
-English · 简体中文 · 繁體中文 · Русский · 日本語 · हिन्दी · 한국어 · Deutsch · Português (Brasil) · Português (Portugal) · Nederlands · Українська · Tiếng Việt · Беларуская · Français · Italiano · Bahasa Indonesia · Español · ไทย · Svenska · Türkçe · Eesti · Bahasa Melayu · Polski · Suomi · Lietuvių · Norsk · Dansk
-
----
-
-## 💎 Competitive Advantages
-
-|  | Manual Screenshots | CLI Tools | Online Services | Desktop Editors | Markdown Viewer |
-|---|:---:|:---:|:---:|:---:|:---:|
-| **Ease of Use** | Tedious | Setup needed | Upload needed | Install needed | ✅ One-click |
-| **Mermaid** | Manual screenshot | Plugin needed | ✅ Supported | ✅ Supported | ✅ Native support |
-| **Math Formulas** | Images | Images | Images | Images | ✅ Editable |
-| **Privacy** | ✅ Local | ✅ Local | ❌ Cloud upload | ✅ Local | ✅ Local |
-| **Themes** | - | - | 3-5 | 5-10 | ✅ 29 |
-| **Offline** | ✅ | ✅ | ❌ | ✅ | ✅ |
-| **GitHub Direct View** | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Price** | Free | Free | Paid plans | Paid plans | ✅ Free |
-
-**Core advantage: Faster, cheaper, safer, more powerful.**
-
----
-
-## ❓ FAQ
-
-**Q: Can I edit the exported Word document?**  
-A: Yes. Standard .docx format, math formulas are editable, not images.
-
-**Q: Which diagrams are supported?**  
-A: PlantUML diagrams (class, sequence, use case, activity, etc.), all Mermaid diagrams (flowchart, sequence, gantt, class, state, pie, ER, etc.), Vega / Vega-Lite data visualization charts, drawio architecture diagrams, Canvas mind maps, Infographic statistical charts, Graphviz DOT graphs + SVG auto-conversion.
-
-**Q: Is there a file size limit?**  
-A: No limit. Smart cache, documents with 100+ diagrams open instantly.
-
-**Q: Does it require internet?**  
-A: No. Completely local processing, works offline.
-
-**Q: Will my documents be uploaded?**  
-A: Never. All processing happens locally.
-
-**Q: How to switch themes?**  
-A: Click toolbar icon → Select theme → Apply instantly.
-
-**Q: Can I customize themes?**  
-A: Currently 29 preset themes, customization coming soon.
-
-**Q: Will large documents lag?**  
-A: No. Progressive loading + smart cache, text displays instantly, diagrams render in background (first 5s, second 1s).
-
-**Q: Does cache take up much space?**  
-A: Default max 1000 items, approximately 500 MB, adjustable or clearable in settings.
-
-**Q: Which browsers are supported?**  
-A: Chrome/Chromium-based browsers (Edge, Brave, Opera, etc.) and Firefox.
-
-**Q: Which Word versions can open the exported file?**  
-A: Word 2016+ fully supported, Word 2013 also works. Fully compatible with WPS Office.
-
-**Q: Can I export to PDF?**  
-A: Currently Word only, PDF planned. You can export to Word then save as PDF.
-
-**Q: Which theme suits me?**  
-A: Business reports → Business · Academic papers → Academic · Technical docs → Technical · Chinese docs → Heiti/Mixed
-
-**Q: What's the difference between Vega and Mermaid?**  
-A: **Mermaid** is for flowcharts, architecture diagrams, and other schematic diagrams; **Vega/Vega-Lite** is for data visualization like sales charts, financial reports, and other data-driven business charts. They complement each other for different scenarios.
-
-**Q: How to create charts with Vega-Lite?**  
-A: Use ````vega-lite` code block in Markdown with JSON format chart specification. See [Vega-Lite official examples](https://vega.github.io/vega-lite/examples/).
-
----
-
-## 🔒 Privacy Commitment
-
-- ✅ All processing done locally, never uploaded
-- ✅ No tracking, no personal data collection
-- ✅ Open source code, auditable and transparent
-- ✅ Browser extensions use modern platform standards (Manifest V3)
-
-**Your privacy is 100% protected.**
-
----
-
-## 🆘 Get Help
-
-📖 [Full Documentation](https://github.com/markdown-viewer/markdown-viewer-extension) · 🐛 [Report Issues](https://github.com/markdown-viewer/markdown-viewer-extension/issues) · 💡 [Feature Requests](https://github.com/markdown-viewer/markdown-viewer-extension/issues) · ⭐ [GitHub Star](https://github.com/markdown-viewer/markdown-viewer-extension)
-
----
-
-## 🎉 Get Started Now
-
-**Install in 30 seconds, start using immediately:**
-
-1. Install on Chrome / Firefox / VS Code / Mobile (links above)
-2. Open a Markdown file
-3. Preview and click export (or use `Ctrl/Cmd + S` where supported)
-4. ✅ Get a clean, ready-to-share Word document
-
-**You'll get:** Markdown → Word one-click conversion · Mermaid/Vega/drawio/Canvas/Infographic/Graphviz auto-convert · LaTeX editable formulas · 100+ languages syntax highlighting · 29 themes · Smart cache · Completely free
-
-**Perfect for:** Technical writers · Students/researchers · Product managers · Developers · Anyone using Markdown
-
----
-
-## 🌱 Community Projects
-
-- 🖥️ [md2x](https://github.com/LarchLiu/md2x) - Node.js CLI tool for batch conversion and automation
-
----
-
-## 📜 Open Source License
-
-This project is open source under GPL-3.0 license. Welcome to Star, report issues, suggest features, and contribute code.
-
-**Project URL:** https://github.com/markdown-viewer/markdown-viewer-extension
-
----
-
-**Stop wasting time on formatting**
-
-**Focus on writing, let Markdown Viewer handle everything else**
-
-🚀 **Install Now:** https://chromewebstore.google.com/detail/markdown-viewer/jekhhoflgcfoikceikgeenibinpojaoi
-
-*Completely Free · Local Processing · Privacy Protected*
+docu.md Markdown Viewer is open source under GPLv3.

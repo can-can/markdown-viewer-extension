@@ -220,7 +220,7 @@
     "description": "Fallback message when DOCX export fails"
   },
   "extensionDescription": {
-    "message": "Markdown täiuslikuks Wordiks — Mermaid, PlantUML, Vega, drawio, Graphviz, LaTeX, koodi esiletõstmine, kohalik töötlemine.",
+    "message": "Vaata Markdowni kohapeal ja ekspordi viimistletud Wordi dokumendid diagrammide, valemite ja koodiga.",
     "description": "Extension description shown in Chrome Web Store"
   },
   "extensionName": {

@@ -220,7 +220,7 @@
     "description": "Toast shown during export"
   },
   "extensionDescription": {
-    "message": "Markdown से परफेक्ट Word — Mermaid, PlantUML, Vega, drawio, इन्फोग्राफिक, Graphviz, LaTeX, कोड हाइलाइटिंग, स्थानीय प्रोसेसिंग.",
+    "message": "Markdown को स्थानीय रूप से देखें और आरेख, संपादन योग्य सूत्र व कोड हाइलाइटिंग वाले Word दस्तावेज़ निर्यात करें।",
     "description": "Extension description shown in Chrome Web Store"
   },
   "extensionName": {

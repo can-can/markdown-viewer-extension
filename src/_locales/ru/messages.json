@@ -220,7 +220,7 @@
     "description": "Toast shown during export"
   },
   "extensionDescription": {
-    "message": "Markdown в идеальный Word — Mermaid, PlantUML, Vega, drawio, инфографика, Graphviz, LaTeX, подсветка кода, локальная обработка.",
+    "message": "Просматривайте Markdown локально и экспортируйте аккуратные документы Word с диаграммами, формулами и кодом.",
     "description": "Описание расширения в Chrome Web Store"
   },
   "extensionName": {

@@ -220,7 +220,7 @@
     "description": "Toast shown during export"
   },
   "extensionDescription": {
-    "message": "Markdown till perfekt Word — Mermaid, PlantUML, Vega, drawio, infografik, Graphviz, LaTeX, kodmarkering, lokal bearbetning.",
+    "message": "Förhandsgranska Markdown lokalt och exportera välformaterade Word-dokument med diagram, formler och kodmarkering.",
     "description": "Extension description shown in Chrome Web Store"
   },
   "extensionName": {

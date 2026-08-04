@@ -220,7 +220,7 @@
     "description": "Toast shown during export"
   },
   "extensionDescription": {
-    "message": "Markdown สู่ Word สมบูรณ์แบบ — Mermaid, PlantUML, Vega, drawio, อินโฟกราฟิก, Graphviz, LaTeX, ไฮไลท์โค้ด, ประมวลผลในเครื่อง.",
+    "message": "ดูตัวอย่าง Markdown ในเครื่อง และส่งออกเอกสาร Word พร้อมไดอะแกรม สูตรที่แก้ไขได้ และไฮไลท์โค้ด",
     "description": "Extension description shown in Chrome Web Store"
   },
   "extensionName": {

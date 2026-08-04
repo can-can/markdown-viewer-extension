@@ -220,7 +220,7 @@
     "description": "Fallback message when DOCX export fails"
   },
   "extensionDescription": {
-    "message": "Markdown į tobulą Word — Mermaid, PlantUML, Vega, drawio, infografika, Graphviz, LaTeX, kodo paryškinimas, vietinis apdorojimas.",
+    "message": "Peržiūrėkite Markdown vietoje ir eksportuokite tvarkingus Word dokumentus su diagramomis, formulėmis ir kodu.",
     "description": "Extension description shown in Chrome Web Store"
   },
   "extensionName": {

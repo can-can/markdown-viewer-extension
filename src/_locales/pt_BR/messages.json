@@ -220,7 +220,7 @@
     "description": "Toast shown during export"
   },
   "extensionDescription": {
-    "message": "Markdown para Word perfeito — Mermaid, PlantUML, Vega, drawio, Graphviz, LaTeX, destaque de código, processamento local.",
+    "message": "Visualize Markdown localmente e exporte documentos Word com diagramas, fórmulas editáveis e destaque de código.",
     "description": "Extension description shown in Chrome Web Store"
   },
   "extensionName": {

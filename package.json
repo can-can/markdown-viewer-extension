@@ -2,7 +2,7 @@
   "name": "markdown-viewer-extension",
   "displayName": "docu.md Markdown Viewer",
   "version": "5.2.1",
-  "description": "Markdown to perfect Word in one click — PlantUML, Mermaid, Vega, drawio, canvas, Infographic, Graphviz, LaTeX (editable), code highlighting, local processing.",
+  "description": "Open Markdown files in the browser and export polished Word documents with diagrams, editable math, code highlighting, and local processing.",
   "type": "module",
   "scripts": {
     "build:chrome": "node chrome/build.js",

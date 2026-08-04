@@ -220,7 +220,7 @@
     "description": "Toast shown during export"
   },
   "extensionDescription": {
-    "message": "Markdown sang Word hoàn hảo — Mermaid, PlantUML, Vega, drawio, infographic, Graphviz, LaTeX, tô sáng mã, xử lý cục bộ.",
+    "message": "Xem trước Markdown cục bộ và xuất tài liệu Word chỉn chu với sơ đồ, công thức chỉnh sửa được và tô sáng mã.",
     "description": "Extension description shown in Chrome Web Store"
   },
   "extensionName": {

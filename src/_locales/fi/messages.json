@@ -220,7 +220,7 @@
     "description": "Toast shown during export"
   },
   "extensionDescription": {
-    "message": "Markdown täydelliseksi Wordiksi — Mermaid, PlantUML, Vega, drawio, Graphviz, LaTeX, koodin korostus, paikallinen käsittely.",
+    "message": "Esikatsele Markdownia paikallisesti ja vie siistejä Word-asiakirjoja kaavioilla, kaavoilla ja koodikorostuksella.",
     "description": "Extension description shown in Chrome Web Store"
   },
   "extensionName": {

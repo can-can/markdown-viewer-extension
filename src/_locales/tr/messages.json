@@ -220,7 +220,7 @@
     "description": "Toast shown during export"
   },
   "extensionDescription": {
-    "message": "Markdown'dan mükemmel Word'e — Mermaid, PlantUML, Vega, drawio, infografik, Graphviz, LaTeX, kod vurgulama, yerel işleme.",
+    "message": "Markdown dosyalarını yerel olarak önizleyin; diyagram, düzenlenebilir formül ve kod vurgulu Word belgeleri dışa aktarın.",
     "description": "Extension description shown in Chrome Web Store"
   },
   "extensionName": {
