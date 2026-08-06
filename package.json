@@ -24,6 +24,7 @@
     "prepack": "node scripts/build-cli.js",
     "documd": "node scripts/documd.js",
     "build:desktop": "node desktop/build.js",
+    "package:desktop": "node desktop/build.js --package",
     "dev:desktop": "node desktop/build.js && electron dist/desktop/main.cjs",
     "sync:formats": "node scripts/sync-formats.js",
     "build:app": "node mobile/build-app.js all",

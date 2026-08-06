@@ -29,6 +29,7 @@ export function renderFolderTabs(
     if (folder.status === 'unavailable') {
       tab.dataset.status = 'unavailable';
       tab.title = `${folder.path} (unavailable)`;
+      label.textContent = `${folder.name} (unavailable)`;
     }
     label.addEventListener('click', () => handlers.onActivate(folder.id));
 

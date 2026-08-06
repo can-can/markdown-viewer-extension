@@ -10,6 +10,7 @@ import type { FolderState, TreeNode, WorkspaceModel } from './workspace-model.ts
 export interface FileTreeHandlers {
   onOpenFile(folderId: string, relPath: string): void;
   onToggleDir(folderId: string, relPath: string): void;
+  onRetryFolder(folderId: string): void;
 }
 
 function renderNode(
@@ -76,7 +77,16 @@ export function renderFileTree(
   if (folder.status === 'unavailable') {
     const notice = document.createElement('div');
     notice.className = 'tree-notice';
-    notice.textContent = 'This folder is no longer available.';
+    const message = document.createElement('span');
+    message.textContent = 'This folder is no longer available.';
+
+    const retry = document.createElement('button');
+    retry.className = 'tree-notice-action';
+    retry.type = 'button';
+    retry.textContent = 'Retry';
+    retry.addEventListener('click', () => handlers.onRetryFolder(folder.id));
+
+    notice.append(message, retry);
     container.append(notice);
     return;
   }

@@ -483,7 +483,18 @@ html, body {
 .tree-chevron, .tree-icon { display: inline-flex; width: 16px; flex: 0 0 auto; }
 .tree-chevron svg, .tree-icon svg { width: 14px; height: 14px; }
 .tree-label { overflow: hidden; text-overflow: ellipsis; }
-.tree-notice { padding: 12px; font-size: 13px; color: var(--mv-text-muted, #57606a); }
+.tree-notice {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+  padding: 12px; font-size: 13px; color: var(--mv-text-muted, #57606a);
+}
+.tree-notice-action,
+.viewer-banner-action {
+  border: 1px solid currentColor; border-radius: 5px;
+  background: transparent; color: inherit; cursor: pointer;
+  padding: 3px 8px; font: inherit;
+}
+.tree-notice-action:hover,
+.viewer-banner-action:hover { background: rgb(0 0 0 / 7%); }
 
 /* ── File tabs ────────────────────────────────────────────────────── */
 .file-tab {
@@ -507,3 +518,15 @@ html, body {
   padding: 2px 4px; border-radius: 4px; flex: 0 0 auto;
 }
 .file-tab-close:hover { background: var(--mv-hover, #eaeef2); }
+
+/* ── Recoverable filesystem notices ─────────────────────────────── */
+.viewer-banner {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 8px 12px; font-size: 13px;
+  background: var(--mv-warn-bg, #fff8c5);
+  color: var(--mv-warn-text, #4d2d00);
+  border-bottom: 1px solid var(--mv-warn-border, #d4a72c);
+}
+.viewer-banner-message { min-width: 0; }
+.viewer-banner-action { flex: 0 0 auto; }

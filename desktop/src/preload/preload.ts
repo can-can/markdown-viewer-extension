@@ -6,6 +6,9 @@ const bridge: DesktopBridge = {
 
   closeFolder: (folderId: string): Promise<void> => ipcRenderer.invoke('folder:close', folderId),
 
+  retryFolder: (folderId: string): Promise<DirEntry[]> =>
+    ipcRenderer.invoke('folder:retry', folderId),
+
   listDir: (folderId: string, relPath: string): Promise<DirEntry[]> =>
     ipcRenderer.invoke('fs:listDir', folderId, relPath),
 

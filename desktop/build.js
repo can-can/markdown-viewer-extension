@@ -53,7 +53,9 @@ await build({
   outExtension: { '.js': '.cjs' },
   platform: 'node',
   format: 'cjs',
-  external: ['electron', 'chokidar', 'fsevents'],
+  // chokidar is bundled because dist/desktop is a self-contained app directory
+  // with no production node_modules for electron-builder to copy.
+  external: ['electron'],
 });
 
 await build({
@@ -190,3 +192,22 @@ fs.unlinkSync(workerPath);
 console.log('  • iframe-render.html (Mermaid + worker inlined)');
 
 console.log(`\n✅ Build complete → dist/desktop/`);
+
+if (process.argv.includes('--package')) {
+  const { execFileSync } = await import('node:child_process');
+  const builderCli = path.join(
+    projectRoot,
+    'node_modules/electron-builder/out/cli/cli.js',
+  );
+  console.log('\n📦 Packaging unsigned universal macOS DMG...');
+  execFileSync(process.execPath, [
+    builderCli,
+    '--config',
+    'desktop/electron-builder.yml',
+    '--mac',
+  ], {
+    stdio: 'inherit',
+    cwd: projectRoot,
+  });
+  console.log(`\n✅ Packaged → dist/docu.md-${version}-universal.dmg`);
+}

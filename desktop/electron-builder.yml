@@ -1,0 +1,25 @@
+appId: md.docu.desktop
+productName: docu.md
+copyright: GPL-3.0-only
+
+directories:
+  app: dist/desktop
+  output: dist
+
+files:
+  - '**/*'
+
+mac:
+  category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch: [universal]
+  # electron-builder rasterizes SVG at 1024px; the 128px extension icon is too
+  # small for a valid macOS .icns (minimum 512px).
+  icon: icons/icon.svg
+  darkModeSupport: true
+  # Signing and notarization are deliberately out of scope for local builds.
+  identity: null
+
+dmg:
+  artifactName: ${productName}-${version}-universal.${ext}

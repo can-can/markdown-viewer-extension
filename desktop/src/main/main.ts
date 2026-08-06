@@ -2,6 +2,7 @@ import { app, BrowserWindow, protocol, net } from 'electron';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { registerIpcHandlers } from './ipc.ts';
+import { stopAllWatchers } from './file-watcher.ts';
 
 const DIST_DIR = __dirname;
 
@@ -55,4 +56,8 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
+});
+
+app.on('before-quit', () => {
+  stopAllWatchers();
 });

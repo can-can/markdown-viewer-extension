@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { _electron as electron, type ElectronApplication, type Page } from 'playwright';
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -22,13 +23,17 @@ async function launchApp(): Promise<ElectronApplication> {
  * the main process to hand back the given fixture folders in sequence.
  */
 async function stubFolderDialog(app: ElectronApplication, folderNames: string[]): Promise<void> {
+  await stubFolderPaths(app, folderNames.map((name) => path.join(fixtures, name)));
+}
+
+async function stubFolderPaths(app: ElectronApplication, paths: string[]): Promise<void> {
   await app.evaluate(async ({ dialog }, paths) => {
     let index = 0;
     dialog.showOpenDialog = async () => ({
       canceled: false,
       filePaths: [paths[Math.min(index++, paths.length - 1)]],
     });
-  }, folderNames.map((name) => path.join(fixtures, name)));
+  }, paths);
 }
 
 describe('desktop app launch', () => {
@@ -52,6 +57,7 @@ describe('desktop app launch', () => {
       'onFileChanged',
       'openFolderDialog',
       'readFile',
+      'retryFolder',
     ]);
   });
 
@@ -155,7 +161,7 @@ describe('document rendering', () => {
     await window.click('.tree-row[data-rel-path="README.md"]');
 
     const frame = await (await window.waitForSelector(
-      'iframe[data-active="true"]',
+      'iframe[data-view-key$=":README.md"]',
     )).contentFrame();
     assert.ok(frame, 'active viewer iframe should have a content frame');
     await frame.waitForSelector('h1');
@@ -190,4 +196,168 @@ describe('document rendering', () => {
   });
 });
 
-export { launchApp, stubFolderDialog, fixtures, projectRoot, fs };
+describe('file watching and live reload', () => {
+  let app: ElectronApplication;
+  let window: Page;
+
+  before(async () => {
+    app = await launchApp();
+    window = await app.firstWindow();
+    await window.waitForSelector('#landing', { state: 'visible' });
+    await stubFolderDialog(app, ['alpha']);
+    await window.click('#open-folder');
+    await window.waitForSelector('.tree-row[data-rel-path="README.md"]');
+  });
+  after(async () => { await app?.close(); });
+
+  it('re-renders an open tab in its existing iframe when the file changes', async () => {
+    const target = path.join(fixtures, 'alpha', 'README.md');
+    const original = await fs.readFile(target, 'utf8');
+
+    try {
+      await window.click('.tree-row[data-rel-path="README.md"]');
+      const iframe = await window.waitForSelector('iframe[data-view-key$=":README.md"]');
+      await iframe.evaluate((element) => { element.dataset.smokeIdentity = 'preserved'; });
+      const frame = await iframe.contentFrame();
+      assert.ok(frame, 'README viewer iframe should have a content frame');
+      await frame.waitForSelector('h1');
+      assert.equal(await frame.textContent('h1'), 'Alpha');
+
+      await fs.writeFile(target, '# Alpha Reloaded\n\nUpdated on disk.\n', 'utf8');
+      await frame.waitForFunction(
+        () => document.querySelector('h1')?.textContent === 'Alpha Reloaded',
+        undefined,
+        { timeout: 5000 },
+      );
+
+      assert.equal(
+        await window.getAttribute('iframe[data-view-key$=":README.md"]', 'data-smoke-identity'),
+        'preserved',
+        'live reload must reuse the existing iframe',
+      );
+    } finally {
+      await fs.writeFile(target, original, 'utf8');
+    }
+  });
+});
+
+describe('deleted file state', () => {
+  let app: ElectronApplication;
+  let window: Page;
+
+  before(async () => {
+    app = await launchApp();
+    window = await app.firstWindow();
+    await window.waitForSelector('#landing', { state: 'visible' });
+    await stubFolderDialog(app, ['alpha']);
+    await window.click('#open-folder');
+    await window.waitForSelector('.tree-row[data-rel-path="README.md"]');
+  });
+  after(async () => { await app?.close(); });
+
+  it('removes the tree row but keeps the open tab with a banner', async () => {
+    const target = path.join(fixtures, 'alpha', 'temp-doc.md');
+
+    try {
+      await fs.writeFile(target, '# Temp\n', 'utf8');
+      await window.waitForSelector('.tree-row[data-rel-path="temp-doc.md"]');
+      await window.click('.tree-row[data-rel-path="temp-doc.md"]');
+
+      const frame = await (await window.waitForSelector(
+        'iframe[data-view-key$=":temp-doc.md"]',
+      )).contentFrame();
+      assert.ok(frame, 'temporary document should have a content frame');
+      await frame.waitForSelector('h1');
+
+      await fs.rm(target);
+      await window.waitForSelector(
+        '.tree-row[data-rel-path="temp-doc.md"]',
+        { state: 'detached' },
+      );
+      await window.waitForSelector('#viewer-banner', { state: 'visible' });
+
+      assert.match(await window.textContent('#viewer-banner') ?? '', /no longer exists on disk/);
+      assert.ok(
+        await window.$('.file-tab[data-rel-path="temp-doc.md"]'),
+        'the deleted file tab should remain open',
+      );
+    } finally {
+      await fs.rm(target, { force: true });
+    }
+  });
+});
+
+describe('unavailable folder state', () => {
+  let app: ElectronApplication;
+  let window: Page;
+  let tempRoot: string;
+
+  before(async () => {
+    tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'documd-unavailable-'));
+    await fs.writeFile(path.join(tempRoot, 'README.md'), '# Available\n', 'utf8');
+    app = await launchApp();
+    window = await app.firstWindow();
+    await window.waitForSelector('#landing', { state: 'visible' });
+    await stubFolderPaths(app, [tempRoot]);
+    await window.click('#open-folder');
+    await window.waitForSelector('.tree-row[data-rel-path="README.md"]');
+  });
+  after(async () => {
+    await app?.close();
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  it('marks a vanished folder unavailable and recovers through Retry', async () => {
+    await fs.rm(tempRoot, { recursive: true });
+    await window.waitForSelector('.folder-tab[data-status="unavailable"]');
+    await window.waitForSelector('.tree-notice-action', { state: 'visible' });
+    assert.match(await window.textContent('.folder-tab-label') ?? '', /unavailable/);
+
+    await fs.mkdir(tempRoot, { recursive: true });
+    await fs.writeFile(path.join(tempRoot, 'README.md'), '# Restored\n', 'utf8');
+    await window.click('.tree-notice-action');
+    await window.waitForSelector('.tree-row[data-rel-path="README.md"]');
+    await window.waitForFunction(
+      () => !document.querySelector('.folder-tab')?.hasAttribute('data-status'),
+    );
+  });
+});
+
+describe('watcher failure notice', () => {
+  let app: ElectronApplication;
+  let window: Page;
+
+  before(async () => {
+    app = await launchApp();
+    window = await app.firstWindow();
+    await window.waitForSelector('#landing', { state: 'visible' });
+    await stubFolderDialog(app, ['alpha']);
+    await window.click('#open-folder');
+    await window.waitForSelector('.tree-row[data-rel-path="README.md"]');
+  });
+  after(async () => { await app?.close(); });
+
+  it('shows a non-blocking notice while files remain readable', async () => {
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0].webContents.send('fs:changed', {
+        folderId: 'f1',
+        relPath: '',
+        kind: 'watcher-error',
+      });
+    });
+
+    await window.waitForSelector('#viewer-banner', { state: 'visible' });
+    assert.match(await window.textContent('#viewer-banner') ?? '', /Live reload is unavailable/);
+    assert.equal(await window.textContent('.viewer-banner-action'), 'Retry watcher');
+
+    await window.click('.tree-row[data-rel-path="README.md"]');
+    const frame = await (await window.waitForSelector(
+      'iframe[data-view-key$=":README.md"]',
+    )).contentFrame();
+    assert.ok(frame, 'watcher failure must not block normal file reads');
+    await frame.waitForSelector('h1');
+    assert.equal(await frame.textContent('h1'), 'Alpha');
+  });
+});
+
+export { launchApp, stubFolderDialog, stubFolderPaths, fixtures, projectRoot, fs };
