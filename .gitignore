@@ -89,3 +89,6 @@ src/fonts/*.ttf
 /main.js
 /styles.css
 /plans/
+
+# Desktop app build output
+dist/desktop

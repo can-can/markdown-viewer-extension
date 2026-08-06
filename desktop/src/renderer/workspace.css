@@ -1,0 +1,445 @@
+:root {
+  --color-primary: #2f5fd0;
+  --color-primary-hover: #234aa8;
+  --color-primary-light: #eef2fb;
+  --color-primary-subtle: #d9e2f6;
+  --color-bg-body: #fdfcf9;
+  --color-bg-surface: #ffffff;
+  --color-text-primary: #22201b;
+  --color-text-secondary: #6a6459;
+  --color-text-tertiary: #9c9488;
+  --color-border: #e7e1d5;
+  --color-border-hover: #d8d0c2;
+  --color-bg-hover: #f6f3ec;
+  --color-bg-active: #efeadf;
+  --sidebar-width: 260px;
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+/* Dark surface override — toggled by the inline preload script in
+  workspace.html when `mdv-dark=1` is present in sessionStorage. Flips the
+   whole palette so sidebar, file tree, toolbar buttons, search inputs and
+   the landing page all follow the selected dark theme. */
+:root.dark {
+  --color-primary: #3b82f6;
+  --color-primary-hover: #60a5fa;
+  --color-bg-body: #1a1d21;
+  --color-bg-surface: #24272c;
+  --color-text-primary: #e6e6e6;
+  --color-text-secondary: #b4b9c2;
+  --color-text-tertiary: #8b919b;
+  --color-border: #3a3f46;
+  --color-border-hover: #4a5058;
+  --color-bg-hover: #2e3239;
+  --color-bg-active: #363b44;
+}
+
+/* Search input & mode button hard-code `background: #fff` below; override
+   them explicitly in dark so they blend into the sidebar surface. */
+:root.dark .sidebar-search-input,
+:root.dark .sidebar-search-mode {
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+}
+
+/* Header shadow under dark palette looks too strong with the default 0.06
+   alpha on black; tone it up so the divider remains visible. */
+:root.dark .sidebar-header {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+}
+
+/* Dark scrollbars (WebKit) */
+:root.dark ::-webkit-scrollbar { width: 10px; height: 10px; }
+:root.dark ::-webkit-scrollbar-track { background: transparent; }
+:root.dark ::-webkit-scrollbar-thumb { background: #3a3f46; border-radius: 5px; }
+:root.dark ::-webkit-scrollbar-thumb:hover { background: #4a5058; }
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  font-family: var(--font-family);
+  background: var(--color-bg-body);
+  color: var(--color-text-primary);
+}
+
+/* === Landing === */
+.landing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.landing-card {
+  text-align: center;
+  width: min(560px, 100%);
+  padding: 48px 32px;
+}
+
+.landing-logo { width: 48px; height: 48px; margin-bottom: 16px; }
+.landing-title { font-size: 24px; font-weight: 600; margin-bottom: 8px; }
+.landing-desc { font-size: 14px; color: var(--color-text-secondary); margin-bottom: 32px; }
+
+.landing-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #fff;
+  background: var(--color-primary);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.landing-btn:hover { background: var(--color-primary-hover); }
+.landing-btn-icon { display: flex; align-items: center; }
+.landing-btn-icon svg { width: 18px; height: 18px; }
+.drop-overlay {
+  position: fixed;
+  inset: 12px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  border: 2px dashed var(--color-primary);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--color-bg-surface) 88%, transparent);
+  color: var(--color-primary);
+  font-weight: 600;
+  text-align: center;
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s, visibility 0.15s;
+}
+
+.drop-overlay.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Recent workspaces */
+.recent-workspaces { margin-top: 40px; text-align: left; }
+.recent-title { font-size: 13px; color: var(--color-text-tertiary); margin-bottom: 8px; }
+.recent-list { display: flex; flex-direction: column; gap: 4px; }
+.recent-item-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  border-radius: 6px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  text-align: left;
+  width: 100%;
+}
+.recent-item:hover { background: var(--color-bg-hover); }
+.recent-item-remove {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+
+.recent-item-row:hover .recent-item-remove,
+.recent-item-row:focus-within .recent-item-remove {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.recent-item-remove:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.recent-item-remove:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+/* === Workspace === */
+.workspace {
+  display: flex;
+  height: 100%;
+  position: relative;
+}
+
+.workspace.sidebar-left {
+  flex-direction: row-reverse;
+}
+
+/* Resize handle */
+.resize-handle {
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s;
+  position: absolute;
+  top: 50px;
+  bottom: 0;
+  left: 0;
+  z-index: 5;
+}
+
+.resize-handle:hover,
+.resize-handle.active {
+  background: var(--color-primary);
+}
+
+/* Sidebar */
+.sidebar {
+  width: var(--sidebar-width);
+  min-width: 160px;
+  max-width: 50vw;
+  border-left: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.workspace.sidebar-left .sidebar {
+  border-left: none;
+  border-right: 1px solid var(--color-border);
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  height: 50px;
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: 0 2px 4px rgba(55, 45, 30, 0.06);
+  z-index: 1;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sidebar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sidebar-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  color: var(--color-text-primary);
+}
+.sidebar-btn svg { width: 16px; height: 16px; }
+.sidebar-btn:hover { background: var(--color-bg-hover); }
+
+.workspace-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+}
+
+.sidebar-search.hidden {
+  display: none;
+}
+
+.sidebar-search-input {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--color-text-primary);
+  font-size: 13px;
+}
+
+.sidebar-search-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+
+.sidebar-search-mode {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.sidebar-search-mode svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* File tree */
+.file-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.tree-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+.tree-item:hover { background: var(--color-bg-hover); }
+.tree-item.active { background: var(--color-bg-active); font-weight: 500; }
+
+.tree-icon { width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.tree-icon svg { width: 16px; height: 16px; }
+.tree-label { overflow: hidden; text-overflow: ellipsis; }
+
+.tree-empty {
+  padding: 18px 14px;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+}
+
+.search-result-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.search-result-item:hover {
+  background: var(--color-bg-hover);
+}
+
+.search-result-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.search-result-path,
+.search-result-snippet {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.search-result-path {
+  word-break: break-all;
+}
+
+.search-result-snippet {
+  color: var(--color-text-tertiary);
+}
+
+.search-highlight {
+  background: color-mix(in srgb, var(--color-primary) 20%, transparent);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+.tree-children { display: none; }
+.tree-children.open { display: block; }
+
+/* Preview pane */
+.preview-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-bg-surface);
+  position: relative;
+}
+
+.preview-empty {
+  color: var(--color-text-tertiary);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+
+.preview-frame {
+  width: 100%;
+  flex: 1;
+  border: none;
+  /* Paint the iframe element itself with the surface color so the brief
+     blank frame between navigations (file switch / refresh) doesn't flash
+     white against a dark preview-pane. */
+  background: var(--color-bg-surface);
+}
+
+/* ── Desktop shell layout ─────────────────────────────────────────── */
+.workspace { display: flex; flex-direction: column; height: 100vh; }
+.workspace-body { display: flex; flex: 1; min-height: 0; }
+.main-pane { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+
+.folder-tabs {
+  display: flex; align-items: center; gap: 2px;
+  height: 38px; padding: 0 8px 0 78px; /* 78px clears the macOS traffic lights */
+  border-bottom: 1px solid var(--mv-border, #e1e4e8);
+  -webkit-app-region: drag;
+}
+.folder-tabs > * { -webkit-app-region: no-drag; }
+
+.file-tabs {
+  display: flex; align-items: stretch; gap: 1px;
+  height: 34px; overflow-x: auto;
+  border-bottom: 1px solid var(--mv-border, #e1e4e8);
+}
+
+.viewer-host { position: relative; flex: 1; min-height: 0; }
+.viewer-host > iframe {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%; border: 0;
+}
+/* Inactive views stay laid out so Mermaid/KaTeX/drawio measure a real box. */
+.viewer-host > iframe[data-active='false'] { visibility: hidden; pointer-events: none; }

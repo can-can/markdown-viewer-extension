@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self' docmd:; script-src 'self' docmd:; style-src 'self' docmd: 'unsafe-inline'; img-src 'self' docmd: data: blob:;">
+  <title>docu.md</title>
+  <link rel="stylesheet" href="workspace.css">
+</head>
+<body>
+  <div id="landing" class="landing">
+    <div class="landing-card">
+      <h1 class="landing-title">docu.md</h1>
+      <p class="landing-desc">Open a folder to browse and preview its documents.</p>
+      <button id="open-folder" class="landing-btn">Open Folder</button>
+    </div>
+  </div>
+
+  <div id="workspace" class="workspace" hidden>
+    <div id="folder-tabs" class="folder-tabs" role="tablist"></div>
+    <div class="workspace-body">
+      <div id="sidebar" class="sidebar">
+        <div id="file-tree" class="file-tree"></div>
+      </div>
+      <div class="resize-handle" id="resize-handle"></div>
+      <div class="main-pane">
+        <div id="file-tabs" class="file-tabs" role="tablist"></div>
+        <div id="viewer-host" class="viewer-host"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="renderer.js"></script>
+</body>
+</html>

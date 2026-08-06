@@ -23,6 +23,8 @@
     "build:cli": "node scripts/build-cli.js",
     "prepack": "node scripts/build-cli.js",
     "documd": "node scripts/documd.js",
+    "build:desktop": "node desktop/build.js",
+    "dev:desktop": "node desktop/build.js && electron dist/desktop/main.cjs",
     "sync:formats": "node scripts/sync-formats.js",
     "build:app": "node mobile/build-app.js all",
     "build:ios": "node mobile/build-app.js ios",
@@ -442,5 +444,11 @@
       }
     ]
   },
-  "icon": "icons/icon128.png"
+  "icon": "icons/icon128.png",
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "chokidar": "^5.0.0",
+    "electron": "^43.3.0",
+    "electron-builder": "^26.15.3"
+  }
 }

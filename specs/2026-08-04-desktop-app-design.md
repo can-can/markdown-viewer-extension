@@ -106,9 +106,12 @@ changes.
 ### Reused without modification
 
 - All of `src/` — markdown core, renderers, exporters, themes, services, i18n
-- `chrome/src/workspace/viewer-embed.ts` and `viewer-embed.html`
 - `chrome/src/workspace/file-icons.ts` and `file-icons-data.ts`
 - `src/integration/iframe-viewer-host.ts` — the host↔iframe bridge
+- `chrome/src/webview/viewer-main.ts` — imported directly across platform
+  folders, following the precedent `firefox/src/webview/main.ts` already sets.
+  It takes `{ platform, pluginRenderer, themeConfigRenderer }`, so the desktop
+  supplies its own `PlatformAPI` and reuses the 1,644-line viewer as-is.
 
 ### Ported with changes
 
@@ -125,6 +128,13 @@ visited file already addressable as a tab, a second history stack is redundant.
 
 `chrome/src/workspace/workspace.css` is copied as the styling base and extended
 with the two tab strips.
+
+`chrome/src/workspace/viewer-embed.ts` and `viewer-embed.html` are adapted
+rather than reused verbatim. The Chrome version imports `../webview/index`,
+which sets `globalThis.platform` to the Chrome implementation, and types on
+`ChromeDocumentService`. The desktop copy swaps the platform import and drops
+the back/forward history controls along with nav history, making it roughly 90
+lines shorter.
 
 ## Process architecture
 
