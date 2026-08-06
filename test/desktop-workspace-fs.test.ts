@@ -40,7 +40,10 @@ describe('resolveWithin', () => {
 describe('listDir', () => {
   it('lists one level, directories before files, alphabetically', async () => {
     const entries = await listDir(alpha, '');
-    assert.deepEqual(entries.map((e) => e.name), ['nested', 'notes.markdown', 'README.md']);
+    assert.deepEqual(
+      entries.map((e) => e.name),
+      ['nested', 'diagram.md', 'notes.markdown', 'README.md'],
+    );
     assert.equal(entries[0].kind, 'directory');
   });
 

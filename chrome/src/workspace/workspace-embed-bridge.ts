@@ -1,11 +1,16 @@
-import type { ChromeDocumentService } from '../webview/api-impl';
+/** Structural type so non-Chrome hosts can supply their own document service. */
+interface WorkspaceFileReaderHost {
+  setWorkspaceFileReader(
+    reader: (relativePath: string, binary: boolean) => Promise<string>,
+  ): void;
+}
 
 type ParentMessage =
   | { type: 'RESOLVE_IMAGE'; src: string; id: number }
   | { type: 'RESOLVE_FILE'; path: string; id: number; binary: boolean };
 
 interface WorkspaceEmbedBridgeOptions {
-  documentService: ChromeDocumentService;
+  documentService: WorkspaceFileReaderHost;
   postToParent: (message: ParentMessage) => void;
 }
 

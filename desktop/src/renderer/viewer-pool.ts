@@ -20,6 +20,7 @@ export interface ViewerPoolOptions {
 
 export interface ViewerPool {
   activate(key: string, input: SyncInput): ViewHandle;
+  deactivate(): void;
   acquire(key: string): ViewHandle | null;
   has(key: string): boolean;
   evictFolder(folderId: string): void;
@@ -77,6 +78,11 @@ export function createViewerPool(options: ViewerPoolOptions): ViewerPool {
       view.sync(input);
       evictIfNeeded();
       return view;
+    },
+
+    deactivate() {
+      if (activeKey) views.get(activeKey)?.setActive(false);
+      activeKey = null;
     },
 
     acquire: (key) => views.get(key) ?? null,

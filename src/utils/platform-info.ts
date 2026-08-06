@@ -3,7 +3,14 @@ import type { PlatformType } from '../types/platform';
 declare const MV_PLATFORM: PlatformType | undefined;
 declare const MV_RUNTIME: 'popup' | 'content' | 'background' | 'webview' | 'worker' | 'shared' | undefined;
 
-const PLATFORM_SET = new Set<PlatformType>(['chrome', 'firefox', 'mobile', 'vscode', 'obsidian']);
+const PLATFORM_SET = new Set<PlatformType>([
+  'chrome',
+  'firefox',
+  'mobile',
+  'vscode',
+  'obsidian',
+  'desktop',
+]);
 
 function isPlatformType(value: unknown): value is PlatformType {
   return typeof value === 'string' && PLATFORM_SET.has(value as PlatformType);

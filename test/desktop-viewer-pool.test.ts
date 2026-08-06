@@ -69,6 +69,13 @@ describe('viewer pool', () => {
     assert.equal(views.get('f1:b.md')?.active, true);
   });
 
+  it('hides the active view without evicting it', () => {
+    pool.activate('f1:a.md', doc('# A'));
+    pool.deactivate();
+    assert.equal(views.get('f1:a.md')?.active, false);
+    assert.equal(pool.has('f1:a.md'), true);
+  });
+
   it('evicts the least recently used view at capacity', () => {
     pool.activate('f1:a.md', doc('# A'));
     pool.activate('f1:b.md', doc('# B'));

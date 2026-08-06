@@ -65,7 +65,7 @@ describe('desktop app launch', () => {
       return { names: entries.map((e) => e.name), content };
     });
 
-    assert.deepEqual(result?.names, ['nested', 'notes.markdown', 'README.md']);
+    assert.deepEqual(result?.names, ['nested', 'diagram.md', 'notes.markdown', 'README.md']);
     assert.match(result?.content ?? '', /Alpha root document/);
   });
 });
@@ -134,6 +134,59 @@ describe('folder tabs', () => {
     const labels = await window.$$eval('.folder-tab-label', (nodes) =>
       nodes.map((n) => n.textContent));
     assert.deepEqual(labels, ['alpha']);
+  });
+});
+
+describe('document rendering', () => {
+  let app: ElectronApplication;
+  let window: Page;
+
+  before(async () => {
+    app = await launchApp();
+    window = await app.firstWindow();
+    await window.waitForSelector('#landing', { state: 'visible' });
+    await stubFolderDialog(app, ['alpha']);
+    await window.click('#open-folder');
+    await window.waitForSelector('.tree-row[data-rel-path="README.md"]');
+  });
+  after(async () => { await app?.close(); });
+
+  it('renders a document in the active viewer iframe', async () => {
+    await window.click('.tree-row[data-rel-path="README.md"]');
+
+    const frame = await (await window.waitForSelector(
+      'iframe[data-active="true"]',
+    )).contentFrame();
+    assert.ok(frame, 'active viewer iframe should have a content frame');
+    await frame.waitForSelector('h1');
+    assert.equal(await frame.textContent('h1'), 'Alpha');
+  });
+
+  it('renders a Mermaid diagram through the offscreen render frame', async () => {
+    await window.click('.tree-row[data-rel-path="diagram.md"]');
+
+    // Select by view key, not by data-active: the outgoing view can still be
+    // marked active while the pool swaps, which would hand back the wrong frame.
+    const frame = await (await window.waitForSelector(
+      'iframe[data-view-key$=":diagram.md"]',
+    )).contentFrame();
+    assert.ok(frame, 'diagram viewer iframe should have a content frame');
+
+    // Wait on the rendered marker, NOT on a bare 'svg' selector — toolbar icons
+    // are SVGs and match instantly, which would pass before the diagram renders.
+    const block = await frame.waitForSelector(
+      '.diagram-block[data-plugin-type="mermaid"][data-plugin-rendered="true"]',
+      { timeout: 30000 },
+    );
+
+    const imgSrc = await block.evaluate(
+      (el) => el.querySelector('img')?.getAttribute('src')?.slice(0, 30) ?? '',
+    );
+    assert.match(
+      imgSrc,
+      /^data:image\/png;base64,/,
+      'diagram should be a rendered PNG, not a placeholder',
+    );
   });
 });
 

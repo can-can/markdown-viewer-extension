@@ -144,6 +144,9 @@ interface IncomingBroadcastMessage {
 export async function initializeViewerMain(options: ViewerMainOptions): Promise<void> {
   const { platform, pluginRenderer, themeConfigRenderer } = options;
 
+  // Bundled asset URLs go through platform.resource, so that the desktop app,
+  // which has no WebExtension runtime, can resolve them too. This handle stays
+  // for the extension-only storage listener further down.
   const webExtensionApi = getWebExtensionApi();
   const isMobile = platform.platform === 'mobile';
   const MIN_SIDEBAR_WIDTH = 160;
@@ -524,7 +527,7 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
     const link = document.createElement('link');
     link.rel = 'icon';
     link.type = 'image/png';
-    link.href = webExtensionApi.runtime.getURL('icons/icon16.png');
+    link.href = platform.resource.getURL('icons/icon16.png');
     document.head.appendChild(link);
   }
   setFavicon();
@@ -652,7 +655,7 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
         })),
       onThemeReady: async (name) => {
         try {
-          const resp = await fetch(webExtensionApi.runtime.getURL('slidev-shell/themes/themes.json'));
+          const resp = await fetch(platform.resource.getURL('slidev-shell/themes/themes.json'));
           if (!resp.ok) return;
           const manifest = await resp.json();
           const entry = manifest[name];
@@ -667,9 +670,9 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
         } catch { /* ignore */ }
       },
       getShellSource: async () =>
-        webExtensionApi.runtime.getURL('slidev-shell/slidev-shell/index.html'),
+        platform.resource.getURL('slidev-shell/slidev-shell/index.html'),
       getThemeUrl: async (name) =>
-        webExtensionApi.runtime.getURL(`slidev-shell/themes/theme-${name}.js`),
+        platform.resource.getURL(`slidev-shell/themes/theme-${name}.js`),
       onParsed: ({ title }) => {
         document.title = title;
         saveToHistory(platform);
