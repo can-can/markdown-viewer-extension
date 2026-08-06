@@ -418,6 +418,10 @@ html, body {
 }
 
 /* ── Desktop shell layout ─────────────────────────────────────────── */
+/* Class rules such as .landing{display:flex} outrank the UA's
+   [hidden]{display:none}, so hidden needs to win explicitly. */
+[hidden] { display: none !important; }
+
 .workspace { display: flex; flex-direction: column; height: 100vh; }
 .workspace-body { display: flex; flex: 1; min-height: 0; }
 .main-pane { display: flex; flex-direction: column; flex: 1; min-width: 0; }
@@ -443,3 +447,63 @@ html, body {
 }
 /* Inactive views stay laid out so Mermaid/KaTeX/drawio measure a real box. */
 .viewer-host > iframe[data-active='false'] { visibility: hidden; pointer-events: none; }
+
+/* ── Folder tabs ──────────────────────────────────────────────────── */
+.folder-tab {
+  display: flex; align-items: center; gap: 6px;
+  height: 28px; padding: 0 6px 0 10px;
+  border-radius: 6px 6px 0 0;
+  font-size: 12px; cursor: default; user-select: none;
+  color: var(--mv-text-muted, #57606a);
+}
+.folder-tab[data-active='true'] {
+  background: var(--mv-bg, #fff);
+  color: var(--mv-text, #1f2328);
+  box-shadow: inset 0 -2px 0 var(--mv-accent, #0969da);
+}
+.folder-tab[data-status='unavailable'] { opacity: 0.55; font-style: italic; }
+.folder-tab-label { cursor: pointer; white-space: nowrap; }
+.folder-tab-close, .folder-tab-add {
+  border: 0; background: transparent; cursor: pointer;
+  color: inherit; font-size: 12px; line-height: 1;
+  padding: 2px 4px; border-radius: 4px;
+}
+.folder-tab-close:hover, .folder-tab-add:hover { background: var(--mv-hover, #eaeef2); }
+.folder-tab-add { font-size: 16px; margin-left: 4px; }
+
+/* ── File tree ────────────────────────────────────────────────────── */
+.tree-row {
+  display: flex; align-items: center; gap: 4px;
+  height: 24px; padding-right: 8px;
+  font-size: 13px; cursor: pointer; user-select: none;
+  white-space: nowrap; overflow: hidden;
+}
+.tree-row:hover { background: var(--mv-hover, #eaeef2); }
+.tree-row[data-active='true'] { background: var(--mv-selected, #dbe9f7); }
+.tree-chevron, .tree-icon { display: inline-flex; width: 16px; flex: 0 0 auto; }
+.tree-chevron svg, .tree-icon svg { width: 14px; height: 14px; }
+.tree-label { overflow: hidden; text-overflow: ellipsis; }
+.tree-notice { padding: 12px; font-size: 13px; color: var(--mv-text-muted, #57606a); }
+
+/* ── File tabs ────────────────────────────────────────────────────── */
+.file-tab {
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 6px 0 10px; max-width: 220px;
+  border-right: 1px solid var(--mv-border, #e1e4e8);
+  font-size: 12px; cursor: pointer; user-select: none;
+  color: var(--mv-text-muted, #57606a);
+}
+.file-tab[data-active='true'] {
+  background: var(--mv-bg, #fff);
+  color: var(--mv-text, #1f2328);
+  box-shadow: inset 0 -2px 0 var(--mv-accent, #0969da);
+}
+.file-tab-icon { display: inline-flex; flex: 0 0 auto; }
+.file-tab-icon svg { width: 14px; height: 14px; }
+.file-tab-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-tab-close {
+  border: 0; background: transparent; cursor: pointer;
+  color: inherit; font-size: 11px; line-height: 1;
+  padding: 2px 4px; border-radius: 4px; flex: 0 0 auto;
+}
+.file-tab-close:hover { background: var(--mv-hover, #eaeef2); }

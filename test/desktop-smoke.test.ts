@@ -1,33 +1,50 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { _electron as electron, type ElectronApplication } from 'playwright';
+import { _electron as electron, type ElectronApplication, type Page } from 'playwright';
 import path from 'node:path';
+import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const fixtures = path.join(projectRoot, 'test/fixtures/desktop');
+
+/**
+ * Each describe block gets its own app instance. The app accumulates state
+ * (open folders, open tabs), so sharing one instance would make tests
+ * order-dependent.
+ */
+async function launchApp(): Promise<ElectronApplication> {
+  return electron.launch({ args: [path.join(projectRoot, 'dist/desktop/main.cjs')] });
+}
+
+/**
+ * The native folder dialog cannot be driven from the renderer, so stub it in
+ * the main process to hand back the given fixture folders in sequence.
+ */
+async function stubFolderDialog(app: ElectronApplication, folderNames: string[]): Promise<void> {
+  await app.evaluate(async ({ dialog }, paths) => {
+    let index = 0;
+    dialog.showOpenDialog = async () => ({
+      canceled: false,
+      filePaths: [paths[Math.min(index++, paths.length - 1)]],
+    });
+  }, folderNames.map((name) => path.join(fixtures, name)));
+}
 
 describe('desktop app launch', () => {
   let app: ElectronApplication;
+  let window: Page;
 
-  before(async () => {
-    app = await electron.launch({
-      args: [path.join(projectRoot, 'dist/desktop/main.cjs')],
-    });
-  });
-
-  after(async () => {
-    await app?.close();
-  });
+  before(async () => { app = await launchApp(); window = await app.firstWindow(); });
+  after(async () => { await app?.close(); });
 
   it('opens a window showing the landing state', async () => {
-    const window = await app.firstWindow();
     await window.waitForSelector('#landing', { state: 'visible' });
     const text = await window.textContent('#landing');
     assert.match(text ?? '', /Open a folder/);
   });
 
   it('exposes the filesystem bridge to the renderer', async () => {
-    const window = await app.firstWindow();
     const keys = await window.evaluate(() => Object.keys(window.desktop).sort());
     assert.deepEqual(keys, [
       'closeFolder',
@@ -39,14 +56,7 @@ describe('desktop app launch', () => {
   });
 
   it('reads a fixture file through the bridge', async () => {
-    const window = await app.firstWindow();
-    const fixtures = path.join(projectRoot, 'test/fixtures/desktop');
-
-    // The native dialog cannot be driven from the renderer, so stub it.
-    await app.evaluate(async ({ dialog }, alphaPath) => {
-      dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [alphaPath] });
-    }, path.join(fixtures, 'alpha'));
-
+    await stubFolderDialog(app, ['alpha']);
     const result = await window.evaluate(async () => {
       const folder = await window.desktop.openFolderDialog();
       if (!folder) return null;
@@ -59,3 +69,72 @@ describe('desktop app launch', () => {
     assert.match(result?.content ?? '', /Alpha root document/);
   });
 });
+
+describe('folder tabs', () => {
+  let app: ElectronApplication;
+  let window: Page;
+
+  before(async () => {
+    app = await launchApp();
+    window = await app.firstWindow();
+    await window.waitForSelector('#landing', { state: 'visible' });
+    await stubFolderDialog(app, ['alpha', 'beta']);
+  });
+  after(async () => { await app?.close(); });
+
+  it('opens two folders as separate tabs', async () => {
+    await window.click('#open-folder');
+    await window.waitForSelector('.folder-tab[data-active="true"]');
+    await window.click('#folder-tab-add');
+    await window.waitForSelector('.folder-tab:nth-of-type(2)');
+
+    const labels = await window.$$eval('.folder-tab-label', (nodes) =>
+      nodes.map((n) => n.textContent));
+    assert.deepEqual(labels, ['alpha', 'beta']);
+
+    const active = await window.getAttribute('.folder-tab:nth-of-type(2)', 'data-active');
+    assert.equal(active, 'true');
+  });
+
+  it('hides the landing state once a folder is open', async () => {
+    assert.equal(await window.isVisible('#landing'), false);
+    assert.equal(await window.isVisible('#workspace'), true);
+  });
+
+  it('expands a directory lazily and lists its children', async () => {
+    await window.click('.folder-tab:nth-of-type(1) .folder-tab-label');
+    await window.waitForSelector('.tree-row[data-rel-path="README.md"]');
+
+    // 'nested' children are absent until the directory is expanded.
+    assert.equal(await window.$('.tree-row[data-rel-path="nested/deep.md"]'), null);
+    await window.click('.tree-row[data-rel-path="nested"]');
+    await window.waitForSelector('.tree-row[data-rel-path="nested/deep.md"]');
+  });
+
+  it('keeps file tabs isolated per folder across folder switches', async () => {
+    await window.click('.folder-tab:nth-of-type(1) .folder-tab-label');
+    await window.click('.tree-row[data-rel-path="README.md"]');
+    await window.waitForSelector('.file-tab[data-rel-path="README.md"]');
+
+    await window.click('.folder-tab:nth-of-type(2) .folder-tab-label');
+    await window.waitForSelector('.tree-row[data-rel-path="index.md"]');
+    await window.click('.tree-row[data-rel-path="index.md"]');
+    await window.waitForSelector('.file-tab[data-rel-path="index.md"]');
+
+    assert.equal((await window.$$('.file-tab')).length, 1, 'beta shows only its own tab');
+
+    await window.click('.folder-tab:nth-of-type(1) .folder-tab-label');
+    await window.waitForSelector('.file-tab[data-rel-path="README.md"]');
+    assert.equal((await window.$$('.file-tab')).length, 1, 'alpha shows only its own tab');
+  });
+
+  it('closes a folder tab and its files', async () => {
+    await window.click('.folder-tab:nth-of-type(2) .folder-tab-close');
+    await window.waitForFunction(() => document.querySelectorAll('.folder-tab').length === 1);
+    const labels = await window.$$eval('.folder-tab-label', (nodes) =>
+      nodes.map((n) => n.textContent));
+    assert.deepEqual(labels, ['alpha']);
+  });
+});
+
+export { launchApp, stubFolderDialog, fixtures, projectRoot, fs };
