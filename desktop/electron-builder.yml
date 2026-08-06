@@ -8,6 +8,14 @@ directories:
 
 files:
   - '**/*'
+  # esbuild bundles every runtime dependency into main.cjs (chokidar included),
+  # so the app needs no node_modules at all. Without this exclusion
+  # electron-builder resolves production deps from the ROOT package.json, which
+  # lists ~100 packages (mermaid, vega, slidev, echarts, vite) under
+  # "dependencies" — that pulled 2.6GB into app.asar and made the universal
+  # lipo step stall on two ~2GB bundles.
+  - '!node_modules'
+  - '!node_modules/**/*'
 
 mac:
   category: public.app-category.productivity
