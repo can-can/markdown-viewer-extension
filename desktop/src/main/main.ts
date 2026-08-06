@@ -1,6 +1,7 @@
 import { app, BrowserWindow, protocol, net } from 'electron';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { registerIpcHandlers } from './ipc.ts';
 
 const DIST_DIR = __dirname;
 
@@ -26,6 +27,8 @@ function createWindow(): BrowserWindow {
       sandbox: true,
     },
   });
+
+  registerIpcHandlers(win);
 
   win.once('ready-to-show', () => win.show());
   void win.loadURL('docmd://app/index.html');
