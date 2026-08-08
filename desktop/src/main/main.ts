@@ -6,6 +6,14 @@ import { stopAllWatchers } from './file-watcher.ts';
 
 const DIST_DIR = __dirname;
 
+// Fix the app name before anything reads app.getPath('userData').
+//
+// Launching main.cjs by file path means Electron never reads the generated
+// package.json, so the name falls back to "Electron" and the session file lands
+// in a directory shared with every other Electron app run in development.
+// Setting it here makes the development and packaged paths the same.
+app.setName('docu.md');
+
 // A custom scheme gives the renderer a real origin. With file:// the viewer
 // iframes would be opaque origins, which breaks both postMessage targeting and
 // relative asset fetches inside the viewer.
