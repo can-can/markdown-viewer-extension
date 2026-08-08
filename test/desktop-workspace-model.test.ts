@@ -2,7 +2,9 @@ import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   createWorkspaceModel,
+  groupByRepo,
   viewKey,
+  type FolderState,
   type WorkspaceModel,
 } from '../desktop/src/renderer/workspace-model.ts';
 
@@ -265,6 +267,106 @@ describe('folder status', () => {
     assert.equal(model.getFolder('f1')!.status, 'ready');
     model.setFolderStatus('f1', 'unavailable');
     assert.equal(model.getFolder('f1')!.status, 'unavailable');
+  });
+});
+
+describe('worktree fields', () => {
+  let model: WorkspaceModel;
+  beforeEach(() => { model = createWorkspaceModel(); });
+
+  it('defaults to no repository and loaded true', () => {
+    model.addFolder(alpha);
+    const folder = model.getFolder('f1')!;
+    assert.equal(folder.repoKey, null);
+    assert.equal(folder.branch, null);
+    assert.equal(folder.loaded, true);
+  });
+
+  it('stores repoKey, branch, and loaded from the options', () => {
+    model.addFolder(alpha, { repoKey: '/r/.git', branch: 'main', loaded: false });
+    const folder = model.getFolder('f1')!;
+    assert.equal(folder.repoKey, '/r/.git');
+    assert.equal(folder.branch, 'main');
+    assert.equal(folder.loaded, false);
+  });
+
+  it('does not activate a folder added with activate false', () => {
+    model.addFolder(alpha);
+    model.addFolder(beta, { activate: false });
+    assert.equal(model.getState().activeFolderId, 'f1');
+    assert.equal(model.getState().folders.length, 2);
+  });
+
+  it('sets the loaded flag later', () => {
+    model.addFolder(alpha, { loaded: false });
+    model.setFolderLoaded('f1', true);
+    assert.equal(model.getFolder('f1')!.loaded, true);
+  });
+
+  it('ignores setFolderLoaded for an unknown folder', () => {
+    assert.doesNotThrow(() => model.setFolderLoaded('nope', true));
+  });
+});
+
+describe('groupByRepo', () => {
+  const make = (id: string, folderPath: string, repoKey: string | null): FolderState => ({
+    id,
+    path: folderPath,
+    name: folderPath.split('/').pop()!,
+    tree: [],
+    tabs: [],
+    activeRelPath: null,
+    expandedPaths: new Set(),
+    status: 'ready',
+    repoKey,
+    branch: null,
+    loaded: true,
+  });
+
+  it('puts worktrees of one repository in one group', () => {
+    const groups = groupByRepo([
+      make('f1', '/code/repo', '/code/repo/.git'),
+      make('f2', '/code/feature-a', '/code/repo/.git'),
+    ]);
+    assert.equal(groups.length, 1);
+    assert.deepEqual(groups[0].folders.map((f) => f.id), ['f1', 'f2']);
+  });
+
+  it('names the group after the main worktree, not the folder you opened', () => {
+    // repoKey is <main worktree>/.git, so its parent directory names the group.
+    const groups = groupByRepo([make('f2', '/code/feature-a', '/code/repo/.git')]);
+    assert.equal(groups[0].label, 'repo');
+  });
+
+  it('gives a plain folder its own group named after the folder', () => {
+    const groups = groupByRepo([make('f1', '/code/notes', null)]);
+    assert.equal(groups.length, 1);
+    assert.equal(groups[0].label, 'notes');
+  });
+
+  it('keeps two plain folders apart', () => {
+    const groups = groupByRepo([
+      make('f1', '/code/notes', null),
+      make('f2', '/code/other', null),
+    ]);
+    assert.equal(groups.length, 2);
+  });
+
+  it('keeps two repositories apart', () => {
+    const groups = groupByRepo([
+      make('f1', '/a/repo', '/a/repo/.git'),
+      make('f2', '/b/repo', '/b/repo/.git'),
+    ]);
+    assert.equal(groups.length, 2);
+  });
+
+  it('keeps the order in which the folders were added', () => {
+    const groups = groupByRepo([
+      make('f1', '/code/notes', null),
+      make('f2', '/code/repo', '/code/repo/.git'),
+      make('f3', '/code/feature-a', '/code/repo/.git'),
+    ]);
+    assert.deepEqual(groups.map((g) => g.label), ['notes', 'repo']);
   });
 });
 

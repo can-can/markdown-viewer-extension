@@ -5,6 +5,7 @@ import type {
   FileChangeEvent,
   OpenedFolder,
   PersistedSession,
+  WorktreeInfo,
 } from '../../types/ipc.ts';
 
 const bridge: DesktopBridge = {
@@ -19,6 +20,15 @@ const bridge: DesktopBridge = {
 
   reopenFolder: (folderPath: string): Promise<OpenedFolder | null> =>
     ipcRenderer.invoke('folder:reopen', folderPath),
+
+  listWorktrees: (folderId: string): Promise<WorktreeInfo[]> =>
+    ipcRenderer.invoke('worktree:list', folderId),
+
+  registerWorktree: (folderPath: string): Promise<OpenedFolder | null> =>
+    ipcRenderer.invoke('worktree:register', folderPath),
+
+  loadFolder: (folderId: string): Promise<DirEntry[]> =>
+    ipcRenderer.invoke('folder:load', folderId),
 
   retryFolder: (folderId: string): Promise<DirEntry[]> =>
     ipcRenderer.invoke('folder:retry', folderId),

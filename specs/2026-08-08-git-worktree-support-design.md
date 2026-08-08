@@ -80,6 +80,24 @@ The top row shows one tab for each different `repoKey`. Folders with
 `repoKey: null` each get their own tab. The dropdown shows the folders that
 share the active `repoKey`.
 
+### Only a worktree root joins a repository group
+
+A folder gets a `repoKey` only when the folder path is itself a worktree root,
+that is, when git reports that exact path in `git worktree list`.
+
+`git rev-parse --git-common-dir` answers for **any** folder inside a
+repository, because git walks up the directory tree. A folder inside a
+repository is not a worktree. Without this rule, two unrelated subfolders of
+one repository would collapse into a single repository tab, and the dropdown
+would offer the repository root as if it were their sibling.
+
+A folder inside a repository keeps `repoKey: null`. It gets its own tab and no
+dropdown, exactly as before this feature.
+
+git reports resolved paths. The app compares the folder path and its resolved
+path against the worktree list, so a path through a symbolic link still
+matches.
+
 The repository tab label is the folder name of the main worktree. Git always
 reports the main worktree first in `git worktree list --porcelain`.
 

@@ -1,5 +1,6 @@
 import { createWorkspaceModel, viewKey, type TreeNode } from './workspace-model.ts';
 import { renderFolderTabs } from './folder-tabs.ts';
+import { renderWorktreeSelect } from './worktree-select.ts';
 import { renderFileTree } from './file-tree.ts';
 import { renderFileTabs } from './file-tabs.ts';
 import { createViewerPool } from './viewer-pool.ts';
@@ -11,6 +12,7 @@ const model = createWorkspaceModel();
 const $landing = document.getElementById('landing')!;
 const $workspace = document.getElementById('workspace')!;
 const $folderTabs = document.getElementById('folder-tabs')!;
+const $worktreeSelect = document.getElementById('worktree-select')!;
 const $fileTree = document.getElementById('file-tree')!;
 const $fileTabs = document.getElementById('file-tabs')!;
 const $openFolder = document.getElementById('open-folder')!;
@@ -31,13 +33,62 @@ const reloadRuns = new Map<string, number>();
 async function openFolder(): Promise<void> {
   const folder = await window.desktop.openFolderDialog();
   if (!folder) return;
-  model.addFolder(folder);
+
+  const existing = model.getState().folders.find((candidate) => candidate.path === folder.path);
+  if (existing) {
+    // The dialog registration is redundant. Close it so it does not leave a
+    // second watcher or an unreachable folder id in the main process.
+    await window.desktop.closeFolder(folder.id);
+    model.activateFolder(existing.id);
+    await loadFolderIfNeeded(existing.id);
+    return;
+  }
+
+  model.addFolder(folder, {
+    repoKey: folder.repoKey,
+    branch: folder.branch,
+    loaded: true,
+  });
 
   try {
     const entries = await window.desktop.listDir(folder.id, '');
     model.setTree(folder.id, entries);
   } catch {
     model.setFolderStatus(folder.id, 'unavailable');
+  }
+
+  // repoKey is set only for a worktree root. A folder inside a repository has
+  // no siblings to add, and must behave as a plain folder.
+  if (folder.repoKey) await addSiblingWorktrees(folder.id, folder.path);
+}
+
+/** Add the other worktrees without reading them or starting their watchers. */
+async function addSiblingWorktrees(folderId: string, folderPath: string): Promise<void> {
+  const worktrees = await window.desktop.listWorktrees(folderId);
+  for (const worktree of worktrees) {
+    if (worktree.path === folderPath) continue;
+    if (model.getState().folders.some((folder) => folder.path === worktree.path)) continue;
+    const registered = await window.desktop.registerWorktree(worktree.path);
+    if (!registered) continue;
+    model.addFolder(registered, {
+      activate: false,
+      repoKey: registered.repoKey,
+      branch: worktree.branch,
+      loaded: false,
+    });
+    if (worktree.prunable) model.setFolderStatus(registered.id, 'unavailable');
+  }
+}
+
+async function loadFolderIfNeeded(folderId: string): Promise<void> {
+  const folder = model.getFolder(folderId);
+  if (!folder || folder.loaded) return;
+
+  try {
+    model.setTree(folderId, await window.desktop.loadFolder(folderId));
+    model.setFolderLoaded(folderId, true);
+  } catch {
+    model.setFolderStatus(folderId, 'unavailable');
   }
 }
 
@@ -68,6 +119,7 @@ async function retryFolder(folderId: string): Promise<void> {
       }
     }
     model.setTree(folderId, entries);
+    model.setFolderLoaded(folderId, true);
     model.setFolderStatus(folderId, 'ready');
   } catch {
     model.setFolderStatus(folderId, 'unavailable');
@@ -100,7 +152,10 @@ function render(): void {
   $workspace.hidden = !hasFolders;
 
   renderFolderTabs($folderTabs, model, {
-    onActivate: (folderId) => model.activateFolder(folderId),
+    onActivate: (folderId) => {
+      model.activateFolder(folderId);
+      void loadFolderIfNeeded(folderId);
+    },
     onClose: closeFolder,
     onAdd: () => { void openFolder(); },
   });
@@ -109,6 +164,13 @@ function render(): void {
     onOpenFile: (folderId, relPath) => model.openTab(folderId, relPath),
     onToggleDir: (folderId, relPath) => { void toggleDir(folderId, relPath); },
     onRetryFolder: (folderId) => { void retryFolder(folderId); },
+  });
+
+  renderWorktreeSelect($worktreeSelect, model, {
+    onSelect: (folderId) => {
+      model.activateFolder(folderId);
+      void loadFolderIfNeeded(folderId);
+    },
   });
 
   renderFileTabs($fileTabs, model, {
@@ -443,7 +505,11 @@ async function restoreSession(): Promise<void> {
     for (const saved of session.folders) {
       const folder = await window.desktop.reopenFolder(saved.path);
       if (!folder) continue;
-      model.addFolder(folder);
+      model.addFolder(folder, {
+        repoKey: folder.repoKey,
+        branch: folder.branch,
+        loaded: true,
+      });
 
       try {
         model.setTree(folder.id, await window.desktop.listDir(folder.id, ''));

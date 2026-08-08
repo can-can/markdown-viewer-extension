@@ -471,6 +471,21 @@ html, body {
 .folder-tab-close:hover, .folder-tab-add:hover { background: var(--mv-hover, #eaeef2); }
 .folder-tab-add { font-size: 16px; margin-left: 4px; }
 
+/* ── Worktree selector ───────────────────────────────────────────── */
+.worktree-select {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--mv-border, #e1e4e8);
+}
+.worktree-select-control {
+  width: 100%;
+  font-size: 12px;
+  padding: 4px 6px;
+  border: 1px solid var(--mv-border, #e1e4e8);
+  border-radius: 6px;
+  background: var(--mv-bg, #fff);
+  color: var(--mv-text, #1f2328);
+}
+
 /* ── File tree ────────────────────────────────────────────────────── */
 .tree-row {
   display: flex; align-items: center; gap: 4px;

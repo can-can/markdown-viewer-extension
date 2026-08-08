@@ -63,10 +63,13 @@ describe('desktop app launch', () => {
     assert.deepEqual(keys, [
       'closeFolder',
       'listDir',
+      'listWorktrees',
+      'loadFolder',
       'loadSession',
       'onFileChanged',
       'openFolderDialog',
       'readFile',
+      'registerWorktree',
       'reopenFolder',
       'retryFolder',
       'saveSession',
@@ -468,6 +471,160 @@ describe('session persistence', () => {
     } finally {
       await fresh.close();
     }
+  });
+});
+
+describe('worktree bridge calls', () => {
+  let app: ElectronApplication;
+  let window: Page;
+  let base: string;
+  let repo: string;
+  let linked: string;
+
+  before(async () => {
+    const { execFileSync } = await import('node:child_process');
+    base = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'docmd-wt-')));
+    repo = path.join(base, 'repo');
+    linked = path.join(base, 'feature-a');
+
+    const git = (cwd: string, ...args: string[]): void => {
+      execFileSync('git', args, { cwd, stdio: 'ignore' });
+    };
+    await fs.mkdir(repo, { recursive: true });
+    git(repo, 'init', '-q');
+    git(repo, 'config', 'user.email', 'test@example.com');
+    git(repo, 'config', 'user.name', 'Test');
+    await fs.writeFile(path.join(repo, 'README.md'), '# Repo main\n', 'utf8');
+    git(repo, 'add', '-A');
+    git(repo, 'commit', '-qm', 'init');
+    git(repo, 'worktree', 'add', '-q', linked, '-b', 'feature-a');
+
+    app = await launchApp();
+    window = await app.firstWindow();
+    await window.waitForSelector('#landing', { state: 'visible' });
+    await stubFolderPaths(app, [repo]);
+  });
+
+  after(async () => {
+    await app?.close();
+    await fs.rm(base, { recursive: true, force: true });
+  });
+
+  it('reports repoKey and branch when the folder opens', async () => {
+    const folder = await window.evaluate(() => window.desktop.openFolderDialog());
+    assert.equal(folder?.branch, 'main');
+    assert.ok(folder?.repoKey?.endsWith('/.git'), 'repoKey should be the git common directory');
+  });
+
+  it('lists both worktrees and registers one without a watcher', async () => {
+    const result = await window.evaluate(async (linkedPath) => {
+      const folder = await window.desktop.openFolderDialog();
+      const list = await window.desktop.listWorktrees(folder!.id);
+      const registered = await window.desktop.registerWorktree(linkedPath);
+      return {
+        branches: list.map((w) => w.branch),
+        registeredBranch: registered?.branch ?? null,
+      };
+    }, linked);
+
+    assert.deepEqual(result.branches, ['main', 'feature-a']);
+    assert.equal(result.registeredBranch, 'feature-a');
+  });
+
+  it('refuses a path that git did not report', async () => {
+    const refused = await window.evaluate(
+      (target) => window.desktop.registerWorktree(target),
+      path.join(fixtures, 'alpha'),
+    );
+    assert.equal(refused, null, 'renderer must not name an arbitrary path');
+  });
+
+  it('reads the root only when loadFolder runs', async () => {
+    const names = await window.evaluate(async (linkedPath) => {
+      const registered = await window.desktop.registerWorktree(linkedPath);
+      const entries = await window.desktop.loadFolder(registered!.id);
+      return entries.map((entry) => entry.name);
+    }, linked);
+
+    assert.deepEqual(names, ['README.md']);
+  });
+});
+
+describe('worktree user interface', () => {
+  let app: ElectronApplication;
+  let window: Page;
+  let base: string;
+  let repo: string;
+
+  before(async () => {
+    const { execFileSync } = await import('node:child_process');
+    base = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'docmd-wtui-')));
+    repo = path.join(base, 'repo');
+
+    const git = (cwd: string, ...args: string[]): void => {
+      execFileSync('git', args, { cwd, stdio: 'ignore' });
+    };
+    await fs.mkdir(repo, { recursive: true });
+    git(repo, 'init', '-q');
+    git(repo, 'config', 'user.email', 'test@example.com');
+    git(repo, 'config', 'user.name', 'Test');
+    await fs.writeFile(path.join(repo, 'README.md'), '# Repo main\n', 'utf8');
+    git(repo, 'add', '-A');
+    git(repo, 'commit', '-qm', 'init');
+    git(repo, 'worktree', 'add', '-q', path.join(base, 'feature-a'), '-b', 'feature-a');
+    await fs.writeFile(path.join(base, 'feature-a', 'ONLY-A.md'), '# Only on A\n', 'utf8');
+
+    app = await launchApp();
+    window = await app.firstWindow();
+    await window.waitForSelector('#landing', { state: 'visible' });
+    await stubFolderPaths(app, [repo, path.join(fixtures, 'alpha')]);
+  });
+
+  after(async () => {
+    await app?.close();
+    await fs.rm(base, { recursive: true, force: true });
+  });
+
+  it('shows one repository tab for two worktrees', async () => {
+    await window.click('#open-folder');
+    await window.waitForSelector('.tree-row[data-rel-path="README.md"]');
+    await window.waitForSelector('#worktree-select-control');
+
+    assert.equal((await window.$$('.folder-tab')).length, 1, 'two worktrees, one tab');
+    assert.equal(await window.textContent('.folder-tab-label'), 'repo');
+  });
+
+  it('lists both branches in the dropdown', async () => {
+    const options = await window.$$eval('#worktree-select-control option', (nodes) =>
+      nodes.map((n) => n.textContent));
+    assert.deepEqual(options, ['main', 'feature-a']);
+  });
+
+  it('changes the tree when you select the other worktree', async () => {
+    // ONLY-A.md exists on feature-a and not on main.
+    assert.equal(await window.$('.tree-row[data-rel-path="ONLY-A.md"]'), null);
+
+    await window.selectOption('#worktree-select-control', { label: 'feature-a' });
+    await window.waitForSelector('.tree-row[data-rel-path="ONLY-A.md"]');
+  });
+
+  it('keeps the file tabs of each worktree apart', async () => {
+    await window.click('.tree-row[data-rel-path="ONLY-A.md"]');
+    await window.waitForSelector('.file-tab[data-rel-path="ONLY-A.md"]');
+
+    await window.selectOption('#worktree-select-control', { label: 'main' });
+    await window.waitForSelector('.tree-row[data-rel-path="README.md"]');
+    assert.equal((await window.$$('.file-tab')).length, 0, 'main has no tab open yet');
+
+    await window.selectOption('#worktree-select-control', { label: 'feature-a' });
+    await window.waitForSelector('.file-tab[data-rel-path="ONLY-A.md"]');
+  });
+
+  it('hides the dropdown for a folder that is not a repository', async () => {
+    await window.click('#folder-tab-add');
+    await window.waitForSelector('.folder-tab:nth-of-type(2)');
+    await window.waitForSelector('.tree-row[data-rel-path="README.md"]');
+    assert.equal(await window.isVisible('#worktree-select'), false);
   });
 });
 

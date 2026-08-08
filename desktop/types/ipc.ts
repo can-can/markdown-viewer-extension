@@ -10,6 +10,18 @@ export interface OpenedFolder {
   /** Absolute path on disk. The renderer treats this as an opaque identifier. */
   path: string;
   name: string;
+  /** Absolute git common directory, or null when the folder is not a repository. */
+  repoKey: string | null;
+  /** Branch name, or null when there is no branch. */
+  branch: string | null;
+}
+
+export interface WorktreeInfo {
+  path: string;
+  branch: string | null;
+  detached: boolean;
+  bare: boolean;
+  prunable: boolean;
 }
 
 export type FileChangeKind =
@@ -55,6 +67,15 @@ export interface DesktopBridge {
    * Returns null if the path was not in that file.
    */
   reopenFolder(folderPath: string): Promise<OpenedFolder | null>;
+  /** Worktrees of the repository that holds this folder. Bare records removed. */
+  listWorktrees(folderId: string): Promise<WorktreeInfo[]>;
+  /**
+   * Register a worktree without a watcher and without reading its tree.
+   * Accepts only a path that git reported this run.
+   */
+  registerWorktree(folderPath: string): Promise<OpenedFolder | null>;
+  /** Start the watcher for a registered folder and read its root. */
+  loadFolder(folderId: string): Promise<DirEntry[]>;
   /** Re-check an unavailable root and restart its watcher. */
   retryFolder(folderId: string): Promise<DirEntry[]>;
   listDir(folderId: string, relPath: string): Promise<DirEntry[]>;

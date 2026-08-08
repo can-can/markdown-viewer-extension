@@ -1,4 +1,4 @@
-import type { WorkspaceModel } from './workspace-model.ts';
+import { groupByRepo, type WorkspaceModel } from './workspace-model.ts';
 
 export interface FolderTabHandlers {
   onActivate(folderId: string): void;
@@ -14,33 +14,39 @@ export function renderFolderTabs(
   const { folders, activeFolderId } = model.getState();
   container.replaceChildren();
 
-  for (const folder of folders) {
+  for (const group of groupByRepo(folders)) {
+    // Show the worktree that is active, else the first one in the group.
+    const shown = group.folders.find((f) => f.id === activeFolderId) ?? group.folders[0];
+    const isActive = group.folders.some((f) => f.id === activeFolderId);
+
     const tab = document.createElement('div');
     tab.className = 'folder-tab';
-    tab.dataset.folderId = folder.id;
-    tab.dataset.active = String(folder.id === activeFolderId);
+    tab.dataset.folderId = shown.id;
+    tab.dataset.repoKey = group.key;
+    tab.dataset.active = String(isActive);
     tab.setAttribute('role', 'tab');
-    tab.setAttribute('aria-selected', String(folder.id === activeFolderId));
-    tab.title = folder.path;
+    tab.setAttribute('aria-selected', String(isActive));
+    tab.title = shown.path;
 
     const label = document.createElement('span');
     label.className = 'folder-tab-label';
-    label.textContent = folder.name;
-    if (folder.status === 'unavailable') {
+    label.textContent = group.label;
+    if (shown.status === 'unavailable') {
       tab.dataset.status = 'unavailable';
-      tab.title = `${folder.path} (unavailable)`;
-      label.textContent = `${folder.name} (unavailable)`;
+      tab.title = `${shown.path} (unavailable)`;
+      label.textContent = `${group.label} (unavailable)`;
     }
-    label.addEventListener('click', () => handlers.onActivate(folder.id));
+    label.addEventListener('click', () => handlers.onActivate(shown.id));
 
     const close = document.createElement('button');
     close.className = 'folder-tab-close';
     close.type = 'button';
     close.textContent = '✕';
-    close.setAttribute('aria-label', `Close ${folder.name}`);
+    close.setAttribute('aria-label', `Close ${group.label}`);
     close.addEventListener('click', (event) => {
       event.stopPropagation();
-      handlers.onClose(folder.id);
+      // Closing a repository closes every worktree in it.
+      for (const folder of group.folders) handlers.onClose(folder.id);
     });
 
     tab.append(label, close);

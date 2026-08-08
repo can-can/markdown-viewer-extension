@@ -25,6 +25,26 @@ export interface FolderState {
   activeRelPath: string | null;
   expandedPaths: Set<string>;
   status: FolderStatus;
+  /** Absolute git common directory. Worktrees of one repository share it. */
+  repoKey: string | null;
+  /** Branch name, or null when the worktree has no branch. */
+  branch: string | null;
+  /** True after the app read the tree and started the watcher. */
+  loaded: boolean;
+}
+
+export interface AddFolderOptions {
+  /** A worktree added in the background must not take focus. */
+  activate?: boolean;
+  repoKey?: string | null;
+  branch?: string | null;
+  loaded?: boolean;
+}
+
+export interface RepoGroup {
+  key: string;
+  label: string;
+  folders: FolderState[];
 }
 
 export interface WorkspaceState {
@@ -37,8 +57,38 @@ export function viewKey(folderId: string, relPath: string): string {
 }
 
 function basename(relPath: string): string {
-  const index = relPath.lastIndexOf('/');
+  const index = Math.max(relPath.lastIndexOf('/'), relPath.lastIndexOf('\\'));
   return index === -1 ? relPath : relPath.slice(index + 1);
+}
+
+function repoLabel(repoKey: string): string {
+  // repoKey is '<main worktree>/.git'. Remove the last segment to get the
+  // main worktree directory, then take its name.
+  const withoutGitDir = repoKey.replace(/[\\/]\.git[\\/]?$/, '');
+  return basename(withoutGitDir);
+}
+
+/** One group for each repository, and one group for each plain folder. */
+export function groupByRepo(folders: FolderState[]): RepoGroup[] {
+  const groups: RepoGroup[] = [];
+  const byKey = new Map<string, RepoGroup>();
+
+  for (const folder of folders) {
+    const key = folder.repoKey ?? `folder:${folder.id}`;
+    let group = byKey.get(key);
+    if (!group) {
+      group = {
+        key,
+        label: folder.repoKey ? repoLabel(folder.repoKey) || folder.name : folder.name,
+        folders: [],
+      };
+      byKey.set(key, group);
+      groups.push(group);
+    }
+    group.folders.push(folder);
+  }
+
+  return groups;
 }
 
 function parentPath(relPath: string): string {
@@ -72,7 +122,8 @@ export interface WorkspaceModel {
   getActiveFolder(): FolderState | null;
   subscribe(listener: () => void): () => void;
 
-  addFolder(folder: OpenedFolder): void;
+  addFolder(folder: OpenedFolder, options?: AddFolderOptions): void;
+  setFolderLoaded(folderId: string, loaded: boolean): void;
   removeFolder(folderId: string): void;
   activateFolder(folderId: string): void;
   setFolderStatus(folderId: string, status: FolderStatus): void;
@@ -115,10 +166,10 @@ export function createWorkspaceModel(): WorkspaceModel {
       return () => { listeners.delete(listener); };
     },
 
-    addFolder(folder) {
+    addFolder(folder, options) {
       const existing = state.folders.find((f) => f.path === folder.path);
       if (existing) {
-        state.activeFolderId = existing.id;
+        if (options?.activate !== false) state.activeFolderId = existing.id;
         notify();
         return;
       }
@@ -131,8 +182,18 @@ export function createWorkspaceModel(): WorkspaceModel {
         activeRelPath: null,
         expandedPaths: new Set(),
         status: 'ready',
+        repoKey: options?.repoKey ?? null,
+        branch: options?.branch ?? null,
+        loaded: options?.loaded ?? true,
       });
-      state.activeFolderId = folder.id;
+      if (options?.activate !== false) state.activeFolderId = folder.id;
+      notify();
+    },
+
+    setFolderLoaded(folderId, loaded) {
+      const folder = find(folderId);
+      if (!folder) return;
+      folder.loaded = loaded;
       notify();
     },
 
