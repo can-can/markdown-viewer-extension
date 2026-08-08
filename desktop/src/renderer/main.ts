@@ -4,7 +4,7 @@ import { renderFileTree } from './file-tree.ts';
 import { renderFileTabs } from './file-tabs.ts';
 import { createViewerPool } from './viewer-pool.ts';
 import { createIframeView } from './viewer-view.ts';
-import type { FileChangeEvent } from '../../types/ipc.ts';
+import type { FileChangeEvent, PersistedSession } from '../../types/ipc.ts';
 
 const model = createWorkspaceModel();
 
@@ -403,8 +403,87 @@ function findTreeNode(nodes: TreeNode[], relPath: string): TreeNode | null {
   return null;
 }
 
+// ── Session persistence ─────────────────────────────────────────────
+
+function snapshotSession(): PersistedSession {
+  const { folders, activeFolderId } = model.getState();
+  return {
+    folders: folders.map((folder) => ({
+      path: folder.path,
+      tabs: folder.tabs.map((tab) => tab.relPath),
+      activeRelPath: folder.activeRelPath,
+      expandedPaths: [...folder.expandedPaths],
+    })),
+    activeFolderPath: folders.find((f) => f.id === activeFolderId)?.path ?? null,
+  };
+}
+
+let saveTimer: ReturnType<typeof setTimeout> | undefined;
+let restoring = false;
+
+function scheduleSessionSave(): void {
+  // Restoring replays many mutations. Writing each one back would be noise,
+  // and a failure part-way through would persist a half-built session.
+  if (restoring) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => { void window.desktop.saveSession(snapshotSession()); }, 300);
+}
+
+/** Depth order, so a parent directory loads before its children. */
+function byDepth(a: string, b: string): number {
+  return a.split('/').length - b.split('/').length;
+}
+
+async function restoreSession(): Promise<void> {
+  const session = await window.desktop.loadSession();
+  if (session.folders.length === 0) return;
+
+  restoring = true;
+  try {
+    for (const saved of session.folders) {
+      const folder = await window.desktop.reopenFolder(saved.path);
+      if (!folder) continue;
+      model.addFolder(folder);
+
+      try {
+        model.setTree(folder.id, await window.desktop.listDir(folder.id, ''));
+      } catch {
+        // The folder moved or was unmounted. Task 10's Retry can recover it.
+        model.setFolderStatus(folder.id, 'unavailable');
+        continue;
+      }
+
+      for (const dir of [...new Set(saved.expandedPaths)].sort(byDepth)) {
+        try {
+          model.setChildren(folder.id, dir, await window.desktop.listDir(folder.id, dir));
+          model.toggleExpanded(folder.id, dir);
+        } catch {
+          // That directory is gone. Leave the rest of the tree alone.
+        }
+      }
+
+      for (const relPath of saved.tabs) model.openTab(folder.id, relPath);
+      if (saved.activeRelPath) model.activateTab(folder.id, saved.activeRelPath);
+    }
+
+    const active = model.getState().folders.find((f) => f.path === session.activeFolderPath);
+    if (active) model.activateFolder(active.id);
+  } finally {
+    restoring = false;
+  }
+
+  // One write to record whatever actually came back.
+  scheduleSessionSave();
+}
+
 model.subscribe(render);
+model.subscribe(scheduleSessionSave);
 window.desktop.onFileChanged(handleFileChanged);
+// Best effort flush, so a quit inside the debounce window is not lost.
+window.addEventListener('beforeunload', () => {
+  clearTimeout(saveTimer);
+  void window.desktop.saveSession(snapshotSession());
+});
 $openFolder.addEventListener('click', () => { void openFolder(); });
 $viewerHost.addEventListener('desktop-viewer-navigate', (event) => {
   const { folderId, relPath } = (event as CustomEvent<{
@@ -415,3 +494,4 @@ $viewerHost.addEventListener('desktop-viewer-navigate', (event) => {
 });
 
 render();
+void restoreSession();

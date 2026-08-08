@@ -1,10 +1,24 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { DesktopBridge, DirEntry, FileChangeEvent, OpenedFolder } from '../../types/ipc.ts';
+import type {
+  DesktopBridge,
+  DirEntry,
+  FileChangeEvent,
+  OpenedFolder,
+  PersistedSession,
+} from '../../types/ipc.ts';
 
 const bridge: DesktopBridge = {
   openFolderDialog: (): Promise<OpenedFolder | null> => ipcRenderer.invoke('folder:open'),
 
   closeFolder: (folderId: string): Promise<void> => ipcRenderer.invoke('folder:close', folderId),
+
+  loadSession: (): Promise<PersistedSession> => ipcRenderer.invoke('session:load'),
+
+  saveSession: (session: PersistedSession): Promise<void> =>
+    ipcRenderer.invoke('session:save', session),
+
+  reopenFolder: (folderPath: string): Promise<OpenedFolder | null> =>
+    ipcRenderer.invoke('folder:reopen', folderPath),
 
   retryFolder: (folderId: string): Promise<DirEntry[]> =>
     ipcRenderer.invoke('folder:retry', folderId),

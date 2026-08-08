@@ -13,9 +13,18 @@ const fixtures = path.join(projectRoot, 'test/fixtures/desktop');
  * Each describe block gets its own app instance. The app accumulates state
  * (open folders, open tabs), so sharing one instance would make tests
  * order-dependent.
+ *
+ * Each launch also gets its own user-data directory. The app now writes a
+ * session file there, so a shared directory would let one test restore another
+ * test's folders — and would write into the real application data of whoever
+ * runs the suite. Pass the same directory twice to test restore across a
+ * restart.
  */
-async function launchApp(): Promise<ElectronApplication> {
-  return electron.launch({ args: [path.join(projectRoot, 'dist/desktop/main.cjs')] });
+async function launchApp(userDataDir?: string): Promise<ElectronApplication> {
+  const dir = userDataDir ?? await fs.mkdtemp(path.join(os.tmpdir(), 'docmd-userdata-'));
+  return electron.launch({
+    args: [path.join(projectRoot, 'dist/desktop/main.cjs'), `--user-data-dir=${dir}`],
+  });
 }
 
 /**
@@ -54,10 +63,13 @@ describe('desktop app launch', () => {
     assert.deepEqual(keys, [
       'closeFolder',
       'listDir',
+      'loadSession',
       'onFileChanged',
       'openFolderDialog',
       'readFile',
+      'reopenFolder',
       'retryFolder',
+      'saveSession',
     ]);
   });
 
@@ -357,6 +369,105 @@ describe('watcher failure notice', () => {
     assert.ok(frame, 'watcher failure must not block normal file reads');
     await frame.waitForSelector('h1');
     assert.equal(await frame.textContent('h1'), 'Alpha');
+  });
+});
+
+describe('session persistence', () => {
+  let userDataDir: string;
+
+  before(async () => {
+    userDataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'docmd-session-'));
+  });
+
+  after(async () => {
+    await fs.rm(userDataDir, { recursive: true, force: true });
+  });
+
+  it('reopens the same folders and tabs after a restart', async () => {
+    // First run: open two folders, open tabs, expand a directory.
+    const first = await launchApp(userDataDir);
+    const firstWindow = await first.firstWindow();
+    await firstWindow.waitForSelector('#landing', { state: 'visible' });
+    await stubFolderDialog(first, ['alpha', 'beta']);
+
+    await firstWindow.click('#open-folder');
+    await firstWindow.waitForSelector('.tree-row[data-rel-path="README.md"]');
+    await firstWindow.click('.tree-row[data-rel-path="nested"]');
+    await firstWindow.waitForSelector('.tree-row[data-rel-path="nested/deep.md"]');
+    await firstWindow.click('.tree-row[data-rel-path="README.md"]');
+    await firstWindow.waitForSelector('.file-tab[data-rel-path="README.md"]');
+    await firstWindow.click('.tree-row[data-rel-path="notes.markdown"]');
+    await firstWindow.waitForSelector('.file-tab[data-rel-path="notes.markdown"]');
+
+    await firstWindow.click('#folder-tab-add');
+    await firstWindow.waitForSelector('.folder-tab:nth-of-type(2)');
+    await firstWindow.waitForSelector('.tree-row[data-rel-path="index.md"]');
+    await firstWindow.click('.tree-row[data-rel-path="index.md"]');
+    await firstWindow.waitForSelector('.file-tab[data-rel-path="index.md"]');
+
+    // Give the debounced write time to land, then confirm it reached disk.
+    await firstWindow.waitForTimeout(700);
+    const sessionFile = path.join(userDataDir, 'session.json');
+    const saved = JSON.parse(await fs.readFile(sessionFile, 'utf8'));
+    assert.equal(saved.folders.length, 2, 'both folders should be recorded');
+
+    await first.close();
+
+    // Second run: no dialog, no clicks. Everything must come back on its own.
+    const second = await launchApp(userDataDir);
+    const secondWindow = await second.firstWindow();
+    try {
+      await secondWindow.waitForSelector('.folder-tab:nth-of-type(2)');
+
+      const labels = await secondWindow.$$eval('.folder-tab-label', (nodes) =>
+        nodes.map((n) => n.textContent));
+      assert.deepEqual(labels, ['alpha', 'beta'], 'both folder tabs should return');
+
+      // beta was active at shutdown, so it is active again with its own tab.
+      await secondWindow.waitForSelector('.file-tab[data-rel-path="index.md"]');
+      assert.equal(
+        await secondWindow.getAttribute('.folder-tab:nth-of-type(2)', 'data-active'),
+        'true',
+      );
+
+      // alpha keeps both its tabs and its expanded directory.
+      await secondWindow.click('.folder-tab:nth-of-type(1) .folder-tab-label');
+      await secondWindow.waitForSelector('.file-tab[data-rel-path="README.md"]');
+      const alphaTabs = await secondWindow.$$eval('.file-tab', (nodes) =>
+        nodes.map((n) => n.getAttribute('data-rel-path')));
+      assert.deepEqual(alphaTabs, ['README.md', 'notes.markdown']);
+      await secondWindow.waitForSelector('.tree-row[data-rel-path="nested/deep.md"]');
+
+      assert.equal(await secondWindow.isVisible('#landing'), false);
+    } finally {
+      await second.close();
+    }
+  });
+
+  it('starts at the landing state when no session exists', async () => {
+    const fresh = await launchApp();
+    const freshWindow = await fresh.firstWindow();
+    try {
+      await freshWindow.waitForSelector('#landing', { state: 'visible' });
+      assert.equal((await freshWindow.$$('.folder-tab')).length, 0);
+    } finally {
+      await fresh.close();
+    }
+  });
+
+  it('refuses to reopen a path that was not in the session file', async () => {
+    const fresh = await launchApp();
+    const freshWindow = await fresh.firstWindow();
+    try {
+      await freshWindow.waitForSelector('#landing', { state: 'visible' });
+      const result = await freshWindow.evaluate(
+        (target) => window.desktop.reopenFolder(target),
+        path.join(fixtures, 'alpha'),
+      );
+      assert.equal(result, null, 'renderer must not name an arbitrary path');
+    } finally {
+      await fresh.close();
+    }
   });
 });
 
