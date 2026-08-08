@@ -31,11 +31,12 @@ Electron instance for each stateful scenario and needs a current desktop build.
 
 ## Architecture
 
-The main process owns filesystem access and a chokidar watcher for every open
-folder, exposed through the narrow bridge in `types/ipc.ts`. The renderer owns
-the pure workspace state and a global LRU pool of viewer iframes capped at
-eight. A live file change reuses the existing iframe/document key, so the shared
-viewer takes its in-place `UPDATE_CONTENT` path and preserves scroll position.
+The main process owns filesystem access and a recursive Node filesystem watcher
+for every open folder, exposed through the narrow bridge in `types/ipc.ts`. The
+renderer owns the pure workspace state and a global LRU pool of viewer iframes
+capped at eight. A live file change reuses the existing iframe/document key, so
+the shared viewer takes its in-place `UPDATE_CONTENT` path and preserves scroll
+position.
 
 Rendering reuses the cross-platform viewer in
 `chrome/src/webview/viewer-main.ts`, with the desktop platform implementation

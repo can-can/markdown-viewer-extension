@@ -448,7 +448,6 @@
   "icon": "icons/icon128.png",
   "devDependencies": {
     "@playwright/test": "^1.62.1",
-    "chokidar": "^5.0.0",
     "electron": "^43.3.0",
     "electron-builder": "^26.15.3"
   }

@@ -1,11 +1,13 @@
-import chokidar, { type ChokidarOptions, type FSWatcher } from 'chokidar';
+import {
+  stat,
+  watch as fsWatch,
+  type FSWatcher,
+  type WatchListener,
+  type WatchOptionsWithStringEncoding,
+} from 'node:fs';
 import path from 'node:path';
 import { ALL_SUPPORTED_EXTENSIONS } from '../../../src/types/formats.ts';
-import type {
-  DirEntry,
-  FileChangeEvent,
-  FileChangeKind,
-} from '../../types/ipc.ts';
+import type { FileChangeEvent } from '../../types/ipc.ts';
 
 export const WATCHER_DEBOUNCE_MS = 100;
 
@@ -13,22 +15,19 @@ const SUPPORTED_EXTENSIONS = new Set(
   ALL_SUPPORTED_EXTENSIONS.map((extension) => extension.toLowerCase()),
 );
 
-function watchOptions(root: string): ChokidarOptions {
-  return {
-    // Resolve against the selected root so a folder living below a hidden
-    // ancestor is still watchable; only hidden descendants are ignored.
-    ignored: (candidate) => {
-      const relative = relativeWatchPath(root, candidate);
-      if (relative === null || relative === '') return false;
-      return relative.split('/').some(
-        (segment) => segment.startsWith('.') || segment === 'node_modules',
-      );
-    },
-    ignoreInitial: true,
-    persistent: true,
-    depth: 12,
-    followSymlinks: false,
-  };
+function isIgnoredWatchPath(root: string, absolutePath: string): boolean {
+  // Resolve against the selected root so a folder living below a hidden
+  // ancestor is still watchable; only hidden descendants are ignored.
+  const relative = relativeWatchPath(root, absolutePath);
+  if (relative === null || relative === '') return false;
+  return relative.split('/').some(
+    (segment) => segment.startsWith('.') || segment === 'node_modules',
+  );
+}
+
+function isMissingPathError(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null || !('code' in error)) return false;
+  return error.code === 'ENOENT' || error.code === 'ENOTDIR';
 }
 
 export interface TimerApi {
@@ -47,7 +46,7 @@ export interface DebouncedEventSender {
 }
 
 /**
- * Map an absolute chokidar path to the POSIX-style relative path used by IPC.
+ * Map an absolute watched path to the POSIX-style relative path used by IPC.
  * Returns null for a path outside the watched root.
  */
 export function relativeWatchPath(root: string, absolutePath: string): string | null {
@@ -97,7 +96,11 @@ export function createDebouncedEventSender(
   };
 }
 
-type WatchFactory = (root: string, options: ChokidarOptions) => FSWatcher;
+type WatchFactory = (
+  root: string,
+  options: WatchOptionsWithStringEncoding,
+  listener: WatchListener<string>,
+) => FSWatcher;
 
 export interface FileWatcherManager {
   startWatching(
@@ -123,7 +126,7 @@ interface WatcherRecord {
 export function createFileWatcherManager(
   dependencies: FileWatcherDependencies = {},
 ): FileWatcherManager {
-  const watch = dependencies.watch ?? ((root, options) => chokidar.watch(root, options));
+  const watch = dependencies.watch ?? fsWatch;
   const timers = dependencies.timers ?? systemTimers;
   const warn = dependencies.warn ?? ((message, error) => console.warn(message, error));
   const watchers = new Map<string, WatcherRecord>();
@@ -135,9 +138,11 @@ export function createFileWatcherManager(
     // Delete first so any late EventEmitter delivery from close() is ignored.
     watchers.delete(folderId);
     record.sender.cancel();
-    void record.watcher.close().catch((error) => {
+    try {
+      record.watcher.close();
+    } catch (error) {
       warn(`[desktop] watcher close failed for ${folderId}:`, error);
-    });
+    }
   }
 
   function startWatching(
@@ -149,52 +154,67 @@ export function createFileWatcherManager(
 
     const sender = createDebouncedEventSender(send, timers);
     let watcher: FSWatcher;
+    const isCurrent = (): boolean => watchers.get(folderId)?.watcher === watcher;
+    let rootUnavailableReported = false;
+    const handleWatchEvent: WatchListener<string> = (_eventType, filename) => {
+      if (!isCurrent() || filename === null) return;
+
+      if (filename === path.basename(root)) {
+        stat(root, (error) => {
+          if (
+            !isCurrent()
+            || rootUnavailableReported
+            || !isMissingPathError(error)
+          ) {
+            return;
+          }
+          rootUnavailableReported = true;
+          sender.enqueue({ folderId, relPath: '', kind: 'folder-unavailable' });
+        });
+        return;
+      }
+
+      const absolutePath = path.resolve(root, filename);
+      const relPath = relativeWatchPath(root, absolutePath);
+      if (
+        relPath === null
+        || relPath === ''
+        || isIgnoredWatchPath(root, absolutePath)
+      ) {
+        return;
+      }
+
+      stat(absolutePath, (error, stats) => {
+        if (!isCurrent()) return;
+        if (error) {
+          if (isMissingPathError(error)) {
+            sender.enqueue({ folderId, relPath, kind: 'unlink' });
+          }
+          return;
+        }
+        if (stats.isDirectory()) {
+          sender.enqueue({ folderId, relPath, kind: 'add', entryKind: 'directory' });
+          return;
+        }
+        if (stats.isFile() && isSupportedWatchFile(absolutePath)) {
+          sender.enqueue({ folderId, relPath, kind: 'change', entryKind: 'file' });
+        }
+      });
+    };
+
     try {
-      watcher = watch(root, watchOptions(root));
+      watcher = watch(root, { recursive: true, persistent: true }, handleWatchEvent);
     } catch (error) {
       warn(`[desktop] watcher unavailable for ${root}:`, error);
       send({ folderId, relPath: '', kind: 'watcher-error' });
       return;
     }
 
-    const isCurrent = (): boolean => watchers.get(folderId)?.watcher === watcher;
-    const emitPath = (
-      kind: Extract<FileChangeKind, 'change' | 'add' | 'unlink'>,
-      absolutePath: string,
-      entryKind: DirEntry['kind'],
-    ): void => {
-      if (!isCurrent()) return;
-      const relPath = relativeWatchPath(root, absolutePath);
-      if (
-        relPath === null
-        || relPath === ''
-        || (entryKind === 'file' && !isSupportedWatchFile(absolutePath))
-      ) {
-        return;
-      }
-      sender.enqueue({ folderId, relPath, kind, entryKind });
-    };
-
     let failureReported = false;
-    watcher.on('change', (changedPath) => emitPath('change', changedPath, 'file'));
-    watcher.on('add', (addedPath) => emitPath('add', addedPath, 'file'));
-    watcher.on('unlink', (removedPath) => emitPath('unlink', removedPath, 'file'));
-    watcher.on('addDir', (addedPath) => emitPath('add', addedPath, 'directory'));
-    watcher.on('unlinkDir', (removedPath) => {
-      if (!isCurrent()) return;
-      const relPath = relativeWatchPath(root, removedPath);
-      if (relPath === null) return;
-      if (relPath === '') {
-        sender.enqueue({ folderId, relPath, kind: 'folder-unavailable' });
-      } else {
-        sender.enqueue({ folderId, relPath, kind: 'unlink', entryKind: 'directory' });
-      }
-    });
     watcher.on('error', (error) => {
-      if (!isCurrent()) return;
-      warn(`[desktop] watcher error for ${root}:`, error);
-      if (failureReported) return;
+      if (!isCurrent() || failureReported) return;
       failureReported = true;
+      warn(`[desktop] watcher error for ${root}:`, error);
       send({ folderId, relPath: '', kind: 'watcher-error' });
     });
 

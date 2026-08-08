@@ -53,8 +53,6 @@ await build({
   outExtension: { '.js': '.cjs' },
   platform: 'node',
   format: 'cjs',
-  // chokidar is bundled because dist/desktop is a self-contained app directory
-  // with no production node_modules for electron-builder to copy.
   external: ['electron'],
 });
 
