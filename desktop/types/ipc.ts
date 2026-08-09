@@ -52,7 +52,11 @@ export interface PersistedSession {
   activeFolderPath: string | null;
 }
 
+export type MenuAction = 'close-tab' | 'next-tab' | 'previous-tab' | 'open-folder';
+
 export interface DesktopBridge {
+  /** Menu commands, including the keyboard accelerators. */
+  onMenuAction(handler: (action: MenuAction) => void): () => void;
   openFolderDialog(): Promise<OpenedFolder | null>;
   closeFolder(folderId: string): Promise<void>;
   /** Read the folders that were open at the last shutdown. */

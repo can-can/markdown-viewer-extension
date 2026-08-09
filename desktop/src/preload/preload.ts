@@ -3,12 +3,19 @@ import type {
   DesktopBridge,
   DirEntry,
   FileChangeEvent,
+  MenuAction,
   OpenedFolder,
   PersistedSession,
   WorktreeInfo,
 } from '../../types/ipc.ts';
 
 const bridge: DesktopBridge = {
+  onMenuAction: (handler: (action: MenuAction) => void): (() => void) => {
+    const listener = (_event: unknown, action: MenuAction): void => handler(action);
+    ipcRenderer.on('menu:action', listener);
+    return () => { ipcRenderer.off('menu:action', listener); };
+  },
+
   openFolderDialog: (): Promise<OpenedFolder | null> => ipcRenderer.invoke('folder:open'),
 
   closeFolder: (folderId: string): Promise<void> => ipcRenderer.invoke('folder:close', folderId),

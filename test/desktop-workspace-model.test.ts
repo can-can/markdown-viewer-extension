@@ -308,6 +308,59 @@ describe('worktree fields', () => {
   });
 });
 
+describe('activateAdjacentTab', () => {
+  let model: WorkspaceModel;
+  beforeEach(() => {
+    model = createWorkspaceModel();
+    model.addFolder(alpha);
+  });
+
+  it('moves to the next tab', () => {
+    model.openTab('f1', 'a.md');
+    model.openTab('f1', 'b.md');
+    model.activateTab('f1', 'a.md');
+    model.activateAdjacentTab('f1', 1);
+    assert.equal(model.getFolder('f1')!.activeRelPath, 'b.md');
+  });
+
+  it('moves to the previous tab', () => {
+    model.openTab('f1', 'a.md');
+    model.openTab('f1', 'b.md');
+    model.activateAdjacentTab('f1', -1);
+    assert.equal(model.getFolder('f1')!.activeRelPath, 'a.md');
+  });
+
+  it('wraps from the last tab to the first', () => {
+    model.openTab('f1', 'a.md');
+    model.openTab('f1', 'b.md');
+    model.activateAdjacentTab('f1', 1);
+    assert.equal(model.getFolder('f1')!.activeRelPath, 'a.md');
+  });
+
+  it('wraps from the first tab to the last', () => {
+    model.openTab('f1', 'a.md');
+    model.openTab('f1', 'b.md');
+    model.activateTab('f1', 'a.md');
+    model.activateAdjacentTab('f1', -1);
+    assert.equal(model.getFolder('f1')!.activeRelPath, 'b.md');
+  });
+
+  it('does nothing with one tab', () => {
+    model.openTab('f1', 'a.md');
+    model.activateAdjacentTab('f1', 1);
+    assert.equal(model.getFolder('f1')!.activeRelPath, 'a.md');
+  });
+
+  it('does nothing with no tabs', () => {
+    assert.doesNotThrow(() => model.activateAdjacentTab('f1', 1));
+    assert.equal(model.getFolder('f1')!.activeRelPath, null);
+  });
+
+  it('does nothing for an unknown folder', () => {
+    assert.doesNotThrow(() => model.activateAdjacentTab('nope', 1));
+  });
+});
+
 describe('groupByRepo', () => {
   const make = (id: string, folderPath: string, repoKey: string | null): FolderState => ({
     id,

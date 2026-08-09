@@ -131,6 +131,8 @@ export interface WorkspaceModel {
   openTab(folderId: string, relPath: string): void;
   closeTab(folderId: string, relPath: string): void;
   activateTab(folderId: string, relPath: string): void;
+  /** Move to the next (1) or previous (-1) file tab, wrapping at each end. */
+  activateAdjacentTab(folderId: string, delta: 1 | -1): void;
   markDirty(folderId: string, relPath: string, dirty: boolean): void;
   setScrollLine(folderId: string, relPath: string, line: number): void;
 
@@ -250,6 +252,20 @@ export function createWorkspaceModel(): WorkspaceModel {
       const folder = find(folderId);
       if (!folder || !folder.tabs.some((t) => t.relPath === relPath)) return;
       folder.activeRelPath = relPath;
+      notify();
+    },
+
+    activateAdjacentTab(folderId, delta) {
+      const folder = find(folderId);
+      if (!folder || folder.tabs.length < 2) return;
+
+      const current = folder.tabs.findIndex((t) => t.relPath === folder.activeRelPath);
+      // No active tab yet: step in from the matching end.
+      const from = current === -1 ? (delta === 1 ? -1 : 0) : current;
+      const count = folder.tabs.length;
+      const next = ((from + delta) % count + count) % count;
+
+      folder.activeRelPath = folder.tabs[next].relPath;
       notify();
     },
 

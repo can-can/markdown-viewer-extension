@@ -545,6 +545,25 @@ async function restoreSession(): Promise<void> {
 model.subscribe(render);
 model.subscribe(scheduleSessionSave);
 window.desktop.onFileChanged(handleFileChanged);
+
+/**
+ * Menu commands, including the keyboard accelerators.
+ *
+ * close-tab closes the active FILE tab only. It never closes the window and
+ * never closes a repository tab, so with no file tab open it does nothing.
+ */
+window.desktop.onMenuAction((action) => {
+  if (action === 'open-folder') { void openFolder(); return; }
+
+  const folder = model.getActiveFolder();
+  if (!folder) return;
+
+  if (action === 'close-tab') {
+    if (folder.activeRelPath) model.closeTab(folder.id, folder.activeRelPath);
+    return;
+  }
+  model.activateAdjacentTab(folder.id, action === 'next-tab' ? 1 : -1);
+});
 // Best effort flush, so a quit inside the debounce window is not lost.
 window.addEventListener('beforeunload', () => {
   clearTimeout(saveTimer);

@@ -1,7 +1,9 @@
 import { app, BrowserWindow, protocol, net } from 'electron';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { Menu } from 'electron';
 import { registerIpcHandlers } from './ipc.ts';
+import { buildMenuTemplate } from './app-menu.ts';
 import { stopAllWatchers } from './file-watcher.ts';
 
 const DIST_DIR = __dirname;
@@ -38,6 +40,14 @@ function createWindow(): BrowserWindow {
   });
 
   registerIpcHandlers(win);
+
+  // The app needs its own menu because macOS binds CmdOrCtrl+W to Close Window
+  // by default, and a menu accelerator always beats a keydown handler.
+  Menu.setApplicationMenu(Menu.buildFromTemplate(
+    buildMenuTemplate((action) => {
+      if (!win.isDestroyed()) win.webContents.send('menu:action', action);
+    }),
+  ));
 
   win.once('ready-to-show', () => win.show());
   void win.loadURL('docmd://app/index.html');

@@ -67,6 +67,7 @@ describe('desktop app launch', () => {
       'loadFolder',
       'loadSession',
       'onFileChanged',
+      'onMenuAction',
       'openFolderDialog',
       'readFile',
       'registerWorktree',
@@ -625,6 +626,89 @@ describe('worktree user interface', () => {
     await window.waitForSelector('.folder-tab:nth-of-type(2)');
     await window.waitForSelector('.tree-row[data-rel-path="README.md"]');
     assert.equal(await window.isVisible('#worktree-select'), false);
+  });
+});
+
+describe('menu shortcuts', () => {
+  let app: ElectronApplication;
+  let window: Page;
+
+  /**
+   * Click the real menu item in the main process.
+   *
+   * A key press sent to the page cannot trigger a menu accelerator, because
+   * the native menu handles accelerators before the page sees the key. Firing
+   * the menu item proves the same path the accelerator uses.
+   */
+  const clickMenu = async (id: string): Promise<boolean> =>
+    app.evaluate(async ({ Menu }, itemId) => {
+      const item = Menu.getApplicationMenu()?.getMenuItemById(itemId);
+      if (!item) return false;
+      item.click();
+      return true;
+    }, id);
+
+  before(async () => {
+    app = await launchApp();
+    window = await app.firstWindow();
+    await window.waitForSelector('#landing', { state: 'visible' });
+    await stubFolderDialog(app, ['alpha']);
+    await window.click('#open-folder');
+    await window.waitForSelector('.tree-row[data-rel-path="README.md"]');
+  });
+  after(async () => { await app?.close(); });
+
+  it('binds CmdOrCtrl+W to Close Tab and to nothing else', async () => {
+    const owners = await app.evaluate(async ({ Menu }) => {
+      const found: string[] = [];
+      const walk = (items: Electron.MenuItem[]): void => {
+        for (const item of items) {
+          if (item.accelerator === 'CmdOrCtrl+W') found.push(item.id || item.label);
+          if (item.submenu) walk(item.submenu.items);
+        }
+      };
+      walk(Menu.getApplicationMenu()?.items ?? []);
+      return found;
+    });
+    assert.deepEqual(owners, ['close-tab'], 'only Close Tab may own CmdOrCtrl+W');
+  });
+
+  it('closes the active file tab, not the repository tab', async () => {
+    await window.click('.tree-row[data-rel-path="README.md"]');
+    await window.waitForSelector('.file-tab[data-rel-path="README.md"]');
+    await window.click('.tree-row[data-rel-path="notes.markdown"]');
+    await window.waitForSelector('.file-tab[data-rel-path="notes.markdown"]');
+
+    assert.equal(await clickMenu('close-tab'), true);
+    await window.waitForSelector('.file-tab[data-rel-path="notes.markdown"]', { state: 'detached' });
+
+    assert.equal((await window.$$('.file-tab')).length, 1, 'the other file tab stays');
+    assert.equal((await window.$$('.folder-tab')).length, 1, 'the repository tab stays');
+  });
+
+  it('does nothing when no file tab is open, and leaves the window open', async () => {
+    await clickMenu('close-tab');           // closes the last remaining tab
+    await window.waitForFunction(() => document.querySelectorAll('.file-tab').length === 0);
+
+    await clickMenu('close-tab');           // nothing left to close
+    await window.waitForTimeout(300);
+
+    assert.equal((await window.$$('.folder-tab')).length, 1, 'repository tab must survive');
+    assert.equal(await window.isVisible('#workspace'), true, 'window must stay open');
+    assert.equal((await app.windows()).length, 1, 'window must not close');
+  });
+
+  it('moves to the next and previous file tab', async () => {
+    await window.click('.tree-row[data-rel-path="README.md"]');
+    await window.waitForSelector('.file-tab[data-rel-path="README.md"]');
+    await window.click('.tree-row[data-rel-path="notes.markdown"]');
+    await window.waitForSelector('.file-tab[data-rel-path="notes.markdown"][data-active="true"]');
+
+    await clickMenu('previous-tab');
+    await window.waitForSelector('.file-tab[data-rel-path="README.md"][data-active="true"]');
+
+    await clickMenu('next-tab');
+    await window.waitForSelector('.file-tab[data-rel-path="notes.markdown"][data-active="true"]');
   });
 });
 
