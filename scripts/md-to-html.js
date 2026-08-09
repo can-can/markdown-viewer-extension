@@ -109,6 +109,19 @@ function outputPathFor(inputPath, requestedOutput) {
   return path.join(parsed.dir, `${parsed.name}.html`);
 }
 
+export async function ensureOutputDirectory(outputPath) {
+  const outputDirectory = path.dirname(outputPath);
+  try {
+    const stats = await fs.stat(outputDirectory);
+    if (!stats.isDirectory()) {
+      throw new Error(`Output parent is not a directory: ${outputDirectory}`);
+    }
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+    await fs.mkdir(outputDirectory, { recursive: true });
+  }
+}
+
 function mimeType(filePath) {
   const extension = path.extname(filePath).toLowerCase();
   return {
@@ -328,7 +341,7 @@ export async function renderMarkdownFile(options) {
       resourceBaseUrl: server.resourceBaseUrl,
     }), options.timeoutMs);
 
-    await fs.mkdir(path.dirname(outputPath), { recursive: true });
+    await ensureOutputDirectory(outputPath);
     await fs.writeFile(outputPath, html, 'utf8');
     return { outputPath, browserErrors };
   } finally {

@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseArgs } from '../scripts/md-to-html.js';
+import path from 'node:path';
+
+import { ensureOutputDirectory, parseArgs } from '../scripts/md-to-html.js';
 
 describe('Markdown HTML CLI arguments', () => {
   it('uses stable defaults', () => {
@@ -37,5 +39,10 @@ describe('Markdown HTML CLI arguments', () => {
       () => parseArgs(['notes.md', '--frontmatter', 'show']),
       /--frontmatter must be hide, table, or raw/,
     );
+  });
+
+  it('accepts an output file directly under an existing filesystem root', async () => {
+    const filesystemRoot = path.parse(process.cwd()).root;
+    await ensureOutputDirectory(path.join(filesystemRoot, 'documd-root-output-test.html'));
   });
 });
