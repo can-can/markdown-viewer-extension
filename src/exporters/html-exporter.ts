@@ -69,6 +69,13 @@ function stripPreloadHidingRules(css: string): string {
     .replace(/(^|\n)\s*:root\s*\{[^{}]*color-scheme\s*:\s*light\s+dark[^{}]*\}\s*(\n|$)/gi, '\n');
 }
 
+function escapeHtmlText(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 const CONTENT_SELECTOR_TOKENS = [
   '#markdown-content',
   '#markdown-page',
@@ -249,7 +256,7 @@ export async function exportToHtml(options: HtmlExportOptions): Promise<HtmlExpo
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title}</title>
+  <title>${escapeHtmlText(title)}</title>
   ${katexLink}
   <style>${styles}\n${EXPORT_LAYOUT_CSS}</style>
 </head>
