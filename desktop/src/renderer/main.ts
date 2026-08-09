@@ -59,15 +59,36 @@ async function openFolder(): Promise<void> {
 
   // repoKey is set only for a worktree root. A folder inside a repository has
   // no siblings to add, and must behave as a plain folder.
-  if (folder.repoKey) await addSiblingWorktrees(folder.id, folder.path);
+  await refreshWorktrees(folder.id);
 }
 
 /** Add the other worktrees without reading them or starting their watchers. */
-async function addSiblingWorktrees(folderId: string, folderPath: string): Promise<void> {
-  const worktrees = await window.desktop.listWorktrees(folderId);
+/**
+ * Bring the folder list into step with git for one repository.
+ *
+ * Idempotent. It adds worktrees that are not open yet and leaves the rest
+ * alone, so it is safe to call whenever the list might be out of date.
+ *
+ * This must run more than once per folder. Discovering the list only at open
+ * time froze it: a worktree created later never appeared, and a restored
+ * session kept whatever set was saved. The dropdown has no per-worktree close
+ * control, so there is no user choice to preserve by not looking again.
+ */
+async function refreshWorktrees(folderId: string): Promise<void> {
+  const folder = model.getFolder(folderId);
+  if (!folder?.repoKey) return;
+
+  let worktrees;
+  try {
+    worktrees = await window.desktop.listWorktrees(folderId);
+  } catch {
+    // git is gone or the folder is unreadable. Keep what is already shown.
+    return;
+  }
+
   for (const worktree of worktrees) {
-    if (worktree.path === folderPath) continue;
-    if (model.getState().folders.some((folder) => folder.path === worktree.path)) continue;
+    if (model.getState().folders.some((candidate) => candidate.path === worktree.path)) continue;
+
     const registered = await window.desktop.registerWorktree(worktree.path);
     if (!registered) continue;
     model.addFolder(registered, {
@@ -77,6 +98,16 @@ async function addSiblingWorktrees(folderId: string, folderPath: string): Promis
       loaded: false,
     });
     if (worktree.prunable) model.setFolderStatus(registered.id, 'unavailable');
+  }
+}
+
+/** Refresh every open repository once, by one folder from each group. */
+async function refreshAllWorktrees(): Promise<void> {
+  const seen = new Set<string>();
+  for (const folder of [...model.getState().folders]) {
+    if (!folder.repoKey || seen.has(folder.repoKey)) continue;
+    seen.add(folder.repoKey);
+    await refreshWorktrees(folder.id);
   }
 }
 
@@ -155,6 +186,8 @@ function render(): void {
     onActivate: (folderId) => {
       model.activateFolder(folderId);
       void loadFolderIfNeeded(folderId);
+      // Coming back to a repository is a good moment to ask git again.
+      void refreshWorktrees(folderId);
     },
     onClose: closeFolder,
     onAdd: () => { void openFolder(); },
@@ -538,6 +571,10 @@ async function restoreSession(): Promise<void> {
     restoring = false;
   }
 
+  // The saved set is a snapshot. Ask git again, so a worktree created since
+  // the last run appears instead of the list staying frozen forever.
+  await refreshAllWorktrees();
+
   // One write to record whatever actually came back.
   scheduleSessionSave();
 }
@@ -545,6 +582,11 @@ async function restoreSession(): Promise<void> {
 model.subscribe(render);
 model.subscribe(scheduleSessionSave);
 window.desktop.onFileChanged(handleFileChanged);
+
+// You normally create a worktree in a terminal and then come back to the app.
+// Returning to the window is therefore the moment the list is most likely to be
+// out of date, and one git call per repository is cheap.
+window.addEventListener('focus', () => { void refreshAllWorktrees(); });
 
 /**
  * Menu commands, including the keyboard accelerators.

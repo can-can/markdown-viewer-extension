@@ -56,30 +56,31 @@ export function registerIpcHandlers(win: BrowserWindow): void {
     watch = true,
     fallback?: { repoKey: string | null; branch: string | null },
   ): Promise<OpenedFolder> => {
+    // Canonicalise once, here. git always reports resolved paths, so an
+    // unresolved path from the dialog (for example /tmp vs /private/tmp) would
+    // never match the worktree list, and the folder would be added a second
+    // time as its own sibling.
+    const canonical = await fs.realpath(root).catch(() => root);
     const id = `f${++folderIdCounter}`;
-    openFolders.set(id, root);
-    if (watch) startWatching(id, root, sendFileChange);
+    openFolders.set(id, canonical);
+    if (watch) startWatching(id, canonical, sendFileChange);
     // Only a worktree ROOT joins a repository group.
     //
     // A folder that merely sits inside a repository is not a worktree. Without
     // this check, two unrelated subfolders of one repository would collapse
     // into a single repository tab, and the dropdown would offer the repository
     // root as if it were their sibling.
-    //
-    // git reports resolved paths, so compare against the resolved folder too.
-    const resolvedRoot = await fs.realpath(root).catch(() => root);
-    const self = (await listWorktrees(root))
-      .find((w) => w.path === root || w.path === resolvedRoot);
+    const self = (await listWorktrees(canonical)).find((w) => w.path === canonical);
 
     // A deleted worktree cannot run git. The caller then supplies what git
     // reported earlier, so the folder keeps its group instead of splitting off.
-    const repoKey = self ? await repoKeyOf(root) : (fallback?.repoKey ?? null);
+    const repoKey = self ? await repoKeyOf(canonical) : (fallback?.repoKey ?? null);
     const branch = self?.branch ?? fallback?.branch ?? null;
     folderRepoKeys.set(id, repoKey);
     return {
       id,
-      path: root,
-      name: path.basename(root),
+      path: canonical,
+      name: path.basename(canonical),
       repoKey,
       branch,
     };

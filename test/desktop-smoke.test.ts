@@ -629,6 +629,90 @@ describe('worktree user interface', () => {
   });
 });
 
+describe('worktree list stays in step with git', () => {
+  let app: ElectronApplication;
+  let window: Page;
+  let base: string;
+  let repo: string;
+  let userDataDir: string;
+  let git: (cwd: string, ...args: string[]) => void;
+
+  const branches = async (): Promise<string[]> =>
+    window.$$eval('#worktree-select-control option', (nodes) =>
+      nodes.map((n) => n.textContent ?? ''));
+
+  before(async () => {
+    const { execFileSync } = await import('node:child_process');
+    git = (cwd, ...args) => { execFileSync('git', args, { cwd, stdio: 'ignore' }); };
+
+    // realpath matters: git reports resolved paths, and the app must match them
+    // or it adds the opened folder again as its own sibling.
+    base = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'docmd-wtref-')));
+    repo = path.join(base, 'repo');
+    userDataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'docmd-wtref-ud-'));
+
+    await fs.mkdir(repo, { recursive: true });
+    git(repo, 'init', '-q');
+    git(repo, 'config', 'user.email', 'test@example.com');
+    git(repo, 'config', 'user.name', 'Test');
+    await fs.writeFile(path.join(repo, 'README.md'), '# Main\n', 'utf8');
+    git(repo, 'add', '-A');
+    git(repo, 'commit', '-qm', 'init');
+    git(repo, 'worktree', 'add', '-q', path.join(base, 'wt-a'), '-b', 'feat-a');
+
+    app = await launchApp(userDataDir);
+    window = await app.firstWindow();
+    await window.waitForSelector('#landing', { state: 'visible' });
+    // Pass the unresolved /tmp form on purpose, to prove the app canonicalises.
+    await stubFolderPaths(app, [repo.replace('/private/tmp/', '/tmp/')]);
+    await window.click('#open-folder');
+    await window.waitForSelector('#worktree-select-control');
+  });
+
+  after(async () => {
+    await app?.close();
+    await fs.rm(base, { recursive: true, force: true });
+    await fs.rm(userDataDir, { recursive: true, force: true });
+  });
+
+  it('lists each worktree once, with no duplicate for the opened folder', async () => {
+    assert.deepEqual(await branches(), ['main', 'feat-a']);
+    assert.equal((await window.$$('.folder-tab')).length, 1);
+  });
+
+  it('picks up a worktree created while the app is open', async () => {
+    git(repo, 'worktree', 'add', '-q', path.join(base, 'wt-b'), '-b', 'feat-b');
+
+    // Returning to the window is when the app asks git again.
+    await window.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await window.waitForFunction(
+      () => document.querySelectorAll('#worktree-select-control option').length === 3,
+      undefined,
+      { timeout: 15000 },
+    );
+    assert.deepEqual(await branches(), ['main', 'feat-a', 'feat-b']);
+  });
+
+  it('keeps the new worktree after a restart', async () => {
+    // The session stores a snapshot. Restore must ask git again, or the list
+    // freezes at whatever was saved.
+    git(repo, 'worktree', 'add', '-q', path.join(base, 'wt-c'), '-b', 'feat-c');
+    await window.waitForTimeout(700);   // let the debounced session write land
+    await app.close();
+
+    app = await launchApp(userDataDir);
+    window = await app.firstWindow();
+    await window.waitForSelector('#worktree-select-control');
+    await window.waitForFunction(
+      () => document.querySelectorAll('#worktree-select-control option').length === 4,
+      undefined,
+      { timeout: 15000 },
+    );
+    assert.deepEqual(await branches(), ['main', 'feat-a', 'feat-b', 'feat-c']);
+    assert.equal((await window.$$('.folder-tab')).length, 1, 'still one repository tab');
+  });
+});
+
 describe('menu shortcuts', () => {
   let app: ElectronApplication;
   let window: Page;
