@@ -6,6 +6,7 @@
     { "id": "business", "file": "business.json", "category": "classic", "featured": true, "order": 3 },
     { "id": "manuscript", "file": "manuscript.json", "category": "classic", "featured": false, "order": 4 },
     { "id": "newspaper", "file": "newspaper.json", "category": "classic", "featured": false, "order": 5 },
+    { "id": "formal-simple", "file": "formal-simple.json", "category": "classic", "featured": false, "order": 6 },
 
     { "id": "palatino", "file": "palatino.json", "category": "reading", "featured": true, "order": 10 },
     { "id": "garamond", "file": "garamond.json", "category": "reading", "featured": true, "order": 11 },

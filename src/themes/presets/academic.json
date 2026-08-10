@@ -11,13 +11,16 @@
       "fontFamily": "SimSun"
     },
     "headings": {
-      "fontFamily": "SimHei"
+      "fontFamily": "SimHei",
+      "fontWeight": "normal",
+      "h3": { "fontWeight": "bold" },
+      "h4": { "fontFamily": "SimSun", "fontWeight": "bold" }
     },
     "code": {
       "fontFamily": "Monaco"
     }
   },
-  "layoutScheme": "book",
+  "layoutScheme": "formal-paper",
   "colorScheme": "neutral",
   "tableStyle": "academic",
   "codeTheme": "light-clean"

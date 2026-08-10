@@ -95,15 +95,22 @@ function blendAlertBackground(alertColor: string, pageBg: string): string {
 export function createBlockquoteConverter({ themeStyles, convertInlineNodes, convertChildNode: initialConvertChildNode }: BlockquoteConverterOptions): BlockquoteConverter {
   const blockquoteSpacing = themeStyles.blockSpacing?.blockquote;
   
-  // Cell padding for the blockquote container.
-  // BlockquoteText paragraph spacing is now globally compensated via
-  // compensateParagraphSpacing(), so cell padding can be symmetric
-  // without adding extra line-height offset.
+  // Cell padding for the blockquote container stays symmetric: the line-extra
+  // compensation (Word's extra leading below the last line) is carried by the
+  // first inner paragraph's spacing-before (see BlockquoteText style), so we
+  // don't rely on cell top margins which are unreliable in some render paths.
   const basePadding = blockquoteSpacing?.paddingVertical ?? 80;
   const horizontalPadding = blockquoteSpacing?.paddingHorizontal ?? 200;
+  // Half of the line leading (line height minus char height). The FIRST inner
+  // paragraph gets this added to its spacing-before, and the cell BOTTOM
+  // padding absorbs the same amount — the equivalent of a "negative trailing
+  // gap" on the last paragraph (which Word renders badly inside table cells:
+  // it produces huge blank areas). The last line therefore sits closer to /
+  // visually past the container bottom while top/bottom whitespace balances.
+  const halfExtra = Math.max(0, Math.round((blockquoteSpacing?.lineExtra ?? 0) / 2));
   const cellPadding = {
     top: basePadding,
-    bottom: basePadding,
+    bottom: Math.max(0, basePadding - halfExtra),
     left: horizontalPadding,
     right: Math.round(horizontalPadding / 2),
   };
@@ -122,7 +129,7 @@ export function createBlockquoteConverter({ themeStyles, convertInlineNodes, con
    * Convert a paragraph node inside blockquote.
    * When the blockquote is an alert, the title paragraph gets the alert colour.
    */
-  async function convertBlockquoteParagraph(child: DOCXASTNode, isFirst: boolean, alertColor?: string): Promise<Paragraph> {
+  async function convertBlockquoteParagraph(child: DOCXASTNode, isFirst: boolean, alertColor?: string, isLast = false): Promise<Paragraph> {
     const isTitle = isAlertTitle(child);
     const inlineColor = (alertColor && isTitle) ? alertColor : undefined;
     const children = await convertInlineNodes(child.children as InlineNode[], inlineColor ? { color: inlineColor } : undefined);
@@ -135,6 +142,18 @@ export function createBlockquoteConverter({ themeStyles, convertInlineNodes, con
       children: children as ParagraphChild[],
       style: 'BlockquoteText',
     };
+    
+    // FIRST paragraph: add half of the line leading (line height minus char
+    // height) to the spacing-before — the "extra top space" that keeps the
+    // text vertically centered in the container. The bottom half is absorbed
+    // by the reduced cell bottom padding (see cellPadding above), so no
+    // negative paragraph spacing is emitted (Word renders negative spacing
+    // inside table cells with huge blank areas). Auto line spacing is kept
+    // (exact rules clip glyph tops).
+    if (isFirst) {
+      const styleBefore = themeStyles.paragraphStyles['BlockquoteText']?.paragraph?.spacing?.before ?? 0;
+      paragraphConfig.spacing = { before: styleBefore + halfExtra };
+    }
     
     return new Paragraph(paragraphConfig);
   }
@@ -157,10 +176,20 @@ export function createBlockquoteConverter({ themeStyles, convertInlineNodes, con
 
     const cellChildren: FileChild[] = [];
 
-    let isFirst = true;
-    for (const child of node.children) {
+    // Locate the LAST paragraph child so its trailing spacing-after can be
+    // dropped (bottom whitespace must stay symmetric with the top padding).
+    let lastParagraphIndex = -1;
+    node.children.forEach((child, index) => {
       if (child.type === 'paragraph') {
-        cellChildren.push(await convertBlockquoteParagraph(child, isFirst, alertColor));
+        lastParagraphIndex = index;
+      }
+    });
+
+    let isFirst = true;
+    for (let i = 0; i < node.children.length; i++) {
+      const child = node.children[i];
+      if (child.type === 'paragraph') {
+        cellChildren.push(await convertBlockquoteParagraph(child, isFirst, alertColor, i === lastParagraphIndex));
         isFirst = false;
       } else if (child.type === 'blockquote') {
         // Nested blockquote: recursively create another table (keep same listLevel, increment nestLevel)

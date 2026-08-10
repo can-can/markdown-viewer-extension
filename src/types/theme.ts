@@ -201,8 +201,17 @@ export interface LayoutBlockConfig {
    *  Web preview only — not applied by DOCX/other renderers. */
   borderWidth?: string;
   /** Whether the theme supports first-line indentation on paragraphs.
-   *  Actual indent amount is controlled by user setting (0-4 characters). */
+   *  Actual indent amount is controlled by user setting (0-4 characters).
+   *  This switch also drives list-item alignment (li { margin-left }) so
+   *  lists stay aligned with indented body text; listItem.firstLineIndent
+   *  is deprecated and no longer consumed. */
   firstLineIndent?: boolean;
+  /** Block text font size (e.g. "10.5pt" for table cells). Falls back to body
+   *  font size when absent. Applied in web rendering and DOCX export alike. */
+  fontSize?: string;
+  /** Block text line-height multiplier (e.g. 1 for single spacing inside
+   *  tables). Falls back to body line-height when absent. */
+  lineHeight?: number;
 }
 
 /**

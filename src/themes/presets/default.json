@@ -1,21 +1,28 @@
 {
   "id": "default",
-  "name": "标准文档",
-  "name_en": "Standard",
-  "description": "Times New Roman 字体，适合正式文档和论文",
-  "description_en": "Times New Roman font for formal documents and papers",
+  "name": "正式文书",
+  "name_en": "Formal",
+  "description": "仿党政机关公文排版：仿宋正文、黑体/楷体标题、首行缩进",
+  "description_en": "Government-style official document layout",
   "author": "docu.md Markdown Viewer",
   "version": "1.0.0",
   "fontScheme": {
     "body": {
-      "fontFamily": "Times New Roman"
+      "fontFamily": "FangSong"
     },
-    "headings": {},
+    "headings": {
+      "fontFamily": "FangSong",
+      "fontWeight": "normal",
+      "h1": { "fontFamily": "SimSun", "fontWeight": "normal" },
+      "h2": { "fontFamily": "SimHei", "fontWeight": "normal" },
+      "h3": { "fontFamily": "KaiTi", "fontWeight": "normal" },
+      "h4": { "fontFamily": "FangSong", "fontWeight": "bold" }
+    },
     "code": {
       "fontFamily": "Monaco"
     }
   },
-  "layoutScheme": "regular",
+  "layoutScheme": "formal",
   "colorScheme": "neutral",
   "tableStyle": "grid",
   "codeTheme": "light-clean"

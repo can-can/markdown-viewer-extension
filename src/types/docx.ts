@@ -169,6 +169,11 @@ export interface DOCXBlockSpacing {
   blockquote?: DOCXParagraphSpacing & {
     paddingVertical?: number;
     paddingHorizontal?: number;
+    /** Line leading below the last paragraph line (line height minus char
+     *  height). Added to the first inner paragraph's spacing-before so the
+     *  top/bottom whitespace inside a blockquote stays equal without
+     *  relying on cell top margins. */
+    lineExtra?: number;
   };
   codeBlock?: DOCXParagraphSpacing;
   table?: DOCXParagraphSpacing;

@@ -63,6 +63,15 @@
         "eastAsia": "SimHei"
       }
     },
+    "KaiTi": {
+      "name": "KaiTi",
+      "displayName": "楷体 (KaiTi)",
+      "webFallback": "'KaiTi', 'STKaiti', 'Kaiti SC', 'Kai', serif, SimSun",
+      "docx": {
+        "ascii": "Times New Roman",
+        "eastAsia": "楷体"
+      }
+    },
     "FangSong": {
       "name": "FangSong",
       "displayName": "仿宋 (FangSong)",

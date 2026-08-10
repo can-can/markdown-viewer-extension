@@ -8,14 +8,16 @@
   "version": "1.0.0",
   "fontScheme": {
     "body": {
-      "fontFamily": "Arial"
+      "fontFamily": "SimSun"
     },
-    "headings": {},
+    "headings": {
+      "fontFamily": "SimHei"
+    },
     "code": {
       "fontFamily": "Monaco"
     }
   },
-  "layoutScheme": "regular",
+  "layoutScheme": "formal",
   "colorScheme": "neutral",
   "tableStyle": "professional",
   "codeTheme": "business-contrast"

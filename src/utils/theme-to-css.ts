@@ -655,7 +655,9 @@ ${styles.join('\n')}
     const styles: string[] = [
       `  margin: ${marginBefore} 0 ${marginAfter} 0;`
     ];
-    if (blocks.listItem.firstLineIndent && firstLineIndent > 0) {
+    // List-item alignment follows the paragraph first-line indent switch:
+    // both are controlled by the same user setting, so they stay in sync.
+    if (blocks.paragraph?.firstLineIndent && firstLineIndent > 0) {
       styles.push(`  margin-left: ${firstLineIndent}em;`);
     }
     css.push(`#markdown-content li {
@@ -682,7 +684,7 @@ ${styles.join('\n')}
 }`);
     }
     // Override list indent inside blockquote (blockquotes don't follow first-line indent)
-    if (blocks.listItem.firstLineIndent && firstLineIndent > 0) {
+    if (blocks.paragraph?.firstLineIndent && firstLineIndent > 0) {
       css.push(`#markdown-content blockquote li {
   margin-left: 0;
 }`);
@@ -698,12 +700,21 @@ ${styles.join('\n')}
 }`);
   }
 
-  // Table spacing
+  // Table spacing (plus optional table text size / line-height)
   if (blocks.table) {
     const marginBefore = toPx(blocks.table.spacingBefore);
     const marginAfter = toPx(blocks.table.spacingAfter);
+    const tableStyles: string[] = [
+      `  margin: ${marginBefore} auto ${marginAfter} auto;`
+    ];
+    if (blocks.table.fontSize) {
+      tableStyles.push(`  font-size: ${themeManager.ptToPx(blocks.table.fontSize)};`);
+    }
+    if (blocks.table.lineHeight !== undefined) {
+      tableStyles.push(`  line-height: ${blocks.table.lineHeight};`);
+    }
     css.push(`#markdown-content table {
-  margin: ${marginBefore} auto ${marginAfter} auto;
+${tableStyles.join('\n')}
 }`);
   }
 
@@ -913,7 +924,12 @@ export async function loadAndApplyTheme(themeId: string): Promise<void> {
     
     // Set renderer theme config for diagrams (Mermaid, Graphviz, etc.)
     const fontFamily = themeManager.buildFontFamily(theme.fontScheme.body.fontFamily);
-    const fontSize = parseFloat(layoutScheme.body.fontSize);
+    // Diagram font size is intentionally FIXED and decoupled from the theme
+    // body font size: external SVGs (e.g. shields.io badges) render with their
+    // own fixed internal sizes, so a body-driven diagram font would break row
+    // height consistency (a 16pt body made diagrams and badges visually
+    // incompatible; badges only line up with PNGs at 12pt).
+    const fontSize = 12;
     const diagramStyle = theme.diagramStyle || 'normal';
     // Derive colorSchema from the theme's registry category. Dark presets live
     // under the 'dark' category so downstream renderers (mermaid, vega, dot,

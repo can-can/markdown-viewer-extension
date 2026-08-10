@@ -1,0 +1,28 @@
+{
+  "id": "formal-simple",
+  "name": "简约正式",
+  "name_en": "Formal Simple",
+  "description": "宋体正文、黑体标题，无楷体层级，适合不要求三级楷体的单位",
+  "description_en": "Song body with Hei headings, no Kai level, for organizations not requiring third-level Kai",
+  "author": "docu.md Markdown Viewer",
+  "version": "1.0.0",
+  "fontScheme": {
+    "body": {
+      "fontFamily": "SimSun"
+    },
+    "headings": {
+      "fontFamily": "SimSun",
+      "fontWeight": "normal",
+      "h2": { "fontFamily": "SimHei", "fontWeight": "normal" },
+      "h3": { "fontFamily": "SimSun", "fontWeight": "bold" },
+      "h4": { "fontFamily": "SimSun", "fontWeight": "bold" }
+    },
+    "code": {
+      "fontFamily": "Monaco"
+    }
+  },
+  "layoutScheme": "formal",
+  "colorScheme": "neutral",
+  "tableStyle": "grid",
+  "codeTheme": "light-clean"
+}

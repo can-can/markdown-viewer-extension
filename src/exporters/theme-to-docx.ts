@@ -188,8 +188,14 @@ export function themeToDOCXStyles(
 
   // TableText paragraph spacing used to compensate cell margins so the
   // total visual gap (margin + paragraph before/after) stays symmetric.
+  // Line-height follows blocks.table.lineHeight when declared (e.g. single
+  // spacing in official documents), otherwise the body line-height.
   const bodyLineSpacing = Math.round(layoutScheme.body.lineHeight * 240);
-  const tableTextSpacing = compensateParagraphSpacing(3, 3, bodyLineSpacing);
+  const tableLineHeight = layoutScheme.blocks.table?.lineHeight;
+  const tableLineSpacing = tableLineHeight !== undefined
+    ? Math.round(tableLineHeight * 240)
+    : bodyLineSpacing;
+  const tableTextSpacing = compensateParagraphSpacing(3, 3, tableLineSpacing);
 
   const pageBackground = colorScheme.background.page
     ? colorScheme.background.page.replace('#', '')
@@ -311,6 +317,21 @@ function generateBlockSpacing(layoutScheme: LayoutScheme): DOCXBlockSpacing {
     ),
     blockquote: {
       ...blockquoteSpacing,
+      // Line leading below the last paragraph line: ACTUAL auto line height
+      // minus the character height (twips). Word's auto line height is
+      // single-line × multiplier, where single-line ≈ 1.2 × font size — NOT
+      // the 240-based bodyLineSpacing (that is only the multiplier × 240
+      // base, which is smaller than the real rendered height; exact line
+      // rules sized to it clip glyphs). The blockquote converter splits this
+      // leading in half — added to the first inner paragraph's spacing-before
+      // and absorbed from the cell's bottom padding — so top/bottom
+      // whitespace stays equal without negative spacing (Word renders
+      // negative paragraph spacing inside table cells with huge blank areas).
+      lineExtra: Math.max(
+        0,
+        Math.round(parseFloat(layoutScheme.body.fontSize) * 1.2 * layoutScheme.body.lineHeight * 20)
+          - themeManager.ptToTwips(layoutScheme.body.fontSize)
+      ),
       paddingVertical: themeManager.ptToTwips(`${parsePtValue(blockquoteBlock.paddingVertical, 4)}pt`),
       paddingHorizontal: themeManager.ptToTwips(`${parsePtValue(blockquoteBlock.paddingHorizontal, 10)}pt`),
     },
@@ -492,17 +513,19 @@ function generateParagraphStyles(
     },
   };
 
-  // TableText uses the same body line-height as BlockquoteText and Normal.
-  // compensateParagraphSpacing already handles line-height asymmetry by
-  // redistributing before/after spacing, so cell margins remain symmetric.
+  // TableText follows blocks.table.fontSize when declared (e.g. 10.5pt in
+  // official documents); otherwise it keeps the legacy fixed 10pt size so
+  // existing themes are unaffected. Line spacing comes from tableTextSpacing
+  // (single spacing when blocks.table.lineHeight is declared).
 
+  const tableBlock = layoutScheme.blocks.table;
   styles.TableText = {
     id: 'TableText',
     name: 'Table Text',
     basedOn: 'Normal',
     next: 'Normal',
     run: {
-      size: 20,
+      size: tableBlock?.fontSize ? themeManager.ptToHalfPt(tableBlock.fontSize) : 20,
     },
     paragraph: {
       spacing: tableTextSpacing,
