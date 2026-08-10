@@ -19,6 +19,26 @@
     "message": "Erro desconhecido",
     "description": "Fallback when error message missing"
   },
+  "book_export_docx": {
+    "message": "Exportar livro para DOCX",
+    "description": "Menu item: export the whole GitBook book as a single DOCX"
+  },
+  "book_export_failed": {
+    "message": "Falha ao exportar o livro: {0}",
+    "description": "Alert shown when whole-book export fails, with error detail"
+  },
+  "book_export_pdf": {
+    "message": "Exportar livro para PDF",
+    "description": "Menu item: export the whole GitBook book as a PDF via print"
+  },
+  "book_export_skipped_pages": {
+    "message": "{0} página(s) ignorada(s)",
+    "description": "Alert shown after export when some pages could not be fetched"
+  },
+  "book_export_title": {
+    "message": "Exportar livro",
+    "description": "Tooltip for the whole-book export dropdown button in the SUMMARY panel header"
+  },
   "cache_clear": {
     "message": "Limpar cache",
     "description": "Clear cache button"
@@ -422,6 +442,10 @@
   "remark_cfg_title": {
     "message": "Modo de anotação",
     "description": "Title for remark mode settings card"
+  },
+  "remark_change_color": {
+    "message": "Alterar cor",
+    "description": "Tooltip for changing the remark color"
   },
   "remark_clear_all": {
     "message": "Limpar todas as observações",

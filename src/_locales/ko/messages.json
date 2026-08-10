@@ -19,6 +19,26 @@
     "message": "알 수 없는 오류",
     "description": "세부 정보가 없을 때 문구"
   },
+  "book_export_docx": {
+    "message": "책을 DOCX로 내보내기",
+    "description": "Menu item: export the whole GitBook book as a single DOCX"
+  },
+  "book_export_failed": {
+    "message": "책 내보내기 실패: {0}",
+    "description": "Alert shown when whole-book export fails, with error detail"
+  },
+  "book_export_pdf": {
+    "message": "책을 PDF로 내보내기",
+    "description": "Menu item: export the whole GitBook book as a PDF via print"
+  },
+  "book_export_skipped_pages": {
+    "message": "{0}페이지가 건너뛰어졌습니다",
+    "description": "Alert shown after export when some pages could not be fetched"
+  },
+  "book_export_title": {
+    "message": "책 내보내기",
+    "description": "Tooltip for the whole-book export dropdown button in the SUMMARY panel header"
+  },
   "cache_clear": {
     "message": "캐시 비우기",
     "description": "캐시 비우기 버튼"
@@ -422,6 +442,10 @@
   "remark_cfg_title": {
     "message": "주석 모드",
     "description": "Title for remark mode settings card"
+  },
+  "remark_change_color": {
+    "message": "색상 변경",
+    "description": "Tooltip for changing the remark color"
   },
   "remark_clear_all": {
     "message": "모든 주석 지우기",

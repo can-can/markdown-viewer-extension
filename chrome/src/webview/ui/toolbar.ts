@@ -6,6 +6,7 @@
 import { getFilenameFromURL, getDocumentFilename, toMarkdownFilename } from '../../../../src/core/document-utils';
 import { applyZoom as applyZoomCore, exportHtmlFlow } from '../../../../src/core/viewer/viewer-host';
 import { createExportMenu } from '../../../../src/ui/export-menu';
+import { showActionMenu } from '../../../../src/ui/action-menu';
 import { printElement, isPrintAvailable, PRINT_BLOCKED_BY_SANDBOX } from '../../../../src/ui/print-utils';
 import type {
   TranslateFunction,
@@ -17,6 +18,7 @@ import type {
   ToolbarManagerInstance,
   GenerateToolbarHTMLOptions
 } from '../../../../src/types/index';
+import type { BookExportPhase } from '../../../../src/types/book-export';
 import { createRemarkMode } from '../../../../src/ui/remark-mode';
 import type { RemarkModeController } from '../../../../src/ui/remark-mode';
 
@@ -62,6 +64,8 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
     enableRemarkMode,
     getRemarkContainer,
     getRemarkRawMarkdown,
+    onExportBookDocx,
+    onExportBookPdf,
   } = options;
 
   // Layout configurations
@@ -544,6 +548,8 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
       });
     }
 
+    setupBookExportButton();
+
     setupPrintButton();
   }
 
@@ -552,6 +558,148 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
    */
   function setupPrintButton(): void {
     // Print availability is handled by the shared export menu.
+  }
+
+  // ========================================================================
+  // Whole-book export (GitBook SUMMARY panel)
+  // ========================================================================
+
+  /**
+   * Update the book export button's progress ring for a pipeline phase.
+   * Fetch: 0-40%, render: 0-95%, convert: 40-95%, pack: 95%.
+   */
+  function updateBookExportProgress(btn: HTMLElement, phase: BookExportPhase, done: number, total: number): void {
+    const circle = btn.querySelector('.download-progress-circle');
+    if (!circle) {
+      return;
+    }
+
+    let ratio = 0;
+    if (phase === 'fetch') {
+      ratio = total > 0 ? (done / total) * 0.4 : 0;
+    } else if (phase === 'render') {
+      ratio = total > 0 ? (done / total) * 0.95 : 0.4;
+    } else if (phase === 'convert') {
+      ratio = total > 0 ? 0.4 + (done / total) * 0.55 : 0.4;
+    } else if (phase === 'pack') {
+      ratio = 0.95;
+    }
+
+    const clamped = Math.max(0, Math.min(1, ratio));
+    const circumference = 43.98;
+    (circle as SVGCircleElement).style.strokeDashoffset = String(circumference * (1 - clamped));
+  }
+
+  /**
+   * Run a whole-book export (DOCX or PDF) with the button progress ring.
+   */
+  async function runBookExport(kind: 'docx' | 'pdf'): Promise<void> {
+    const btn = document.getElementById('book-export-btn') as HTMLButtonElement | null;
+    if (!btn || btn.disabled) {
+      return;
+    }
+    if (kind === 'docx' && !onExportBookDocx) {
+      return;
+    }
+    if (kind === 'pdf' && !onExportBookPdf) {
+      return;
+    }
+
+    // Request downloads permission only for remote files (local files use <a download> fallback)
+    if (kind === 'docx' && !window.location.protocol.startsWith('file')) {
+      try {
+        await chrome.runtime.sendMessage({ type: 'REQUEST_DOWNLOADS_PERMISSION' });
+      } catch {
+        // Ignore - background will fall back if permission denied
+      }
+    }
+
+    const originalContent = btn.innerHTML;
+    const progressHTML = `
+      <svg class="progress-circle" width="18" height="18" viewBox="0 0 18 18">
+        <circle class="progress-circle-bg" cx="9" cy="9" r="7" stroke="currentColor" stroke-width="2" fill="none" opacity="0.3"/>
+        <circle class="download-progress-circle" cx="9" cy="9" r="7" stroke="currentColor" stroke-width="2" fill="none"
+                stroke-dasharray="43.98" stroke-dashoffset="43.98" transform="rotate(-90 9 9)"/>
+      </svg>
+    `;
+
+    try {
+      btn.disabled = true;
+      btn.classList.add('downloading');
+      btn.innerHTML = progressHTML;
+
+      const onProgress = (phase: BookExportPhase, done: number, total: number): void => {
+        updateBookExportProgress(btn, phase, done, total);
+      };
+
+      if (kind === 'docx') {
+        const result = await onExportBookDocx!({ onProgress });
+        if (!result.success) {
+          const detail = result.error ? `: ${result.error}` : '';
+          alert(translate('book_export_failed', [detail]));
+          return;
+        }
+        if (result.skippedCount && result.skippedCount > 0) {
+          alert(translate('book_export_skipped_pages', [String(result.skippedCount)]));
+        }
+      } else {
+        const result = await onExportBookPdf!({ onProgress });
+        if (!result.success) {
+          const detail = result.error ? `: ${result.error}` : '';
+          alert(translate('book_export_failed', [detail]));
+        }
+      }
+    } catch (error) {
+      console.error('Book export error:', error);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      if (errMsg === PRINT_BLOCKED_BY_SANDBOX) {
+        alert(translate('toolbar_print_disabled_title'));
+      } else {
+        alert(translate('book_export_failed', [`: ${errMsg}`]));
+      }
+    } finally {
+      btn.innerHTML = originalContent;
+      btn.disabled = false;
+      btn.classList.remove('downloading');
+    }
+  }
+
+  /**
+   * Wire the SUMMARY panel header export button (dropdown with DOCX/PDF items).
+   */
+  function setupBookExportButton(): void {
+    const btn = document.getElementById('book-export-btn') as HTMLButtonElement | null;
+    if (!btn || (!onExportBookDocx && !onExportBookPdf)) {
+      return;
+    }
+
+    const openMenu = (): void => {
+      // Position like the main toolbar export menu (anchor branch): below the
+      // button, right-aligned to its right edge. rightAligned here would pin
+      // the menu to the top of the viewport instead.
+      showActionMenu({
+        anchor: btn,
+        className: 'book-export-menu',
+        items: [
+          ...(onExportBookDocx ? [{
+            label: translate('book_export_docx'),
+            onSelect: () => runBookExport('docx'),
+          }] : []),
+          ...(onExportBookPdf ? [{
+            label: translate('book_export_pdf'),
+            onSelect: () => runBookExport('pdf'),
+          }] : []),
+        ],
+      });
+    };
+
+    btn.addEventListener('click', openMenu);
+    btn.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openMenu();
+      }
+    });
   }
 
   function triggerSaveFile(): void {
@@ -666,6 +814,7 @@ export function generateToolbarHTML(options: GenerateToolbarHTMLOptions): string
   const printTitleAttr = escapeHtml(toolbarPrintTitle);
   const remarkModeTitleAttr = escapeHtml(remarkModeTitle);
   const toggleGitbookTitleAttr = escapeHtml(toolbarToggleGitbookTitle);
+  const bookExportTitleAttr = escapeHtml(translate('book_export_title'));
 
   return `
   <div id="page-shell">
@@ -734,6 +883,18 @@ export function generateToolbarHTML(options: GenerateToolbarHTMLOptions): string
       </div>
       <div id="gitbook-sidebar-header" class="hidden">
         <span class="gitbook-sidebar-title">SUMMARY.md</span>
+        <div class="gitbook-sidebar-actions">
+          <button id="book-export-btn" class="toolbar-btn toolbar-menu-trigger" title="${bookExportTitleAttr}" aria-label="${bookExportTitleAttr}" aria-haspopup="menu" aria-expanded="false">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 13V7"/>
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/>
+              <path d="m9 10 3 3 3-3"/>
+            </svg>
+            <svg class="toolbar-menu-caret" width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+              <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
     <div id="page-content">

@@ -484,6 +484,14 @@ body.toc-position-right #table-of-contents.hidden {
   color: var(--color-text-primary);
 }
 
+/* Export whole-book button group (right-aligned in the SUMMARY panel header) */
+.gitbook-sidebar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 /* GitBook sidebar body — flex child in page-content row */
 #gitbook-sidebar-body {
   order: 3;

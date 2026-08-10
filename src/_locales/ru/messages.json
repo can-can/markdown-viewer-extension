@@ -19,6 +19,26 @@
     "message": "Неизвестная ошибка",
     "description": "Резервный текст"
   },
+  "book_export_docx": {
+    "message": "Экспорт книги в DOCX",
+    "description": "Menu item: export the whole GitBook book as a single DOCX"
+  },
+  "book_export_failed": {
+    "message": "Не удалось экспортировать книгу: {0}",
+    "description": "Alert shown when whole-book export fails, with error detail"
+  },
+  "book_export_pdf": {
+    "message": "Экспорт книги в PDF",
+    "description": "Menu item: export the whole GitBook book as a PDF via print"
+  },
+  "book_export_skipped_pages": {
+    "message": "Пропущено страниц: {0}",
+    "description": "Alert shown after export when some pages could not be fetched"
+  },
+  "book_export_title": {
+    "message": "Экспорт книги",
+    "description": "Tooltip for the whole-book export dropdown button in the SUMMARY panel header"
+  },
   "cache_clear": {
     "message": "Очистить кэш",
     "description": "Кнопка очистки"
@@ -422,6 +442,10 @@
   "remark_cfg_title": {
     "message": "Режим аннотаций",
     "description": "Title for remark mode settings card"
+  },
+  "remark_change_color": {
+    "message": "Изменить цвет",
+    "description": "Tooltip for changing the remark color"
   },
   "remark_clear_all": {
     "message": "Очистить все заметки",

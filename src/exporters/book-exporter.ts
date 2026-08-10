@@ -1,0 +1,251 @@
+/**
+ * Book Exporter — GitBook whole-book export core.
+ *
+ * Platform-agnostic: page fetching, per-page preprocessing (frontmatter strip,
+ * relative URL absolutization, heading level shifting) and merged markdown
+ * assembly for DOCX export. The DOCX conversion reuses the existing
+ * DocxExporter (dynamically imported to avoid circular dependencies).
+ *
+ * DOM/print rendering (PDF path) lives in book-renderer.ts.
+ */
+
+import type {
+  BookExportDocxResult,
+  BookExportProgressHandler,
+  BookPage,
+} from '../types/book-export';
+import type { PluginRenderer } from '../types/plugin';
+
+// ============================================================================
+// Markers
+// ============================================================================
+
+/**
+ * Chapter page-break marker inserted between merged book pages.
+ * Recognized by the DOCX exporter (same pattern as [toc]) so that every
+ * source file starts on a new page, independent of the user's
+ * `docxHrDisplay` setting.
+ */
+export const BOOK_PAGE_BREAK_MARKER = '[pagebreak]';
+
+// ============================================================================
+// Preprocessing
+// ============================================================================
+
+const FRONTMATTER_RE = /^\uFEFF?---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/;
+const ATX_HEADING_RE = /^(#{1,6})\s+(.+)$/;
+const INLINE_LINK_RE = /(!?\[[^\]]*\])\s*\(\s*(<[^>]*>|[^)\s]+)((?:\s+["'][^"']*["'])?)\s*\)/g;
+const REF_DEFINITION_RE = /^\[([^\]]+)\]:\s*(\S+)(?:\s+(?:".*"|'.*'|\(.*\)))?\s*$/gm;
+
+function isAbsoluteUrl(url: string): boolean {
+  return /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(url);
+}
+
+/**
+ * Rewrite relative image/link URLs (inline and reference definitions) to
+ * absolute URLs resolved against the page's own URL. The DOCX exporter and
+ * the HTML print renderer both work with a single base URL, so absolutizing
+ * at merge time is what allows per-page relative paths to keep working.
+ */
+export function absolutizeMarkdownUrls(markdown: string, baseUrl: string): string {
+  const resolve = (raw: string): string => {
+    if (isAbsoluteUrl(raw) || raw.startsWith('#') || raw.startsWith('data:')) {
+      return raw;
+    }
+    try {
+      return new URL(raw, baseUrl).href;
+    } catch {
+      return raw;
+    }
+  };
+
+  let result = markdown.replace(INLINE_LINK_RE, (match, prefix: string, rawUrl: string, rest: string) => {
+    const isAngle = rawUrl.startsWith('<') && rawUrl.endsWith('>');
+    const url = isAngle ? rawUrl.slice(1, -1) : rawUrl;
+    const resolved = resolve(url);
+    return `${prefix}(${isAngle ? `<${resolved}>` : resolved}${rest})`;
+  });
+
+  result = result.replace(REF_DEFINITION_RE, (match, id: string, url: string) => `[${id}]: ${resolve(url)}`);
+
+  return result;
+}
+
+/**
+ * Find the level of the first ATX heading in a markdown document (0 if none).
+ */
+export function findFirstHeadingLevel(markdown: string): number {
+  for (const line of markdown.split(/\r?\n/)) {
+    const match = line.match(ATX_HEADING_RE);
+    if (match) {
+      return match[1].length;
+    }
+  }
+  return 0;
+}
+
+/**
+ * Shift all ATX heading levels by `shift` (clamped to 1..6).
+ */
+export function shiftHeadingLevels(markdown: string, shift: number): string {
+  if (shift === 0) {
+    return markdown;
+  }
+  return markdown.replace(/^(#{1,6})(?=\s)/gm, (match, hashes: string) => {
+    const level = Math.max(1, Math.min(6, hashes.length + shift));
+    return '#'.repeat(level);
+  });
+}
+
+export interface PreprocessPageOptions {
+  /** Book-tree depth of the page (0 = top level) */
+  depth?: number;
+  /** Navigation title, used as a generated H1 when the page has no heading */
+  chapterTitle?: string;
+}
+
+/**
+ * Prepare a single book page for merging into a whole-book document:
+ * 1. Strip YAML frontmatter (book export always uses 'hide' display mode).
+ * 2. Absolutize relative URLs against the page's own URL.
+ * 3. Shift heading levels so the page's first heading becomes H1
+ *    (+1 additional level per nested depth). Pages without any heading get
+ *    a generated H1 from the navigation title.
+ */
+export function preprocessPage(markdown: string, pageUrl: string, options: PreprocessPageOptions = {}): string {
+  const { depth = 0, chapterTitle = '' } = options;
+
+  let content = markdown.replace(/^\uFEFF/, '');
+  content = content.replace(FRONTMATTER_RE, '');
+  content = absolutizeMarkdownUrls(content, pageUrl);
+
+  const firstLevel = findFirstHeadingLevel(content);
+  if (firstLevel > 0) {
+    // First heading aligns to the chapter level: H1 for top-level pages,
+    // H(1+depth) for nested sections.
+    const shift = 1 + depth - firstLevel;
+    content = shiftHeadingLevels(content, shift);
+  } else if (chapterTitle) {
+    content = `# ${chapterTitle}\n\n${content}`;
+  }
+
+  return content;
+}
+
+// ============================================================================
+// Merged markdown assembly
+// ============================================================================
+
+export interface BuildMergedMarkdownOptions {
+  pages: BookPage[];
+  fetchPage: (href: string) => Promise<string>;
+  onProgress?: BookExportProgressHandler;
+  signal?: AbortSignal;
+}
+
+export interface BookMergedMarkdownResult {
+  markdown: string;
+  /** Pages that failed to fetch (export continues with the rest) */
+  skipped: { href: string; error: string }[];
+  totalPages: number;
+}
+
+/**
+ * Fetch every book page in SUMMARY order, preprocess it, and join the pages
+ * with [pagebreak] markers so each source file starts on a new page.
+ * Individual page failures are collected and do not abort the export.
+ */
+export async function buildMergedMarkdown(options: BuildMergedMarkdownOptions): Promise<BookMergedMarkdownResult> {
+  const { pages, fetchPage, onProgress, signal } = options;
+  const parts: string[] = [];
+  const skipped: { href: string; error: string }[] = [];
+  const total = pages.length;
+
+  for (let i = 0; i < total; i++) {
+    signal?.throwIfAborted();
+    const page = pages[i];
+    try {
+      const raw = await fetchPage(page.href);
+      const processed = preprocessPage(raw, page.href, { depth: page.depth, chapterTitle: page.title });
+      if (i > 0 && parts.length > 0) {
+        parts.push(`\n\n${BOOK_PAGE_BREAK_MARKER}\n\n`);
+      }
+      parts.push(processed.trim());
+    } catch (error) {
+      skipped.push({ href: page.href, error: error instanceof Error ? error.message : String(error) });
+    }
+    onProgress?.('fetch', i + 1, total);
+  }
+
+  return { markdown: parts.join('\n'), skipped, totalPages: total };
+}
+
+// ============================================================================
+// DOCX book export
+// ============================================================================
+
+export interface ExportBookToDocxOptions {
+  pages: BookPage[];
+  /**
+   * Book title rendered as the title-page heading. Only used when non-empty:
+   * the title page is omitted entirely when there is no suitable title
+   * (the directory name is NOT forced as the document title).
+   */
+  bookTitle?: string | null;
+  /** Output filename (may include or omit the .docx extension) */
+  filename?: string;
+  fetchPage: (href: string) => Promise<string>;
+  /** Diagram renderer (mermaid/plantuml etc.); optional */
+  renderer?: PluginRenderer | null;
+  onProgress?: BookExportProgressHandler;
+  signal?: AbortSignal;
+}
+
+/**
+ * Assemble the whole-book document markdown: optional title-page heading,
+ * [toc] field, page break, then the merged chapters. Without a suitable
+ * title the document simply starts with the table of contents.
+ */
+export function buildBookDocumentMarkdown(bookTitle: string | null | undefined, chaptersMarkdown: string): string {
+  const titleBlock = bookTitle ? [`# ${bookTitle}`, ''] : [];
+  return [
+    ...titleBlock,
+    '[toc]',
+    '',
+    BOOK_PAGE_BREAK_MARKER,
+    '',
+    chaptersMarkdown,
+  ].join('\n');
+}
+
+/**
+ * Export a whole book to a single DOCX (title page only when a suitable
+ * title exists). Reuses the full DocxExporter pipeline (theme, math, code
+ * highlighting, tables, footnotes, images).
+ */
+export async function exportBookToDocx(options: ExportBookToDocxOptions): Promise<BookExportDocxResult> {
+  const { pages, bookTitle = null, filename: filenameOption, fetchPage, renderer = null, onProgress, signal } = options;
+
+  const merged = await buildMergedMarkdown({ pages, fetchPage, onProgress, signal });
+
+  const markdown = buildBookDocumentMarkdown(bookTitle, merged.markdown);
+
+  // Dynamically import to avoid circular dependencies (same pattern as viewer-host)
+  const DocxExporterModule = await import('./docx-exporter');
+  const DocxExporter = DocxExporterModule.default;
+  const exporter = new DocxExporter(renderer);
+
+  const baseName = (filenameOption || bookTitle || 'book').trim();
+  const filename = baseName.toLowerCase().endsWith('.docx') ? baseName : `${baseName}.docx`;
+
+  const result = await exporter.exportToDocx(markdown, filename, (completed, total) => {
+    onProgress?.('convert', completed, total);
+  });
+
+  return {
+    success: result.success,
+    error: result.error,
+    skippedCount: merged.skipped.length,
+    filename: result.success ? filename : undefined,
+  };
+}

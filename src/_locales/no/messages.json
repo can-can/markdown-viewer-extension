@@ -19,6 +19,26 @@
     "message": "Ukjent feil",
     "description": "Fallback when error message missing"
   },
+  "book_export_docx": {
+    "message": "Eksporter bok til DOCX",
+    "description": "Menu item: export the whole GitBook book as a single DOCX"
+  },
+  "book_export_failed": {
+    "message": "Kunne ikke eksportere boken: {0}",
+    "description": "Alert shown when whole-book export fails, with error detail"
+  },
+  "book_export_pdf": {
+    "message": "Eksporter bok til PDF",
+    "description": "Menu item: export the whole GitBook book as a PDF via print"
+  },
+  "book_export_skipped_pages": {
+    "message": "{0} side(r) hoppet over",
+    "description": "Alert shown after export when some pages could not be fetched"
+  },
+  "book_export_title": {
+    "message": "Eksporter bok",
+    "description": "Tooltip for the whole-book export dropdown button in the SUMMARY panel header"
+  },
   "cache_clear": {
     "message": "Tøm cache",
     "description": "Clear cache button"
@@ -422,6 +442,10 @@
   "remark_cfg_title": {
     "message": "Merknadsmodus",
     "description": "Title for remark mode settings card"
+  },
+  "remark_change_color": {
+    "message": "Endre farge",
+    "description": "Tooltip for changing the remark color"
   },
   "remark_clear_all": {
     "message": "Fjern alle merknader",

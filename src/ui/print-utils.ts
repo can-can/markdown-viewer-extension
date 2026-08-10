@@ -20,7 +20,7 @@ export function isPrintAvailable(): boolean {
 
 export const PRINT_BLOCKED_BY_SANDBOX = 'PRINT_BLOCKED_BY_SANDBOX';
 
-export async function printElement(element: HTMLElement, title = document.title): Promise<void> {
+export async function printElement(element: HTMLElement, title = document.title, extraCss = ''): Promise<void> {
   const markdownContent = element.querySelector('#markdown-content') as HTMLElement | null;
   // Extract theme background color for @page and html/body rules
   const pageBackgroundColor = markdownContent
@@ -94,6 +94,7 @@ export async function printElement(element: HTMLElement, title = document.title)
         height: auto !important;
       }
     }
+    ${extraCss}
   `;
   document.head.appendChild(printStyle);
 

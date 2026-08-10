@@ -19,6 +19,26 @@
     "message": "Okänt fel",
     "description": "Fallback when error message missing"
   },
+  "book_export_docx": {
+    "message": "Exportera bok till DOCX",
+    "description": "Menu item: export the whole GitBook book as a single DOCX"
+  },
+  "book_export_failed": {
+    "message": "Kunde inte exportera boken: {0}",
+    "description": "Alert shown when whole-book export fails, with error detail"
+  },
+  "book_export_pdf": {
+    "message": "Exportera bok till PDF",
+    "description": "Menu item: export the whole GitBook book as a PDF via print"
+  },
+  "book_export_skipped_pages": {
+    "message": "{0} sida/sidor hoppades över",
+    "description": "Alert shown after export when some pages could not be fetched"
+  },
+  "book_export_title": {
+    "message": "Exportera bok",
+    "description": "Tooltip for the whole-book export dropdown button in the SUMMARY panel header"
+  },
   "cache_clear": {
     "message": "Rensa cache",
     "description": "Clear cache button"
@@ -422,6 +442,10 @@
   "remark_cfg_title": {
     "message": "Anteckningsläge",
     "description": "Title for remark mode settings card"
+  },
+  "remark_change_color": {
+    "message": "Ändra färg",
+    "description": "Tooltip for changing the remark color"
   },
   "remark_clear_all": {
     "message": "Rensa alla kommentarer",

@@ -525,6 +525,23 @@ class DocxExporter {
   }
 
   /**
+   * Check if a node is a [pagebreak] marker
+   * Detects paragraphs containing only [pagebreak] — used by whole-book
+   * export so every chapter starts on a new page (independent of the
+   * user's docxHrDisplay setting).
+   */
+  private isPageBreakMarker(node: DOCXASTNode): boolean {
+    if (node.type !== 'paragraph') return false;
+    if (!node.children || node.children.length !== 1) return false;
+
+    const child = node.children[0];
+    if (child.type !== 'text') return false;
+
+    const text = (child.value || '').trim();
+    return /^\[pagebreak\]$/i.test(text);
+  }
+
+  /**
    * Convert frontmatter to DOCX elements based on display mode
    */
   private async convertFrontmatterToDocx(): Promise<FileChild[]> {
@@ -645,6 +662,21 @@ class DocxExporter {
           spacing: { before: 240, after: 120 },
         }));
         lastNodeType = 'toc';
+        continue;
+      }
+
+      // [pagebreak] marker: start a new page (whole-book chapter break)
+      if (this.isPageBreakMarker(node)) {
+        // Use pageBreakBefore instead of an explicit PageBreak run to avoid
+        // an extra blank page when the break lands at the top of a page
+        // (same approach as convertThematicBreak's pageBreak mode).
+        elements.push(new Paragraph({
+          pageBreakBefore: true,
+          children: [new TextRun({ text: '', size: 1 })],
+          spacing: { before: 0, after: 0, line: 1, lineRule: 'exact' },
+          alignment: AlignmentType.LEFT,
+        }));
+        lastNodeType = 'pagebreak';
         continue;
       }
 

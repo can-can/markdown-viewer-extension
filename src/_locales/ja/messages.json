@@ -19,6 +19,26 @@
     "message": "不明なエラー",
     "description": "詳細がない場合の文言"
   },
+  "book_export_docx": {
+    "message": "本をDOCXにエクスポート",
+    "description": "Menu item: export the whole GitBook book as a single DOCX"
+  },
+  "book_export_failed": {
+    "message": "本のエクスポートに失敗しました: {0}",
+    "description": "Alert shown when whole-book export fails, with error detail"
+  },
+  "book_export_pdf": {
+    "message": "本をPDFにエクスポート",
+    "description": "Menu item: export the whole GitBook book as a PDF via print"
+  },
+  "book_export_skipped_pages": {
+    "message": "{0} ページをスキップしました",
+    "description": "Alert shown after export when some pages could not be fetched"
+  },
+  "book_export_title": {
+    "message": "本をエクスポート",
+    "description": "Tooltip for the whole-book export dropdown button in the SUMMARY panel header"
+  },
   "cache_clear": {
     "message": "キャッシュをクリア",
     "description": "キャッシュクリアボタン"
@@ -422,6 +442,10 @@
   "remark_cfg_title": {
     "message": "注釈モード",
     "description": "Title for remark mode settings card"
+  },
+  "remark_change_color": {
+    "message": "色を変更",
+    "description": "Tooltip for changing the remark color"
   },
   "remark_clear_all": {
     "message": "注釈をすべて削除",

@@ -19,6 +19,26 @@
     "message": "Tuntematon virhe",
     "description": "Fallback when error message missing"
   },
+  "book_export_docx": {
+    "message": "Vie kirja DOCX-muotoon",
+    "description": "Menu item: export the whole GitBook book as a single DOCX"
+  },
+  "book_export_failed": {
+    "message": "Kirjan vienti epäonnistui: {0}",
+    "description": "Alert shown when whole-book export fails, with error detail"
+  },
+  "book_export_pdf": {
+    "message": "Vie kirja PDF-muotoon",
+    "description": "Menu item: export the whole GitBook book as a PDF via print"
+  },
+  "book_export_skipped_pages": {
+    "message": "{0} sivua ohitettiin",
+    "description": "Alert shown after export when some pages could not be fetched"
+  },
+  "book_export_title": {
+    "message": "Vie kirja",
+    "description": "Tooltip for the whole-book export dropdown button in the SUMMARY panel header"
+  },
   "cache_clear": {
     "message": "Tyhjennä välimuisti",
     "description": "Clear cache button"
@@ -422,6 +442,10 @@
   "remark_cfg_title": {
     "message": "Huomautustila",
     "description": "Title for remark mode settings card"
+  },
+  "remark_change_color": {
+    "message": "Vaihda väri",
+    "description": "Tooltip for changing the remark color"
   },
   "remark_clear_all": {
     "message": "Tyhjennä kaikki huomautukset",

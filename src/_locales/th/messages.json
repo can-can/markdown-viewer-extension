@@ -19,6 +19,26 @@
     "message": "ข้อผิดพลาดที่ไม่รู้จัก",
     "description": "Fallback when error message missing"
   },
+  "book_export_docx": {
+    "message": "ส่งออกหนังสือเป็น DOCX",
+    "description": "Menu item: export the whole GitBook book as a single DOCX"
+  },
+  "book_export_failed": {
+    "message": "ส่งออกหนังสือล้มเหลว: {0}",
+    "description": "Alert shown when whole-book export fails, with error detail"
+  },
+  "book_export_pdf": {
+    "message": "ส่งออกหนังสือเป็น PDF",
+    "description": "Menu item: export the whole GitBook book as a PDF via print"
+  },
+  "book_export_skipped_pages": {
+    "message": "ข้าม {0} หน้า",
+    "description": "Alert shown after export when some pages could not be fetched"
+  },
+  "book_export_title": {
+    "message": "ส่งออกหนังสือ",
+    "description": "Tooltip for the whole-book export dropdown button in the SUMMARY panel header"
+  },
   "cache_clear": {
     "message": "ล้างแคช",
     "description": "Clear cache button"
@@ -422,6 +442,10 @@
   "remark_cfg_title": {
     "message": "โหมดคำอธิบาย",
     "description": "Title for remark mode settings card"
+  },
+  "remark_change_color": {
+    "message": "เปลี่ยนสี",
+    "description": "Tooltip for changing the remark color"
   },
   "remark_clear_all": {
     "message": "ล้างหมายเหตุทั้งหมด",

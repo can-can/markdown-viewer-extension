@@ -19,6 +19,26 @@
     "message": "Lỗi không xác định",
     "description": "Fallback when error message missing"
   },
+  "book_export_docx": {
+    "message": "Xuất sách sang DOCX",
+    "description": "Menu item: export the whole GitBook book as a single DOCX"
+  },
+  "book_export_failed": {
+    "message": "Xuất sách thất bại: {0}",
+    "description": "Alert shown when whole-book export fails, with error detail"
+  },
+  "book_export_pdf": {
+    "message": "Xuất sách sang PDF",
+    "description": "Menu item: export the whole GitBook book as a PDF via print"
+  },
+  "book_export_skipped_pages": {
+    "message": "Đã bỏ qua {0} trang",
+    "description": "Alert shown after export when some pages could not be fetched"
+  },
+  "book_export_title": {
+    "message": "Xuất sách",
+    "description": "Tooltip for the whole-book export dropdown button in the SUMMARY panel header"
+  },
   "cache_clear": {
     "message": "Xóa bộ nhớ đệm",
     "description": "Clear cache button"
@@ -422,6 +442,10 @@
   "remark_cfg_title": {
     "message": "Chế độ chú thích",
     "description": "Title for remark mode settings card"
+  },
+  "remark_change_color": {
+    "message": "Đổi màu",
+    "description": "Tooltip for changing the remark color"
   },
   "remark_clear_all": {
     "message": "Xóa tất cả ghi chú",

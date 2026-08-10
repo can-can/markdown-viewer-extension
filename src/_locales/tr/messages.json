@@ -19,6 +19,26 @@
     "message": "Bilinmeyen hata",
     "description": "Fallback when error message missing"
   },
+  "book_export_docx": {
+    "message": "Kitabı DOCX olarak dışa aktar",
+    "description": "Menu item: export the whole GitBook book as a single DOCX"
+  },
+  "book_export_failed": {
+    "message": "Kitap dışa aktarılamadı: {0}",
+    "description": "Alert shown when whole-book export fails, with error detail"
+  },
+  "book_export_pdf": {
+    "message": "Kitabı PDF olarak dışa aktar",
+    "description": "Menu item: export the whole GitBook book as a PDF via print"
+  },
+  "book_export_skipped_pages": {
+    "message": "{0} sayfa atlandı",
+    "description": "Alert shown after export when some pages could not be fetched"
+  },
+  "book_export_title": {
+    "message": "Kitabı dışa aktar",
+    "description": "Tooltip for the whole-book export dropdown button in the SUMMARY panel header"
+  },
   "cache_clear": {
     "message": "Önbelleği temizle",
     "description": "Clear cache button"
@@ -422,6 +442,10 @@
   "remark_cfg_title": {
     "message": "Not modu",
     "description": "Title for remark mode settings card"
+  },
+  "remark_change_color": {
+    "message": "Rengi değiştir",
+    "description": "Tooltip for changing the remark color"
   },
   "remark_clear_all": {
     "message": "Tüm notları temizle",

@@ -24,6 +24,10 @@ interface GitbookNavItem {
 interface GitbookPanel {
   generateGitbookPanel(): Promise<void>;
   setupResponsivePanel(): Promise<void>;
+  /** Get the parsed SUMMARY.md navigation items (empty when no book found) */
+  getGitbookNavItems(): GitbookNavItem[];
+  /** Derive a book title from the SUMMARY.md location (null when unknown) */
+  getGitbookBookTitle(): string | null;
 }
 
 function isMarkdownDocumentUrl(url: string): boolean {
@@ -98,6 +102,35 @@ function getRepositoryRootPath(url: string): string {
   }
 }
 
+/**
+ * Boilerplate SUMMARY.md headings that are not real book titles.
+ * (GitBook's default template starts with "# Summary".)
+ */
+const SUMMARY_TITLE_BLOCKLIST = new Set([
+  'summary', 'table of contents', 'contents', 'index',
+  '目录', '目錄', '内容', '內容',
+]);
+
+/**
+ * Extract a book title from SUMMARY.md's first heading. Returns null when
+ * there is no heading or it is boilerplate — callers must not fall back to
+ * the directory name as an in-document title.
+ */
+function extractSummaryBookTitle(summaryContent: string): string | null {
+  for (const line of summaryContent.split(/\r?\n/)) {
+    const match = line.match(/^\s*(#{1,6})\s+(.+?)\s*#*\s*$/);
+    if (!match) {
+      continue;
+    }
+    const title = match[2].trim();
+    if (title && !SUMMARY_TITLE_BLOCKLIST.has(title.toLowerCase())) {
+      return title;
+    }
+    return null;
+  }
+  return null;
+}
+
 function parseGitbookSummary(summaryContent: string, summaryUrl: string): GitbookNavItem[] {
   const items: GitbookNavItem[] = [];
   const lines = summaryContent.split(/\r?\n/);
@@ -168,7 +201,7 @@ async function readSummaryByRelativePath(
 async function loadGitbookNavigation(
   currentUrl: string,
   readRelativeFile?: (relativePath: string) => Promise<string>
-): Promise<GitbookNavItem[] | null> {
+): Promise<{ items: GitbookNavItem[]; summaryUrl: string; bookTitle: string | null } | null> {
   if (!isMarkdownDocumentUrl(currentUrl)) {
     return null;
   }
@@ -218,7 +251,11 @@ async function loadGitbookNavigation(
 
         const navItems = parseGitbookSummary(loaded.content, loaded.summaryUrl);
         if (navItems.length > 0) {
-          return navItems;
+          return {
+            items: navItems,
+            summaryUrl: loaded.summaryUrl,
+            bookTitle: extractSummaryBookTitle(loaded.content),
+          };
         }
       }
     }
@@ -262,6 +299,11 @@ export function createGitbookPanel(
   isMobile: boolean,
   options: GitbookPanelOptions = {}
 ): GitbookPanel {
+  // Cached book data for whole-book export (export menu reads these)
+  let cachedNavItems: GitbookNavItem[] = [];
+  let cachedSummaryUrl: string | null = null;
+  let cachedBookTitle: string | null = null;
+
   function getPanelElements(): {
     panelDiv: HTMLElement | null;
     sidebarBody: HTMLElement | null;
@@ -311,11 +353,19 @@ export function createGitbookPanel(
 
   async function renderGitbookPanelIfAvailable(panelDiv: HTMLElement): Promise<boolean> {
     const currentUrl = options.currentUrl || window.location.href;
-    const navItems = await loadGitbookNavigation(currentUrl, options.readRelativeFile);
-    if (!navItems || navItems.length === 0) {
+    const bookNav = await loadGitbookNavigation(currentUrl, options.readRelativeFile);
+    if (!bookNav || bookNav.items.length === 0) {
+      cachedNavItems = [];
+      cachedSummaryUrl = null;
+      cachedBookTitle = null;
       setPanelVisibility(false);
       return false;
     }
+
+    cachedNavItems = bookNav.items;
+    cachedSummaryUrl = bookNav.summaryUrl;
+    cachedBookTitle = bookNav.bookTitle;
+    const navItems = bookNav.items;
 
     // Build TOC style list structure
     let panelHTML = '<ul class="gitbook-nav-list">';
@@ -417,8 +467,26 @@ export function createGitbookPanel(
     // Panel is always shown when SUMMARY.md is available; nothing to do here.
   }
 
+  /**
+   * Get the parsed SUMMARY.md navigation items (empty when no book found).
+   */
+  function getGitbookNavItems(): GitbookNavItem[] {
+    return cachedNavItems;
+  }
+
+  /**
+   * Book title from SUMMARY.md's own heading (null when there is no suitable
+   * title — the directory name is intentionally NOT used, it would make a
+   * weird in-document title).
+   */
+  function getGitbookBookTitle(): string | null {
+    return cachedBookTitle;
+  }
+
   return {
     generateGitbookPanel,
     setupResponsivePanel,
+    getGitbookNavItems,
+    getGitbookBookTitle,
   };
 }

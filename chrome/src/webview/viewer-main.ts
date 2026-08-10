@@ -6,6 +6,9 @@
  */
 
 import DocxExporter from '../../../src/exporters/docx-exporter';
+import { exportBookToDocx } from '../../../src/exporters/book-exporter';
+import { renderBookForPrint } from '../../../src/exporters/book-renderer';
+import { printElement, PRINT_BLOCKED_BY_SANDBOX } from '../../../src/ui/print-utils';
 import Localization, { DEFAULT_SETTING_LOCALE } from '../../../src/utils/localization';
 import themeManager from '../../../src/utils/theme-manager';
 import { loadAndApplyTheme } from '../../../src/utils/theme-to-css';
@@ -17,7 +20,7 @@ import { getWebExtensionApi } from '../../../src/utils/platform-info';
 import type { PluginRenderer, RendererThemeConfig, PlatformAPI } from '../../../src/types/index';
 
 import { escapeHtml } from '../../../src/core/markdown-utils';
-import { getCurrentDocumentUrl, saveToHistory } from '../../../src/core/document-utils';
+import { getCurrentDocumentUrl, saveToHistory, getDocumentFilename } from '../../../src/core/document-utils';
 import type { FileState } from '../../../src/types/core';
 import { showProcessingIndicator, hideProcessingIndicator } from './ui/progress-indicator';
 import { createTocManager } from './ui/toc-manager';
@@ -546,6 +549,59 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
   // Create navigation callback for GitBook panel (will be set after renderMarkdown is defined)
   let onGitbookNavigate: ((url: string, content: string) => Promise<void>) | undefined;
 
+  /**
+   * Fetch a book page the same way the GitBook panel navigates:
+   * readRelativeFile for file:// pages, direct fetch for remote URLs.
+   */
+  const fetchBookPage = async (href: string): Promise<string> => {
+    if (href.startsWith('file://')) {
+      if (!platform.document) {
+        throw new Error('Document service unavailable');
+      }
+      return platform.document.readRelativeFile(href);
+    }
+    const response = await fetch(href);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    return response.text();
+  };
+
+  /**
+   * Print CSS for whole-book PDF export: hide the current page, show the
+   * off-screen book container, and start every chapter on a new page.
+   */
+  const BOOK_PRINT_CSS = `
+    @media print {
+      #markdown-page { display: none !important; }
+      #book-print-root {
+        position: static !important;
+        left: 0 !important;
+      }
+      #book-print-root .book-chapter {
+        break-before: page;
+        page-break-before: always;
+      }
+      #book-print-root .book-chapter:first-child {
+        break-before: auto;
+        page-break-before: auto;
+      }
+      #book-print-root img {
+        max-width: 100%;
+        max-height: 9.5in;
+        height: auto;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      #book-print-root .diagram-block {
+        overflow: visible !important;
+        max-width: 100% !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+    }
+  `;
+
   // Initialize GitBook panel manager
   const gitbookPanel = createGitbookPanel(saveFileState, getFileState, isMobile, {
     currentUrl: getActiveDocumentUrl(),
@@ -562,7 +618,7 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
       return Promise.resolve();
     },
   });
-  const { generateGitbookPanel, setupResponsivePanel } = gitbookPanel;
+  const { generateGitbookPanel, setupResponsivePanel, getGitbookNavItems, getGitbookBookTitle } = gitbookPanel;
 
   // Get the raw markdown content.
   // When the page is a rendered HTML document the html-to-markdown content
@@ -875,6 +931,46 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
       });
     },
     enableSourceToggle: isMarkdownSourceToggleEnabled(),
+    onExportBookDocx: async ({ onProgress }) => {
+      const pages = getGitbookNavItems();
+      if (pages.length === 0) {
+        return { success: false, error: 'No book pages found' };
+      }
+      const bookTitle = getGitbookBookTitle();
+      return exportBookToDocx({
+        pages,
+        bookTitle,
+        filename: bookTitle || getDocumentFilename(),
+        fetchPage: fetchBookPage,
+        renderer: pluginRenderer,
+        onProgress,
+      });
+    },
+    onExportBookPdf: async ({ onProgress }) => {
+      const pages = getGitbookNavItems();
+      if (pages.length === 0) {
+        return { success: false, error: 'No book pages found' };
+      }
+      const rendered = await renderBookForPrint({
+        pages,
+        fetchPage: fetchBookPage,
+        renderer: pluginRenderer,
+        translate,
+        onProgress,
+      });
+      try {
+        await printElement(rendered.container, getGitbookBookTitle() || document.title, BOOK_PRINT_CSS);
+        return { success: true };
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        if (errMsg === PRINT_BLOCKED_BY_SANDBOX) {
+          throw error;
+        }
+        return { success: false, error: errMsg };
+      } finally {
+        rendered.cleanup();
+      }
+    },
     onToggleSourceMode: () => {
       void (async () => {
         if (!viewerAssembler) {

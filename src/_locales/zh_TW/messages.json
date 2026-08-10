@@ -19,6 +19,26 @@
     "message": "未知錯誤",
     "description": "錯誤信息缺失時的提示"
   },
+  "book_export_docx": {
+    "message": "匯出整本書為 DOCX",
+    "description": "Menu item: export the whole GitBook book as a single DOCX"
+  },
+  "book_export_failed": {
+    "message": "整本書匯出失敗：{0}",
+    "description": "Alert shown when whole-book export fails, with error detail"
+  },
+  "book_export_pdf": {
+    "message": "匯出整本書為 PDF",
+    "description": "Menu item: export the whole GitBook book as a PDF via print"
+  },
+  "book_export_skipped_pages": {
+    "message": "有 {0} 個頁面被略過，未匯出",
+    "description": "Alert shown after export when some pages could not be fetched"
+  },
+  "book_export_title": {
+    "message": "匯出整本書",
+    "description": "Tooltip for the whole-book export dropdown button in the SUMMARY panel header"
+  },
   "cache_clear": {
     "message": "清空快取",
     "description": "清空按鈕"
@@ -422,6 +442,10 @@
   "remark_cfg_title": {
     "message": "批注模式",
     "description": "Title for remark mode settings card"
+  },
+  "remark_change_color": {
+    "message": "更改顏色",
+    "description": "Tooltip for changing the remark color"
   },
   "remark_clear_all": {
     "message": "清除所有批註",

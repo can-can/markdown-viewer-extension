@@ -88,3 +88,4 @@ src/fonts/*.ttf
 # Obsidian plugin release assets (attached to GitHub Release, not committed)
 /main.js
 /styles.css
+/plans/
