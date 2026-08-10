@@ -11,6 +11,8 @@ export type SettingKey =
   | 'themeId'
   | 'tableMergeEmpty'
   | 'tableLayout'
+  | 'imageLayout'
+  | 'diagramLayout'
   | 'swapPanelSide'
   | 'readerSidebarWidth'
   | 'frontmatterDisplay'
@@ -26,6 +28,10 @@ export interface SettingTypes {
   themeId: string;
   tableMergeEmpty: boolean;
   tableLayout: 'left' | 'center' | 'center-full-width';
+  /** Standalone image alignment: 'left' (default) or 'center' */
+  imageLayout: 'left' | 'center';
+  /** Diagram/chart alignment: 'left' or 'center' (default) */
+  diagramLayout: 'left' | 'center';
   swapPanelSide: boolean;
   readerSidebarWidth: number;
   frontmatterDisplay: 'hide' | 'table' | 'raw';
@@ -42,6 +48,8 @@ export const DEFAULT_SETTINGS: SettingTypes = {
   themeId: 'default',
   tableMergeEmpty: true,
   tableLayout: 'center',
+  imageLayout: 'left',
+  diagramLayout: 'center',
   swapPanelSide: false,
   readerSidebarWidth: 280,
   frontmatterDisplay: 'hide',

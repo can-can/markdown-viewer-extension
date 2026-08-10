@@ -599,6 +599,8 @@ class _MarkdownViewerHomeState extends State<MarkdownViewerHome> {
             'frontmatterDisplay': settingsService.frontmatterDisplay,
             'tableMergeEmpty': settingsService.tableMergeEmpty,
             'tableLayout': settingsService.tableLayout,
+            'imageLayout': settingsService.imageLayout,
+            'diagramLayout': settingsService.diagramLayout,
             'firstLineIndent': settingsService.firstLineIndent,
           };
         }
@@ -639,6 +641,12 @@ class _MarkdownViewerHomeState extends State<MarkdownViewerHome> {
             }
             if (viewerSettings.containsKey('tableLayout')) {
               settingsService.tableLayout = viewerSettings['tableLayout'] as String;
+            }
+            if (viewerSettings.containsKey('imageLayout')) {
+              settingsService.imageLayout = viewerSettings['imageLayout'] as String;
+            }
+            if (viewerSettings.containsKey('diagramLayout')) {
+              settingsService.diagramLayout = viewerSettings['diagramLayout'] as String;
             }
             if (viewerSettings.containsKey('firstLineIndent')) {
               settingsService.firstLineIndent = viewerSettings['firstLineIndent'] as int;

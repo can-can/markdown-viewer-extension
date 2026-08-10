@@ -536,7 +536,7 @@
     "description": "自动刷新复选框标签"
   },
   "settings_auto_refresh_interval": {
-    "message": "刷新间隔:",
+    "message": "刷新间隔",
     "description": "刷新间隔选择器标签"
   },
   "settings_auto_refresh_note": {
@@ -550,6 +550,18 @@
   "settings_cache_title": {
     "message": "缓存",
     "description": "缓存设置区块标题"
+  },
+  "settings_diagram_layout": {
+    "message": "图表对齐",
+    "description": "Label for diagram alignment selector"
+  },
+  "settings_diagram_layout_center": {
+    "message": "居中",
+    "description": "Option for centered diagrams"
+  },
+  "settings_diagram_layout_left": {
+    "message": "靠左",
+    "description": "Option for left-aligned diagrams"
   },
   "settings_docx_emoji_style": {
     "message": "表情符号样式",
@@ -572,11 +584,11 @@
     "description": "Option to use Segoe UI Emoji"
   },
   "settings_docx_hr_display": {
-    "message": "DOCX：分隔线处理",
+    "message": "分隔线处理",
     "description": "Label for DOCX horizontal rule handling selector"
   },
   "settings_docx_hr_display_hide": {
-    "message": "隐藏（空行）",
+    "message": "隐藏",
     "description": "Option to hide horizontal rules in DOCX"
   },
   "settings_docx_hr_display_line": {
@@ -611,16 +623,12 @@
     "message": "4 字符",
     "description": "Option: 4 characters first-line indent"
   },
-  "settings_first_line_indent_note": {
-    "message": "正文段落首行缩进字符数。仅对支持缩进的主题生效。",
-    "description": "Helper note for first-line indent option"
-  },
   "settings_first_line_indent_off": {
     "message": "不缩进",
     "description": "Option to disable first-line indent"
   },
   "settings_frontmatter_display": {
-    "message": "Frontmatter 显示:",
+    "message": "Frontmatter 显示",
     "description": "Label for frontmatter display mode selector"
   },
   "settings_frontmatter_hide": {
@@ -643,6 +651,18 @@
     "message": "扩展设置",
     "description": "设置区标题"
   },
+  "settings_image_layout": {
+    "message": "图片对齐",
+    "description": "Label for standalone image alignment selector"
+  },
+  "settings_image_layout_center": {
+    "message": "居中",
+    "description": "Option for centered standalone images"
+  },
+  "settings_image_layout_left": {
+    "message": "靠左",
+    "description": "Option for left-aligned standalone images"
+  },
   "settings_interface_title": {
     "message": "界面设置",
     "description": "界面设置区标题"
@@ -660,7 +680,7 @@
     "description": "语言更改成功提示"
   },
   "settings_max_cache_label": {
-    "message": "最大缓存项目数:",
+    "message": "最大缓存项目数",
     "description": "最大缓存标签"
   },
   "settings_reset_btn": {
@@ -724,7 +744,7 @@
     "description": "主题切换成功时显示的消息"
   },
   "settings_theme_label": {
-    "message": "选择主题：",
+    "message": "选择主题",
     "description": "主题选择器标签"
   },
   "share": {

@@ -426,6 +426,8 @@ export class MarkdownPreviewView extends ItemView {
         frontmatterDisplay: stored.frontmatterDisplay ?? data.frontmatterDisplay ?? 'hide',
         tableMergeEmpty: stored.tableMergeEmpty ?? (data.tableMergeEmpty !== false),
         tableLayout: stored.tableLayout ?? data.tableLayout ?? 'center',
+        imageLayout: stored.imageLayout ?? data.imageLayout ?? 'left',
+        diagramLayout: stored.diagramLayout ?? data.diagramLayout ?? 'center',
         firstLineIndent: (typeof stored.firstLineIndent === 'number' ? stored.firstLineIndent : (typeof (data as Record<string, unknown>).firstLineIndent === 'number' ? (data as Record<string, unknown>).firstLineIndent as number : 2)),
       };
     });

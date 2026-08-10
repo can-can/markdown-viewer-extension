@@ -85,6 +85,8 @@ let savedSettings: {
   frontmatterDisplay: string;
   tableMergeEmpty: boolean;
   tableLayout: string;
+  imageLayout: string;
+  diagramLayout: string;
   firstLineIndent: number;
 } = {
   locale: 'auto',
@@ -93,6 +95,8 @@ let savedSettings: {
   frontmatterDisplay: 'hide',
   tableMergeEmpty: true,
   tableLayout: 'center',
+  imageLayout: 'left',
+  diagramLayout: 'center',
   firstLineIndent: 2,
 };
 
@@ -779,6 +783,8 @@ function initializeUI(): void {
     frontmatterDisplay: savedSettings.frontmatterDisplay as FrontmatterDisplay,
     tableMergeEmpty: savedSettings.tableMergeEmpty,
     tableLayout: savedSettings.tableLayout as 'left' | 'center' | 'center-full-width',
+    imageLayout: savedSettings.imageLayout as 'left' | 'center',
+    diagramLayout: savedSettings.diagramLayout as 'left' | 'center',
     firstLineIndent: savedSettings.firstLineIndent,
     onThemeChange: async (themeId) => {
       await handleSetTheme(themeId);
@@ -807,6 +813,14 @@ function initializeUI(): void {
     },
     onTableLayoutChange: async (layout) => {
       await platform.settings.set('tableLayout', layout);
+      await rerenderCurrentDocumentPreservingScroll();
+    },
+    onImageLayoutChange: async (layout) => {
+      await platform.settings.set('imageLayout', layout);
+      await rerenderCurrentDocumentPreservingScroll();
+    },
+    onDiagramLayoutChange: async (layout) => {
+      await platform.settings.set('diagramLayout', layout);
       await rerenderCurrentDocumentPreservingScroll();
     },
     onFirstLineIndentChange: async (indent) => {

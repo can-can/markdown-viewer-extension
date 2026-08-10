@@ -536,7 +536,7 @@
     "description": "Label for auto refresh checkbox"
   },
   "settings_auto_refresh_interval": {
-    "message": "Atnaujinimo intervalas:",
+    "message": "Atnaujinimo intervalas",
     "description": "Label for refresh interval selector"
   },
   "settings_auto_refresh_note": {
@@ -550,6 +550,18 @@
   "settings_cache_title": {
     "message": "Podėlis",
     "description": "Title for cache settings section"
+  },
+  "settings_diagram_layout": {
+    "message": "Diagramų išdėstymas",
+    "description": "Label for diagram alignment selector"
+  },
+  "settings_diagram_layout_center": {
+    "message": "Centre",
+    "description": "Option for centered diagrams"
+  },
+  "settings_diagram_layout_left": {
+    "message": "Kairėje",
+    "description": "Option for left-aligned diagrams"
   },
   "settings_docx_emoji_style": {
     "message": "Emoji stilius",
@@ -572,11 +584,11 @@
     "description": "Option for Windows emoji style"
   },
   "settings_docx_hr_display": {
-    "message": "DOCX: Horizontalių linijų apdorojimas",
+    "message": "Horizontalių linijų apdorojimas",
     "description": "Label for DOCX horizontal rule handling selector"
   },
   "settings_docx_hr_display_hide": {
-    "message": "Slėpti (tuščia eilutė)",
+    "message": "Slėpti",
     "description": "Option to hide horizontal rules in DOCX"
   },
   "settings_docx_hr_display_line": {
@@ -611,16 +623,12 @@
     "message": "4 simboliai",
     "description": "Option: 4 characters first-line indent"
   },
-  "settings_first_line_indent_note": {
-    "message": "Simbolių skaičius pastrapų pirmos eilutės įtraukai. Veikia tik temose, palaikančiose įtrauką.",
-    "description": "Helper note for first-line indent option"
-  },
   "settings_first_line_indent_off": {
     "message": "Be įtraukos",
     "description": "Option to disable first-line indent"
   },
   "settings_frontmatter_display": {
-    "message": "Frontmatter rodymas:",
+    "message": "Frontmatter rodymas",
     "description": "Label for frontmatter display mode selector"
   },
   "settings_frontmatter_hide": {
@@ -643,6 +651,18 @@
     "message": "Plėtinio nustatymai",
     "description": "Heading for settings section"
   },
+  "settings_image_layout": {
+    "message": "Vaizdų išdėstymas",
+    "description": "Label for standalone image alignment selector"
+  },
+  "settings_image_layout_center": {
+    "message": "Centre",
+    "description": "Option for centered standalone images"
+  },
+  "settings_image_layout_left": {
+    "message": "Kairėje",
+    "description": "Option for left-aligned standalone images"
+  },
   "settings_interface_title": {
     "message": "Sąsajos nustatymai",
     "description": "Heading for interface settings section"
@@ -660,7 +680,7 @@
     "description": "Toast when language is changed successfully"
   },
   "settings_max_cache_label": {
-    "message": "Maks. talpyklos elementų:",
+    "message": "Maks. talpyklos elementų",
     "description": "Label for max cache input"
   },
   "settings_reset_btn": {
@@ -724,7 +744,7 @@
     "description": "Message shown when theme is changed"
   },
   "settings_theme_label": {
-    "message": "Pasirinkite temą:",
+    "message": "Pasirinkite temą",
     "description": "Label for theme selector"
   },
   "share": {

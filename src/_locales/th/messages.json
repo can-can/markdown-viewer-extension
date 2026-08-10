@@ -536,7 +536,7 @@
     "description": "Label for auto refresh checkbox"
   },
   "settings_auto_refresh_interval": {
-    "message": "ช่วงเวลารีเฟรช:",
+    "message": "ช่วงเวลารีเฟรช",
     "description": "Label for refresh interval selector"
   },
   "settings_auto_refresh_note": {
@@ -550,6 +550,18 @@
   "settings_cache_title": {
     "message": "แคช",
     "description": "Title for cache settings section"
+  },
+  "settings_diagram_layout": {
+    "message": "เค้าโครงไดอะแกรม",
+    "description": "Label for diagram alignment selector"
+  },
+  "settings_diagram_layout_center": {
+    "message": "กึ่งกลาง",
+    "description": "Option for centered diagrams"
+  },
+  "settings_diagram_layout_left": {
+    "message": "ซ้าย",
+    "description": "Option for left-aligned diagrams"
   },
   "settings_docx_emoji_style": {
     "message": "สไตล์อิโมจิ",
@@ -572,11 +584,11 @@
     "description": "Option for Windows emoji style"
   },
   "settings_docx_hr_display": {
-    "message": "DOCX: การจัดการเส้นแนวนอน",
+    "message": "การจัดการเส้นแนวนอน",
     "description": "Label for DOCX horizontal rule handling selector"
   },
   "settings_docx_hr_display_hide": {
-    "message": "ซ่อน (บรรทัดว่าง)",
+    "message": "ซ่อน",
     "description": "Option to hide horizontal rules in DOCX"
   },
   "settings_docx_hr_display_line": {
@@ -611,16 +623,12 @@
     "message": "4 อักขระ",
     "description": "Option: 4 characters first-line indent"
   },
-  "settings_first_line_indent_note": {
-    "message": "จำนวนอักขระสำหรับเยื้องบรรทัดแรกของย่อหน้าเนื้อหา มีผลเฉพาะกับธีมที่รองรับการเยื้องเท่านั้น",
-    "description": "Helper note for first-line indent option"
-  },
   "settings_first_line_indent_off": {
     "message": "ไม่เยื้อง",
     "description": "Option to disable first-line indent"
   },
   "settings_frontmatter_display": {
-    "message": "การแสดง Frontmatter:",
+    "message": "การแสดง Frontmatter",
     "description": "Label for frontmatter display mode selector"
   },
   "settings_frontmatter_hide": {
@@ -643,6 +651,18 @@
     "message": "การตั้งค่าส่วนขยาย",
     "description": "Heading for settings section"
   },
+  "settings_image_layout": {
+    "message": "เค้าโครงรูปภาพ",
+    "description": "Label for standalone image alignment selector"
+  },
+  "settings_image_layout_center": {
+    "message": "กึ่งกลาง",
+    "description": "Option for centered standalone images"
+  },
+  "settings_image_layout_left": {
+    "message": "ซ้าย",
+    "description": "Option for left-aligned standalone images"
+  },
   "settings_interface_title": {
     "message": "การตั้งค่าอินเทอร์เฟซ",
     "description": "Heading for interface settings section"
@@ -660,7 +680,7 @@
     "description": "Toast when language is changed successfully"
   },
   "settings_max_cache_label": {
-    "message": "รายการแคชสูงสุด:",
+    "message": "รายการแคชสูงสุด",
     "description": "Label for max cache input"
   },
   "settings_reset_btn": {

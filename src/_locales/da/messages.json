@@ -536,7 +536,7 @@
     "description": "Label for auto refresh checkbox"
   },
   "settings_auto_refresh_interval": {
-    "message": "Opdateringsinterval:",
+    "message": "Opdateringsinterval",
     "description": "Label for refresh interval selector"
   },
   "settings_auto_refresh_note": {
@@ -550,6 +550,18 @@
   "settings_cache_title": {
     "message": "Cache",
     "description": "Title for cache settings section"
+  },
+  "settings_diagram_layout": {
+    "message": "Diagramlayout",
+    "description": "Label for diagram alignment selector"
+  },
+  "settings_diagram_layout_center": {
+    "message": "Centreret",
+    "description": "Option for centered diagrams"
+  },
+  "settings_diagram_layout_left": {
+    "message": "Venstre",
+    "description": "Option for left-aligned diagrams"
   },
   "settings_docx_emoji_style": {
     "message": "Emoji-stil",
@@ -572,11 +584,11 @@
     "description": "Option for Windows emoji style"
   },
   "settings_docx_hr_display": {
-    "message": "DOCX: Håndtering af vandrette linjer",
+    "message": "Håndtering af vandrette linjer",
     "description": "Label for DOCX horizontal rule handling selector"
   },
   "settings_docx_hr_display_hide": {
-    "message": "Skjul (tom linje)",
+    "message": "Skjul",
     "description": "Option to hide horizontal rules in DOCX"
   },
   "settings_docx_hr_display_line": {
@@ -611,16 +623,12 @@
     "message": "4 tegn",
     "description": "Option: 4 characters first-line indent"
   },
-  "settings_first_line_indent_note": {
-    "message": "Antal tegn til indrykning af første linje i brødtekstafsnit. Træder kun i kraft for temaer, der understøtter indrykning.",
-    "description": "Helper note for first-line indent option"
-  },
   "settings_first_line_indent_off": {
     "message": "Ingen indrykning",
     "description": "Option to disable first-line indent"
   },
   "settings_frontmatter_display": {
-    "message": "Frontmatter visning:",
+    "message": "Frontmatter visning",
     "description": "Label for frontmatter display mode selector"
   },
   "settings_frontmatter_hide": {
@@ -643,6 +651,18 @@
     "message": "Udvidelsesindstillinger",
     "description": "Overskrift for indstillingsafsnittet"
   },
+  "settings_image_layout": {
+    "message": "Billedlayout",
+    "description": "Label for standalone image alignment selector"
+  },
+  "settings_image_layout_center": {
+    "message": "Centreret",
+    "description": "Option for centered standalone images"
+  },
+  "settings_image_layout_left": {
+    "message": "Venstre",
+    "description": "Option for left-aligned standalone images"
+  },
   "settings_interface_title": {
     "message": "Grænsefladeindstillinger",
     "description": "Heading for interface settings section"
@@ -660,7 +680,7 @@
     "description": "Toast when language is changed successfully"
   },
   "settings_max_cache_label": {
-    "message": "Maksimum cachede elementer:",
+    "message": "Maksimum cachede elementer",
     "description": "Label for max cache input"
   },
   "settings_reset_btn": {

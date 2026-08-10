@@ -94,18 +94,41 @@ class _SettingsPageState extends State<SettingsPage> {
           // Display section
           _SectionHeader(title: localization.t('settings_general_title')),
           ListTile(
-            leading: const LeadingIcon(AntIcons.file_text_outline),
-            title: Text(localization.t('settings_frontmatter_display')),
-            subtitle: Text(_getFrontmatterDisplayName()),
+            leading: const LeadingIcon(AntIcons.align_left),
+            title: Text(localization.t('settings_first_line_indent')),
+            subtitle: Text(_getFirstLineIndentName()),
             trailing: const Icon(AntIcons.right_outline, size: 16),
-            onTap: _pickFrontmatterDisplay,
+            onTap: _pickFirstLineIndent,
+          ),
+          _FontSizeTile(
+            fontSize: settingsService.fontSize,
+            onChanged: (size) {
+              setState(() {
+                settingsService.fontSize = size;
+              });
+              _applyFontSize(size);
+            },
           ),
           ListTile(
-            leading: const LeadingIcon(AntIcons.smile_outline),
-            title: Text(localization.t('settings_docx_emoji_style')),
-            subtitle: Text(_getEmojiStyleDisplayName()),
+            leading: const LeadingIcon(AntIcons.table),
+            title: Text(localization.t('settings_table_layout')),
+            subtitle: Text(_getTableLayoutName()),
             trailing: const Icon(AntIcons.right_outline, size: 16),
-            onTap: _pickEmojiStyle,
+            onTap: _pickTableLayout,
+          ),
+          ListTile(
+            leading: const LeadingIcon(AntIcons.picture),
+            title: Text(localization.t('settings_image_layout')),
+            subtitle: Text(_getImageLayoutName()),
+            trailing: const Icon(AntIcons.right_outline, size: 16),
+            onTap: _pickImageLayout,
+          ),
+          ListTile(
+            leading: const LeadingIcon(AntIcons.bar_chart),
+            title: Text(localization.t('settings_diagram_layout')),
+            subtitle: Text(_getDiagramLayoutName()),
+            trailing: const Icon(AntIcons.right_outline, size: 16),
+            onTap: _pickDiagramLayout,
           ),
           _SwitchTile(
             iconData: AntIcons.border_horizontal,
@@ -120,11 +143,18 @@ class _SettingsPageState extends State<SettingsPage> {
             },
           ),
           ListTile(
-            leading: const LeadingIcon(AntIcons.table),
-            title: Text(localization.t('settings_table_layout')),
-            subtitle: Text(_getTableLayoutName()),
+            leading: const LeadingIcon(AntIcons.file_text_outline),
+            title: Text(localization.t('settings_frontmatter_display')),
+            subtitle: Text(_getFrontmatterDisplayName()),
             trailing: const Icon(AntIcons.right_outline, size: 16),
-            onTap: _pickTableLayout,
+            onTap: _pickFrontmatterDisplay,
+          ),
+          ListTile(
+            leading: const LeadingIcon(AntIcons.smile_outline),
+            title: Text(localization.t('settings_docx_emoji_style')),
+            subtitle: Text(_getEmojiStyleDisplayName()),
+            trailing: const Icon(AntIcons.right_outline, size: 16),
+            onTap: _pickEmojiStyle,
           ),
           ListTile(
             leading: const LeadingIcon(AntIcons.minus_outline),
@@ -132,22 +162,6 @@ class _SettingsPageState extends State<SettingsPage> {
             subtitle: Text(_getHrDisplayName()),
             trailing: const Icon(AntIcons.right_outline, size: 16),
             onTap: _pickHrDisplay,
-          ),
-          _FontSizeTile(
-            fontSize: settingsService.fontSize,
-            onChanged: (size) {
-              setState(() {
-                settingsService.fontSize = size;
-              });
-              _applyFontSize(size);
-            },
-          ),
-          ListTile(
-            leading: const LeadingIcon(AntIcons.align_left),
-            title: Text(localization.t('settings_first_line_indent')),
-            subtitle: Text(_getFirstLineIndentName()),
-            trailing: const Icon(AntIcons.right_outline, size: 16),
-            onTap: _pickFirstLineIndent,
           ),
           const Divider(),
           ListTile(
@@ -345,6 +359,18 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  String _getImageLayoutName() {
+    return settingsService.imageLayout == 'center'
+        ? localization.t('settings_image_layout_center')
+        : localization.t('settings_image_layout_left');
+  }
+
+  String _getDiagramLayoutName() {
+    return settingsService.diagramLayout == 'left'
+        ? localization.t('settings_diagram_layout_left')
+        : localization.t('settings_diagram_layout_center');
+  }
+
   String _getHrDisplayName() {
     final display = settingsService.hrDisplay;
     switch (display) {
@@ -461,6 +487,52 @@ class _SettingsPageState extends State<SettingsPage> {
     if (selected == null || !mounted) return;
     setState(() {
       settingsService.tableLayout = selected;
+    });
+    _notifySettingChanged();
+    if (mounted) Navigator.pop(context);
+  }
+
+  Future<void> _pickImageLayout() async {
+    final selected = await showSingleChoiceSheet<String>(
+      context: context,
+      title: localization.t('settings_image_layout'),
+      icon: AntIcons.picture,
+      selected: settingsService.imageLayout,
+      options: [
+        ChoiceOption(
+            value: 'left',
+            label: localization.t('settings_image_layout_left')),
+        ChoiceOption(
+            value: 'center',
+            label: localization.t('settings_image_layout_center')),
+      ],
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      settingsService.imageLayout = selected;
+    });
+    _notifySettingChanged();
+    if (mounted) Navigator.pop(context);
+  }
+
+  Future<void> _pickDiagramLayout() async {
+    final selected = await showSingleChoiceSheet<String>(
+      context: context,
+      title: localization.t('settings_diagram_layout'),
+      icon: AntIcons.bar_chart,
+      selected: settingsService.diagramLayout,
+      options: [
+        ChoiceOption(
+            value: 'left',
+            label: localization.t('settings_diagram_layout_left')),
+        ChoiceOption(
+            value: 'center',
+            label: localization.t('settings_diagram_layout_center')),
+      ],
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      settingsService.diagramLayout = selected;
     });
     _notifySettingChanged();
     if (mounted) Navigator.pop(context);

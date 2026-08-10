@@ -924,6 +924,28 @@ html[data-code-view] #markdown-content pre code .mv-code-line-content:empty::bef
   height: auto;
 }
 
+/* Standalone images: left-aligned by default (inline flow).
+   With .image-layout-center on the container, standalone images are centered. */
+#markdown-content.image-layout-center p > img:only-child,
+#markdown-content.image-layout-center p > a:only-child > img:only-child {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Diagram blocks (Mermaid, Vega, PlantUML, etc.): centered by default.
+   With .diagram-layout-left on the container, they become left-aligned. */
+#markdown-content .diagram-block {
+  margin: 20px auto;
+  text-align: center;
+}
+
+#markdown-content.diagram-layout-left .diagram-block {
+  margin-left: 0;
+  margin-right: auto;
+  text-align: left;
+}
+
 #markdown-content .diagram-block svg {
   width: 100%;
   height: auto;

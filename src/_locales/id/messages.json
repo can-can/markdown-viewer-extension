@@ -536,7 +536,7 @@
     "description": "Label for auto refresh checkbox"
   },
   "settings_auto_refresh_interval": {
-    "message": "Interval penyegaran:",
+    "message": "Interval penyegaran",
     "description": "Label for refresh interval selector"
   },
   "settings_auto_refresh_note": {
@@ -550,6 +550,18 @@
   "settings_cache_title": {
     "message": "Cache",
     "description": "Title for cache settings section"
+  },
+  "settings_diagram_layout": {
+    "message": "Tata letak diagram",
+    "description": "Label for diagram alignment selector"
+  },
+  "settings_diagram_layout_center": {
+    "message": "Tengah",
+    "description": "Option for centered diagrams"
+  },
+  "settings_diagram_layout_left": {
+    "message": "Kiri",
+    "description": "Option for left-aligned diagrams"
   },
   "settings_docx_emoji_style": {
     "message": "Gaya Emoji",
@@ -572,11 +584,11 @@
     "description": "Option for Windows emoji style"
   },
   "settings_docx_hr_display": {
-    "message": "DOCX: Penanganan garis horizontal",
+    "message": "Penanganan garis horizontal",
     "description": "Label for DOCX horizontal rule handling selector"
   },
   "settings_docx_hr_display_hide": {
-    "message": "Sembunyikan (baris kosong)",
+    "message": "Sembunyikan",
     "description": "Option to hide horizontal rules in DOCX"
   },
   "settings_docx_hr_display_line": {
@@ -611,16 +623,12 @@
     "message": "4 karakter",
     "description": "Option: 4 characters first-line indent"
   },
-  "settings_first_line_indent_note": {
-    "message": "Jumlah karakter untuk mengindentasi baris pertama paragraf isi. Hanya berlaku untuk tema yang mendukung indentasi.",
-    "description": "Helper note for first-line indent option"
-  },
   "settings_first_line_indent_off": {
     "message": "Tanpa indentasi",
     "description": "Option to disable first-line indent"
   },
   "settings_frontmatter_display": {
-    "message": "Tampilan Frontmatter:",
+    "message": "Tampilan Frontmatter",
     "description": "Label for frontmatter display mode selector"
   },
   "settings_frontmatter_hide": {
@@ -643,6 +651,18 @@
     "message": "Pengaturan ekstensi",
     "description": "Judul bagian pengaturan"
   },
+  "settings_image_layout": {
+    "message": "Tata letak gambar",
+    "description": "Label for standalone image alignment selector"
+  },
+  "settings_image_layout_center": {
+    "message": "Tengah",
+    "description": "Option for centered standalone images"
+  },
+  "settings_image_layout_left": {
+    "message": "Kiri",
+    "description": "Option for left-aligned standalone images"
+  },
   "settings_interface_title": {
     "message": "Pengaturan antarmuka",
     "description": "Heading for interface settings section"
@@ -660,7 +680,7 @@
     "description": "Toast when language is changed successfully"
   },
   "settings_max_cache_label": {
-    "message": "Maksimal item di-cache:",
+    "message": "Maksimal item di-cache",
     "description": "Label for max cache input"
   },
   "settings_reset_btn": {
@@ -724,7 +744,7 @@
     "description": "Message shown when theme is changed"
   },
   "settings_theme_label": {
-    "message": "Pilih Tema:",
+    "message": "Pilih Tema",
     "description": "Label for theme selector"
   },
   "share": {

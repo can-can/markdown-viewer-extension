@@ -536,7 +536,7 @@
     "description": "Label for auto refresh checkbox"
   },
   "settings_auto_refresh_interval": {
-    "message": "更新間隔:",
+    "message": "更新間隔",
     "description": "Label for refresh interval selector"
   },
   "settings_auto_refresh_note": {
@@ -550,6 +550,18 @@
   "settings_cache_title": {
     "message": "キャッシュ",
     "description": "Title for cache settings section"
+  },
+  "settings_diagram_layout": {
+    "message": "図表の配置",
+    "description": "Label for diagram alignment selector"
+  },
+  "settings_diagram_layout_center": {
+    "message": "中央",
+    "description": "Option for centered diagrams"
+  },
+  "settings_diagram_layout_left": {
+    "message": "左",
+    "description": "Option for left-aligned diagrams"
   },
   "settings_docx_emoji_style": {
     "message": "絵文字スタイル",
@@ -572,11 +584,11 @@
     "description": "Option for Windows emoji style"
   },
   "settings_docx_hr_display": {
-    "message": "DOCX: 水平線の処理",
+    "message": "水平線の処理",
     "description": "Label for DOCX horizontal rule handling selector"
   },
   "settings_docx_hr_display_hide": {
-    "message": "非表示（空行）",
+    "message": "非表示",
     "description": "Option to hide horizontal rules in DOCX"
   },
   "settings_docx_hr_display_line": {
@@ -611,16 +623,12 @@
     "message": "4 文字",
     "description": "Option: 4 characters first-line indent"
   },
-  "settings_first_line_indent_note": {
-    "message": "本文段落の先頭行をインデントする文字数。インデントに対応したテーマでのみ有効です。",
-    "description": "Helper note for first-line indent option"
-  },
   "settings_first_line_indent_off": {
     "message": "インデントなし",
     "description": "Option to disable first-line indent"
   },
   "settings_frontmatter_display": {
-    "message": "Frontmatter表示:",
+    "message": "Frontmatter表示",
     "description": "Label for frontmatter display mode selector"
   },
   "settings_frontmatter_hide": {
@@ -643,6 +651,18 @@
     "message": "拡張機能の設定",
     "description": "設定セクションの見出し"
   },
+  "settings_image_layout": {
+    "message": "画像の配置",
+    "description": "Label for standalone image alignment selector"
+  },
+  "settings_image_layout_center": {
+    "message": "中央",
+    "description": "Option for centered standalone images"
+  },
+  "settings_image_layout_left": {
+    "message": "左",
+    "description": "Option for left-aligned standalone images"
+  },
   "settings_interface_title": {
     "message": "インターフェース設定",
     "description": "Heading for interface settings section"
@@ -660,7 +680,7 @@
     "description": "Toast when language is changed successfully"
   },
   "settings_max_cache_label": {
-    "message": "キャッシュ最大件数:",
+    "message": "キャッシュ最大件数",
     "description": "キャッシュ項目数のラベル"
   },
   "settings_reset_btn": {
@@ -724,7 +744,7 @@
     "description": "テーマ変更時のメッセージ"
   },
   "settings_theme_label": {
-    "message": "テーマを選択：",
+    "message": "テーマを選択",
     "description": "テーマ選択のラベル"
   },
   "share": {

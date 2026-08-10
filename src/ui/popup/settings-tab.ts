@@ -140,6 +140,8 @@ interface Settings {
   frontmatterDisplay?: FrontmatterDisplay;
   tableMergeEmpty?: boolean;
   tableLayout?: TableLayout;
+  imageLayout?: 'left' | 'center';
+  diagramLayout?: 'left' | 'center';
   swapPanelSide?: PanelSideMode;
   firstLineIndent?: number;
 }
@@ -184,6 +186,8 @@ export function createSettingsTabManager({
     frontmatterDisplay: 'hide',
     tableMergeEmpty: true,
     tableLayout: 'center',
+    imageLayout: 'left',
+    diagramLayout: 'center',
     swapPanelSide: false,
     firstLineIndent: 2,
   };
@@ -323,6 +327,36 @@ export function createSettingsTabManager({
           await saveSettingsToStorage();
           // Notify all tabs to re-render
           notifySettingChanged('tableLayout', settings.tableLayout);
+        });
+      }
+    }
+
+    // Image layout
+    const imageLayoutEl = document.getElementById('image-layout') as HTMLSelectElement | null;
+    if (imageLayoutEl) {
+      imageLayoutEl.value = settings.imageLayout || 'left';
+      if (!imageLayoutEl.dataset.listenerAdded) {
+        imageLayoutEl.dataset.listenerAdded = 'true';
+        imageLayoutEl.addEventListener('change', async () => {
+          settings.imageLayout = imageLayoutEl.value as 'left' | 'center';
+          await saveSettingsToStorage();
+          // Notify all tabs to re-render
+          notifySettingChanged('imageLayout', settings.imageLayout);
+        });
+      }
+    }
+
+    // Diagram layout
+    const diagramLayoutEl = document.getElementById('diagram-layout') as HTMLSelectElement | null;
+    if (diagramLayoutEl) {
+      diagramLayoutEl.value = settings.diagramLayout || 'center';
+      if (!diagramLayoutEl.dataset.listenerAdded) {
+        diagramLayoutEl.dataset.listenerAdded = 'true';
+        diagramLayoutEl.addEventListener('change', async () => {
+          settings.diagramLayout = diagramLayoutEl.value as 'left' | 'center';
+          await saveSettingsToStorage();
+          // Notify all tabs to re-render
+          notifySettingChanged('diagramLayout', settings.diagramLayout);
         });
       }
     }
@@ -762,9 +796,6 @@ export function createSettingsTabManager({
           themeSelector.appendChild(categoryGroup);
         });
 
-        // Update description
-        updateThemeDescription(currentTheme);
-
         // Add change listener
         themeSelector.addEventListener('change', (event) => {
           const target = event.target as HTMLSelectElement;
@@ -773,21 +804,6 @@ export function createSettingsTabManager({
       }
     } catch (error) {
       console.error('Failed to load themes:', error);
-    }
-  }
-
-  /**
-   * Update theme description display
-   * @param themeId - Theme ID
-   */
-  function updateThemeDescription(themeId: string): void {
-    const theme = themes.find(t => t.id === themeId);
-    const descEl = document.getElementById('theme-description');
-
-    if (descEl && theme) {
-      const locale = getUiLocale();
-      const useEnglish = !locale.startsWith('zh');
-      descEl.textContent = useEnglish ? theme.description_en : theme.description;
     }
   }
 
@@ -805,9 +821,6 @@ export function createSettingsTabManager({
         selectedTheme: themeId,
       });
       currentTheme = themeId;
-
-      // Update description
-      updateThemeDescription(themeId);
 
       // Notify all tabs to reload theme
       notifySettingChanged('themeId', themeId);
@@ -884,6 +897,8 @@ export function createSettingsTabManager({
         docxEmojiStyle: 'system',
         tableMergeEmpty: true,
         tableLayout: 'center',
+        imageLayout: 'left',
+        diagramLayout: 'center',
         swapPanelSide: false,
         firstLineIndent: 2,
       };

@@ -536,7 +536,7 @@
     "description": "Label for auto refresh checkbox"
   },
   "settings_auto_refresh_interval": {
-    "message": "重新整理間隔:",
+    "message": "重新整理間隔",
     "description": "Label for refresh interval selector"
   },
   "settings_auto_refresh_note": {
@@ -550,6 +550,18 @@
   "settings_cache_title": {
     "message": "快取",
     "description": "Title for cache settings section"
+  },
+  "settings_diagram_layout": {
+    "message": "圖表對齊",
+    "description": "Label for diagram alignment selector"
+  },
+  "settings_diagram_layout_center": {
+    "message": "置中",
+    "description": "Option for centered diagrams"
+  },
+  "settings_diagram_layout_left": {
+    "message": "靠左",
+    "description": "Option for left-aligned diagrams"
   },
   "settings_docx_emoji_style": {
     "message": "表情符號樣式",
@@ -572,11 +584,11 @@
     "description": "Option for Windows emoji style"
   },
   "settings_docx_hr_display": {
-    "message": "DOCX：分隔線處理",
+    "message": "分隔線處理",
     "description": "Label for DOCX horizontal rule handling selector"
   },
   "settings_docx_hr_display_hide": {
-    "message": "隱藏（空行）",
+    "message": "隱藏",
     "description": "Option to hide horizontal rules in DOCX"
   },
   "settings_docx_hr_display_line": {
@@ -611,16 +623,12 @@
     "message": "4 字元",
     "description": "Option: 4 characters first-line indent"
   },
-  "settings_first_line_indent_note": {
-    "message": "正文段落首行縮排字元數。僅對支援縮排的主題生效。",
-    "description": "Helper note for first-line indent option"
-  },
   "settings_first_line_indent_off": {
     "message": "不縮排",
     "description": "Option to disable first-line indent"
   },
   "settings_frontmatter_display": {
-    "message": "Frontmatter 顯示:",
+    "message": "Frontmatter 顯示",
     "description": "Label for frontmatter display mode selector"
   },
   "settings_frontmatter_hide": {
@@ -643,6 +651,18 @@
     "message": "擴充功能設定",
     "description": "設定區標題"
   },
+  "settings_image_layout": {
+    "message": "圖片對齊",
+    "description": "Label for standalone image alignment selector"
+  },
+  "settings_image_layout_center": {
+    "message": "置中",
+    "description": "Option for centered standalone images"
+  },
+  "settings_image_layout_left": {
+    "message": "靠左",
+    "description": "Option for left-aligned standalone images"
+  },
   "settings_interface_title": {
     "message": "介面設定",
     "description": "介面設定區標題"
@@ -660,7 +680,7 @@
     "description": "語言變更成功提示"
   },
   "settings_max_cache_label": {
-    "message": "最大快取項目數:",
+    "message": "最大快取項目數",
     "description": "最大快取標籤"
   },
   "settings_reset_btn": {
@@ -724,7 +744,7 @@
     "description": "主題切換成功時顯示的訊息"
   },
   "settings_theme_label": {
-    "message": "選擇主題：",
+    "message": "選擇主題",
     "description": "主題選擇器標籤"
   },
   "share": {

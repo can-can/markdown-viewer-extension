@@ -536,7 +536,7 @@
     "description": "Label for auto refresh checkbox"
   },
   "settings_auto_refresh_interval": {
-    "message": "Інтервал оновлення:",
+    "message": "Інтервал оновлення",
     "description": "Label for refresh interval selector"
   },
   "settings_auto_refresh_note": {
@@ -550,6 +550,18 @@
   "settings_cache_title": {
     "message": "Кеш",
     "description": "Title for cache settings section"
+  },
+  "settings_diagram_layout": {
+    "message": "Розташування діаграм",
+    "description": "Label for diagram alignment selector"
+  },
+  "settings_diagram_layout_center": {
+    "message": "По центру",
+    "description": "Option for centered diagrams"
+  },
+  "settings_diagram_layout_left": {
+    "message": "Зліва",
+    "description": "Option for left-aligned diagrams"
   },
   "settings_docx_emoji_style": {
     "message": "Стиль емодзі",
@@ -572,11 +584,11 @@
     "description": "Option for Windows emoji style"
   },
   "settings_docx_hr_display": {
-    "message": "DOCX: Обробка горизонтальних ліній",
+    "message": "Обробка горизонтальних ліній",
     "description": "Label for DOCX horizontal rule handling selector"
   },
   "settings_docx_hr_display_hide": {
-    "message": "Приховати (порожній рядок)",
+    "message": "Приховати",
     "description": "Option to hide horizontal rules in DOCX"
   },
   "settings_docx_hr_display_line": {
@@ -611,16 +623,12 @@
     "message": "4 символи",
     "description": "Option: 4 characters first-line indent"
   },
-  "settings_first_line_indent_note": {
-    "message": "Кількість символів для відступу першого рядка абзаців основного тексту. Діє лише для тем, що підтримують відступ.",
-    "description": "Helper note for first-line indent option"
-  },
   "settings_first_line_indent_off": {
     "message": "Без відступу",
     "description": "Option to disable first-line indent"
   },
   "settings_frontmatter_display": {
-    "message": "Відображення Frontmatter:",
+    "message": "Відображення Frontmatter",
     "description": "Label for frontmatter display mode selector"
   },
   "settings_frontmatter_hide": {
@@ -643,6 +651,18 @@
     "message": "Налаштування розширення",
     "description": "Heading for settings section"
   },
+  "settings_image_layout": {
+    "message": "Розташування зображень",
+    "description": "Label for standalone image alignment selector"
+  },
+  "settings_image_layout_center": {
+    "message": "По центру",
+    "description": "Option for centered standalone images"
+  },
+  "settings_image_layout_left": {
+    "message": "Зліва",
+    "description": "Option for left-aligned standalone images"
+  },
   "settings_interface_title": {
     "message": "Налаштування інтерфейсу",
     "description": "Heading for interface settings section"
@@ -660,7 +680,7 @@
     "description": "Toast when language is changed successfully"
   },
   "settings_max_cache_label": {
-    "message": "Макс. кількість кешованих елементів:",
+    "message": "Макс. кількість кешованих елементів",
     "description": "Label for max cache input"
   },
   "settings_reset_btn": {
@@ -724,7 +744,7 @@
     "description": "Message shown when theme is changed"
   },
   "settings_theme_label": {
-    "message": "Виберіть тему:",
+    "message": "Виберіть тему",
     "description": "Label for theme selector"
   },
   "share": {

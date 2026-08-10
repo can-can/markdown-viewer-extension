@@ -29,13 +29,6 @@ function extractStencilGroups(xml: string): string[] {
   return Array.from(groups);
 }
 
-function getPrimaryFontFamily(fontFamily?: string): string | undefined {
-  if (!fontFamily) return undefined;
-  const first = fontFamily.split(',')[0]?.trim();
-  if (!first) return undefined;
-  return first.replace(/^['"]|['"]$/g, '');
-}
-
 export class DrawioRenderer extends BaseRenderer {
   private roughOptions: RoughSvgOptions = {
     roughness: 0.5,
@@ -103,7 +96,7 @@ export class DrawioRenderer extends BaseRenderer {
     // Convert DrawIO XML to SVG with stencils and font family support
     let svg = convert(xml, {
       stencils,
-      fontFamily: themeConfig?.fontFamily ? getPrimaryFontFamily(themeConfig.fontFamily) : undefined
+      fontFamily: themeConfig?.fontFamily || undefined
     });
 
     // Parse SVG to get dimensions

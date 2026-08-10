@@ -536,7 +536,7 @@
     "description": "Label for auto refresh checkbox"
   },
   "settings_auto_refresh_interval": {
-    "message": "새로고침 간격:",
+    "message": "새로고침 간격",
     "description": "Label for refresh interval selector"
   },
   "settings_auto_refresh_note": {
@@ -550,6 +550,18 @@
   "settings_cache_title": {
     "message": "캐시",
     "description": "Title for cache settings section"
+  },
+  "settings_diagram_layout": {
+    "message": "다이어그램 레이아웃",
+    "description": "Label for diagram alignment selector"
+  },
+  "settings_diagram_layout_center": {
+    "message": "가운데",
+    "description": "Option for centered diagrams"
+  },
+  "settings_diagram_layout_left": {
+    "message": "왼쪽",
+    "description": "Option for left-aligned diagrams"
   },
   "settings_docx_emoji_style": {
     "message": "이모지 스타일",
@@ -572,11 +584,11 @@
     "description": "Option for Windows emoji style"
   },
   "settings_docx_hr_display": {
-    "message": "DOCX: 가로줄 처리",
+    "message": "가로줄 처리",
     "description": "Label for DOCX horizontal rule handling selector"
   },
   "settings_docx_hr_display_hide": {
-    "message": "숨기기 (빈 줄)",
+    "message": "숨기기",
     "description": "Option to hide horizontal rules in DOCX"
   },
   "settings_docx_hr_display_line": {
@@ -611,16 +623,12 @@
     "message": "4자",
     "description": "Option: 4 characters first-line indent"
   },
-  "settings_first_line_indent_note": {
-    "message": "본문 단락 첫 줄을 들여쓸 문자 수입니다. 들여쓰기를 지원하는 테마에서만 적용됩니다.",
-    "description": "Helper note for first-line indent option"
-  },
   "settings_first_line_indent_off": {
     "message": "들여쓰기 없음",
     "description": "Option to disable first-line indent"
   },
   "settings_frontmatter_display": {
-    "message": "Frontmatter 표시:",
+    "message": "Frontmatter 표시",
     "description": "Label for frontmatter display mode selector"
   },
   "settings_frontmatter_hide": {
@@ -643,6 +651,18 @@
     "message": "확장 프로그램 설정",
     "description": "설정 섹션 제목"
   },
+  "settings_image_layout": {
+    "message": "이미지 레이아웃",
+    "description": "Label for standalone image alignment selector"
+  },
+  "settings_image_layout_center": {
+    "message": "가운데",
+    "description": "Option for centered standalone images"
+  },
+  "settings_image_layout_left": {
+    "message": "왼쪽",
+    "description": "Option for left-aligned standalone images"
+  },
   "settings_interface_title": {
     "message": "인터페이스 설정",
     "description": "Heading for interface settings section"
@@ -660,7 +680,7 @@
     "description": "Toast when language is changed successfully"
   },
   "settings_max_cache_label": {
-    "message": "최대 캐시 항목 수:",
+    "message": "최대 캐시 항목 수",
     "description": "캐시 필드 라벨"
   },
   "settings_reset_btn": {
@@ -724,7 +744,7 @@
     "description": "테마 변경 시 표시되는 메시지"
   },
   "settings_theme_label": {
-    "message": "테마 선택:",
+    "message": "테마 선택",
     "description": "테마 선택 라벨"
   },
   "share": {

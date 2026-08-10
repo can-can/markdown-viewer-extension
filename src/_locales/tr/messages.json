@@ -536,7 +536,7 @@
     "description": "Label for auto refresh checkbox"
   },
   "settings_auto_refresh_interval": {
-    "message": "Yenileme aralığı:",
+    "message": "Yenileme aralığı",
     "description": "Label for refresh interval selector"
   },
   "settings_auto_refresh_note": {
@@ -550,6 +550,18 @@
   "settings_cache_title": {
     "message": "Önbellek",
     "description": "Title for cache settings section"
+  },
+  "settings_diagram_layout": {
+    "message": "Diyagram düzeni",
+    "description": "Label for diagram alignment selector"
+  },
+  "settings_diagram_layout_center": {
+    "message": "Orta",
+    "description": "Option for centered diagrams"
+  },
+  "settings_diagram_layout_left": {
+    "message": "Sol",
+    "description": "Option for left-aligned diagrams"
   },
   "settings_docx_emoji_style": {
     "message": "Emoji Stili",
@@ -572,11 +584,11 @@
     "description": "Option for Windows emoji style"
   },
   "settings_docx_hr_display": {
-    "message": "DOCX: Yatay çizgi işleme",
+    "message": "Yatay çizgi işleme",
     "description": "Label for DOCX horizontal rule handling selector"
   },
   "settings_docx_hr_display_hide": {
-    "message": "Gizle (boş satır)",
+    "message": "Gizle",
     "description": "Option to hide horizontal rules in DOCX"
   },
   "settings_docx_hr_display_line": {
@@ -611,16 +623,12 @@
     "message": "4 karakter",
     "description": "Option: 4 characters first-line indent"
   },
-  "settings_first_line_indent_note": {
-    "message": "Gövde paragraflarının ilk satırını girintilemek için karakter sayısı. Yalnızca girintiyi destekleyen temalarda etkili olur.",
-    "description": "Helper note for first-line indent option"
-  },
   "settings_first_line_indent_off": {
     "message": "Girinti yok",
     "description": "Option to disable first-line indent"
   },
   "settings_frontmatter_display": {
-    "message": "Frontmatter görüntüleme:",
+    "message": "Frontmatter görüntüleme",
     "description": "Label for frontmatter display mode selector"
   },
   "settings_frontmatter_hide": {
@@ -643,6 +651,18 @@
     "message": "Uzantı ayarları",
     "description": "Heading for settings section"
   },
+  "settings_image_layout": {
+    "message": "Görsel düzeni",
+    "description": "Label for standalone image alignment selector"
+  },
+  "settings_image_layout_center": {
+    "message": "Orta",
+    "description": "Option for centered standalone images"
+  },
+  "settings_image_layout_left": {
+    "message": "Sol",
+    "description": "Option for left-aligned standalone images"
+  },
   "settings_interface_title": {
     "message": "Arayüz ayarları",
     "description": "Heading for interface settings section"
@@ -660,7 +680,7 @@
     "description": "Toast when language is changed successfully"
   },
   "settings_max_cache_label": {
-    "message": "Maksimum önbellekteki öğe sayısı:",
+    "message": "Maksimum önbellekteki öğe sayısı",
     "description": "Label for max cache input"
   },
   "settings_reset_btn": {
@@ -724,7 +744,7 @@
     "description": "Message shown when theme is changed"
   },
   "settings_theme_label": {
-    "message": "Tema Seç:",
+    "message": "Tema Seç",
     "description": "Label for theme selector"
   },
   "share": {

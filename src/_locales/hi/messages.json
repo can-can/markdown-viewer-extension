@@ -536,7 +536,7 @@
     "description": "Label for auto refresh checkbox"
   },
   "settings_auto_refresh_interval": {
-    "message": "रिफ्रेश अंतराल:",
+    "message": "रिफ्रेश अंतराल",
     "description": "Label for refresh interval selector"
   },
   "settings_auto_refresh_note": {
@@ -550,6 +550,18 @@
   "settings_cache_title": {
     "message": "कैश",
     "description": "Title for cache settings section"
+  },
+  "settings_diagram_layout": {
+    "message": "आरेख लेआउट",
+    "description": "Label for diagram alignment selector"
+  },
+  "settings_diagram_layout_center": {
+    "message": "केंद्र",
+    "description": "Option for centered diagrams"
+  },
+  "settings_diagram_layout_left": {
+    "message": "बाएँ",
+    "description": "Option for left-aligned diagrams"
   },
   "settings_docx_emoji_style": {
     "message": "इमोजी शैली",
@@ -572,11 +584,11 @@
     "description": "Option for Windows emoji style"
   },
   "settings_docx_hr_display": {
-    "message": "DOCX: क्षैतिज रेखा हैंडलिंग",
+    "message": "क्षैतिज रेखा हैंडलिंग",
     "description": "Label for DOCX horizontal rule handling selector"
   },
   "settings_docx_hr_display_hide": {
-    "message": "छुपाएं (खाली पंक्ति)",
+    "message": "छुपाएं",
     "description": "Option to hide horizontal rules in DOCX"
   },
   "settings_docx_hr_display_line": {
@@ -611,16 +623,12 @@
     "message": "4 वर्ण",
     "description": "Option: 4 characters first-line indent"
   },
-  "settings_first_line_indent_note": {
-    "message": "मुख्य पैराग्राफ की पहली पंक्ति को इंडेंट करने के लिए वर्णों की संख्या। केवल उन थीम पर प्रभावी होता है जो इंडेंट का समर्थन करती हैं।",
-    "description": "Helper note for first-line indent option"
-  },
   "settings_first_line_indent_off": {
     "message": "कोई इंडेंट नहीं",
     "description": "Option to disable first-line indent"
   },
   "settings_frontmatter_display": {
-    "message": "Frontmatter प्रदर्शन:",
+    "message": "Frontmatter प्रदर्शन",
     "description": "Label for frontmatter display mode selector"
   },
   "settings_frontmatter_hide": {
@@ -643,6 +651,18 @@
     "message": "एक्सटेंशन सेटिंग्स",
     "description": "सेटिंग्स अनुभाग का शीर्षक"
   },
+  "settings_image_layout": {
+    "message": "छवि लेआउट",
+    "description": "Label for standalone image alignment selector"
+  },
+  "settings_image_layout_center": {
+    "message": "केंद्र",
+    "description": "Option for centered standalone images"
+  },
+  "settings_image_layout_left": {
+    "message": "बाएँ",
+    "description": "Option for left-aligned standalone images"
+  },
   "settings_interface_title": {
     "message": "इंटरफेस सेटिंग्स",
     "description": "Heading for interface settings section"
@@ -660,7 +680,7 @@
     "description": "Toast when language is changed successfully"
   },
   "settings_max_cache_label": {
-    "message": "अधिकतम कैश आइटम:",
+    "message": "अधिकतम कैश आइटम",
     "description": "Label for max cache input"
   },
   "settings_reset_btn": {
@@ -724,7 +744,7 @@
     "description": "Message shown when theme is changed"
   },
   "settings_theme_label": {
-    "message": "थीम चुनें:",
+    "message": "थीम चुनें",
     "description": "Label for theme selector"
   },
   "share": {

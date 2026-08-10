@@ -415,6 +415,36 @@ export async function getTableLayout(platform: PlatformAPI): Promise<'left' | 'c
   }
 }
 
+/**
+ * Get the standalone image layout setting.
+ * Uses platform.settings service exclusively.
+ *
+ * @returns 'left' | 'center' (default: 'left')
+ */
+export async function getImageLayout(platform: PlatformAPI): Promise<'left' | 'center'> {
+  try {
+    const layout = await platform.settings.get('imageLayout');
+    return layout === 'center' ? 'center' : 'left';
+  } catch {
+    return 'left';
+  }
+}
+
+/**
+ * Get the diagram/chart layout setting.
+ * Uses platform.settings service exclusively.
+ *
+ * @returns 'left' | 'center' (default: 'center')
+ */
+export async function getDiagramLayout(platform: PlatformAPI): Promise<'left' | 'center'> {
+  try {
+    const layout = await platform.settings.get('diagramLayout');
+    return layout === 'left' ? 'left' : 'center';
+  } catch {
+    return 'center';
+  }
+}
+
 // ============================================================================
 // Zoom
 // ============================================================================
@@ -746,15 +776,27 @@ export async function renderMarkdownFlow(options: RenderMarkdownFlowOptions): Pr
     // Get table layout setting
     const tableLayout = await getTableLayout(platform);
 
-    // Apply table layout class to both the render container and the outer
-    // #markdown-content wrapper. Some hosts render into a child element inside
-    // #markdown-content, while theme CSS targets the wrapper itself.
+    // Get image / diagram layout settings
+    const imageLayout = await getImageLayout(platform);
+    const diagramLayout = await getDiagramLayout(platform);
+
+    // Apply table/image/diagram layout classes to both the render container and
+    // the outer #markdown-content wrapper. Some hosts render into a child element
+    // inside #markdown-content, while theme CSS targets the wrapper itself.
     const outerContent = container.closest('#markdown-content') as HTMLElement | null;
-    container.classList.remove('table-layout-left', 'table-layout-center', 'table-layout-center-full-width');
-    container.classList.add(`table-layout-${tableLayout}`);
+    container.classList.remove(
+      'table-layout-left', 'table-layout-center', 'table-layout-center-full-width',
+      'image-layout-left', 'image-layout-center',
+      'diagram-layout-left', 'diagram-layout-center'
+    );
+    container.classList.add(`table-layout-${tableLayout}`, `image-layout-${imageLayout}`, `diagram-layout-${diagramLayout}`);
     if (outerContent && outerContent !== container) {
-      outerContent.classList.remove('table-layout-left', 'table-layout-center', 'table-layout-center-full-width');
-      outerContent.classList.add(`table-layout-${tableLayout}`);
+      outerContent.classList.remove(
+        'table-layout-left', 'table-layout-center', 'table-layout-center-full-width',
+        'image-layout-left', 'image-layout-center',
+        'diagram-layout-left', 'diagram-layout-center'
+      );
+      outerContent.classList.add(`table-layout-${tableLayout}`, `image-layout-${imageLayout}`, `diagram-layout-${diagramLayout}`);
     }
 
     // Render markdown

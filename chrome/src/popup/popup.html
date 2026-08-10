@@ -84,14 +84,59 @@
       <div class="tab-panel" id="theme">
         <div class="info-section">
           <h3 data-i18n="settings_theme_label">Theme</h3>
-          <div style="margin: 10px 0;">
+          <div class="settings-row">
+            <label for="theme-selector" data-i18n="settings_theme_label"></label>
             <select id="theme-selector">
               <option value="default">Loading themes...</option>
             </select>
-            <div id="theme-description" class="settings-note"></div>
           </div>
 
-          <div style="margin: 10px 0;">
+          <div class="settings-row">
+            <label for="first-line-indent" data-i18n="settings_first_line_indent"></label>
+            <select id="first-line-indent">
+              <option value="0" data-i18n="settings_first_line_indent_off">不缩进</option>
+              <option value="1" data-i18n="settings_first_line_indent_1">1 字符</option>
+              <option value="2" data-i18n="settings_first_line_indent_2" selected>2 字符</option>
+              <option value="3" data-i18n="settings_first_line_indent_3">3 字符</option>
+              <option value="4" data-i18n="settings_first_line_indent_4">4 字符</option>
+            </select>
+          </div>
+
+          <div class="settings-row">
+            <label for="table-layout" data-i18n="settings_table_layout"></label>
+            <select id="table-layout">
+              <option value="left" data-i18n="settings_table_layout_left"></option>
+              <option value="center" data-i18n="settings_table_layout_center"></option>
+              <option value="center-full-width" data-i18n="settings_table_layout_full_width"></option>
+            </select>
+          </div>
+
+          <div class="settings-row">
+            <label for="image-layout" data-i18n="settings_image_layout"></label>
+            <select id="image-layout">
+              <option value="left" data-i18n="settings_image_layout_left"></option>
+              <option value="center" data-i18n="settings_image_layout_center"></option>
+            </select>
+          </div>
+
+          <div class="settings-row">
+            <label for="diagram-layout" data-i18n="settings_diagram_layout"></label>
+            <select id="diagram-layout">
+              <option value="left" data-i18n="settings_diagram_layout_left"></option>
+              <option value="center" data-i18n="settings_diagram_layout_center"></option>
+            </select>
+          </div>
+
+          <div class="settings-row">
+            <span class="switch-label" data-i18n="settings_table_merge_empty"></span>
+            <label class="switch">
+              <input type="checkbox" id="table-merge-empty" checked>
+              <span class="switch-slider" aria-hidden="true"></span>
+            </label>
+            <div class="settings-note" data-i18n="settings_table_merge_empty_note"></div>
+          </div>
+
+          <div class="settings-row">
             <label for="frontmatter-display" data-i18n="settings_frontmatter_display"></label>
             <select id="frontmatter-display">
               <option value="hide" selected data-i18n="settings_frontmatter_hide">Hide</option>
@@ -101,32 +146,16 @@
             <div class="settings-note" data-i18n="settings_frontmatter_note"></div>
           </div>
 
-          <div style="margin: 10px 0;">
-            <label for="table-layout" data-i18n="settings_table_layout"></label>
-            <select id="table-layout">
-              <option value="left" data-i18n="settings_table_layout_left"></option>
-              <option value="center" data-i18n="settings_table_layout_center"></option>
-              <option value="center-full-width" data-i18n="settings_table_layout_full_width"></option>
-            </select>
-          </div>
-
-          <div style="margin: 10px 0;">
-            <label class="checkbox-label">
-              <input type="checkbox" id="table-merge-empty" checked>
-              <span data-i18n="settings_table_merge_empty"></span>
-            </label>
-            <div class="settings-note" data-i18n="settings_table_merge_empty_note"></div>
-          </div>
-
-          <div style="margin: 10px 0;">
-            <label class="checkbox-label">
+          <div class="settings-row">
+            <span class="switch-label" data-i18n="settings_swap_panel_side"></span>
+            <label class="switch">
               <input type="checkbox" id="swap-panel-side">
-              <span data-i18n="settings_swap_panel_side"></span>
+              <span class="switch-slider" aria-hidden="true"></span>
             </label>
             <div class="settings-note" data-i18n="settings_swap_panel_side_note"></div>
           </div>
 
-          <div style="margin: 10px 0;">
+          <div class="settings-row">
             <label for="docx-emoji-style" data-i18n="settings_docx_emoji_style"></label>
             <select id="docx-emoji-style">
               <option value="system" selected data-i18n="settings_docx_emoji_style_system">System style</option>
@@ -136,7 +165,7 @@
             <div class="settings-note" data-i18n="settings_docx_emoji_style_note"></div>
           </div>
 
-          <div style="margin: 10px 0;">
+          <div class="settings-row">
             <label for="docx-hr-display" data-i18n="settings_docx_hr_display"></label>
             <select id="docx-hr-display">
               <option value="hide" data-i18n="settings_docx_hr_display_hide"></option>
@@ -144,18 +173,6 @@
               <option value="pageBreak" data-i18n="settings_docx_hr_display_page_break"></option>
             </select>
             <div class="settings-note" data-i18n="settings_docx_hr_display_note"></div>
-          </div>
-
-          <div style="margin: 10px 0;">
-            <label for="first-line-indent" data-i18n="settings_first_line_indent"></label>
-            <select id="first-line-indent">
-              <option value="0" data-i18n="settings_first_line_indent_off">不缩进</option>
-              <option value="1" data-i18n="settings_first_line_indent_1">1 字符</option>
-              <option value="2" data-i18n="settings_first_line_indent_2" selected>2 字符</option>
-              <option value="3" data-i18n="settings_first_line_indent_3">3 字符</option>
-              <option value="4" data-i18n="settings_first_line_indent_4">4 字符</option>
-            </select>
-            <div class="settings-note" data-i18n="settings_first_line_indent_note"></div>
           </div>
         </div>
       </div>
@@ -172,7 +189,7 @@
             <div class="settings-note" data-i18n="settings_auto_refresh_note">Automatically reload when local file changes</div>
           </div>
 
-          <div style="margin: 10px 0;">
+          <div class="settings-row">
             <label for="auto-refresh-interval" data-i18n="settings_auto_refresh_interval">Refresh Interval</label>
             <select id="auto-refresh-interval">
               <option value="500">0.5s</option>
@@ -197,7 +214,7 @@
               <span data-i18n="remark_cfg_close_after_copy">Close tab after copy</span>
             </label>
           </div>
-          <div style="margin: 10px 0;">
+          <div class="settings-row">
             <label for="remark-highlight-style" data-i18n="remark_cfg_highlight_style">Highlight style</label>
             <select id="remark-highlight-style">
               <option value="background" data-i18n="remark_cfg_style_bg">Background</option>
@@ -206,7 +223,7 @@
               <option value="border" data-i18n="remark_cfg_style_border">Border</option>
             </select>
           </div>
-          <div style="margin: 10px 0;">
+          <div class="settings-row">
             <label for="remark-default-color" data-i18n="remark_cfg_default_color">Default color</label>
             <select id="remark-default-color">
               <option value="yellow">Suggestion</option>
@@ -215,7 +232,7 @@
               <option value="pink">Concern</option>
             </select>
           </div>
-          <div style="margin: 10px 0;">
+          <div class="settings-row">
             <label for="remark-font-size" data-i18n="remark_cfg_font_size">Font size</label>
             <select id="remark-font-size">
               <option value="12">12px</option>
@@ -240,7 +257,7 @@
             </div>
           </div>
 
-          <div style="margin: 10px 0;">
+          <div class="settings-row">
             <label for="max-cache-items" data-i18n="settings_max_cache_label"></label>
             <select id="max-cache-items">
               <option value="100">100</option>

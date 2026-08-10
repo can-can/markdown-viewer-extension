@@ -536,7 +536,7 @@
     "description": "Label for auto refresh checkbox"
   },
   "settings_auto_refresh_interval": {
-    "message": "Intervalo de actualización:",
+    "message": "Intervalo de actualización",
     "description": "Label for refresh interval selector"
   },
   "settings_auto_refresh_note": {
@@ -550,6 +550,18 @@
   "settings_cache_title": {
     "message": "Caché",
     "description": "Title for cache settings section"
+  },
+  "settings_diagram_layout": {
+    "message": "Alineación de diagramas",
+    "description": "Label for diagram alignment selector"
+  },
+  "settings_diagram_layout_center": {
+    "message": "Centro",
+    "description": "Option for centered diagrams"
+  },
+  "settings_diagram_layout_left": {
+    "message": "Izquierda",
+    "description": "Option for left-aligned diagrams"
   },
   "settings_docx_emoji_style": {
     "message": "Estilo de emoji",
@@ -572,11 +584,11 @@
     "description": "Option for Windows emoji style"
   },
   "settings_docx_hr_display": {
-    "message": "DOCX: Manejo de líneas horizontales",
+    "message": "Manejo de líneas horizontales",
     "description": "Label for DOCX horizontal rule handling selector"
   },
   "settings_docx_hr_display_hide": {
-    "message": "Ocultar (línea vacía)",
+    "message": "Ocultar",
     "description": "Option to hide horizontal rules in DOCX"
   },
   "settings_docx_hr_display_line": {
@@ -611,16 +623,12 @@
     "message": "4 caracteres",
     "description": "Option: 4 characters first-line indent"
   },
-  "settings_first_line_indent_note": {
-    "message": "Número de caracteres para sangrar la primera línea de los párrafos del cuerpo. Solo surte efecto en temas que admiten sangría.",
-    "description": "Helper note for first-line indent option"
-  },
   "settings_first_line_indent_off": {
     "message": "Sin sangría",
     "description": "Option to disable first-line indent"
   },
   "settings_frontmatter_display": {
-    "message": "Visualización de Frontmatter:",
+    "message": "Visualización de Frontmatter",
     "description": "Label for frontmatter display mode selector"
   },
   "settings_frontmatter_hide": {
@@ -643,6 +651,18 @@
     "message": "Configuración de extensión",
     "description": "Encabezado de la sección de configuración"
   },
+  "settings_image_layout": {
+    "message": "Alineación de imágenes",
+    "description": "Label for standalone image alignment selector"
+  },
+  "settings_image_layout_center": {
+    "message": "Centro",
+    "description": "Option for centered standalone images"
+  },
+  "settings_image_layout_left": {
+    "message": "Izquierda",
+    "description": "Option for left-aligned standalone images"
+  },
   "settings_interface_title": {
     "message": "Configuración de interfaz",
     "description": "Heading for interface settings section"
@@ -660,7 +680,7 @@
     "description": "Toast when language is changed successfully"
   },
   "settings_max_cache_label": {
-    "message": "Máximo de elementos en caché:",
+    "message": "Máximo de elementos en caché",
     "description": "Etiqueta para el campo de caché"
   },
   "settings_reset_btn": {
@@ -724,7 +744,7 @@
     "description": "Mensaje cuando se cambia el tema"
   },
   "settings_theme_label": {
-    "message": "Seleccionar tema:",
+    "message": "Seleccionar tema",
     "description": "Etiqueta para el selector de tema"
   },
   "share": {

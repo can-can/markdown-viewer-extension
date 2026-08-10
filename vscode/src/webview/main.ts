@@ -758,6 +758,8 @@ function initializeUI(): void {
     frontmatterDisplay: (window.VSCODE_CONFIG?.frontmatterDisplay as FrontmatterDisplay) || 'hide',
     tableMergeEmpty: window.VSCODE_CONFIG?.tableMergeEmpty !== false,
     tableLayout: (window.VSCODE_CONFIG?.tableLayout as 'left' | 'center' | 'center-full-width') || 'center',
+    imageLayout: (window.VSCODE_CONFIG?.imageLayout as 'left' | 'center') || 'left',
+    diagramLayout: (window.VSCODE_CONFIG?.diagramLayout as 'left' | 'center') || 'center',
     firstLineIndent: (typeof window.VSCODE_CONFIG?.firstLineIndent === 'number' ? window.VSCODE_CONFIG.firstLineIndent : 2) as number,
     onThemeChange: async (themeId) => {
       // handleSetTheme saves via themeManager.saveSelectedTheme (same as Chrome)
@@ -793,6 +795,16 @@ function initializeUI(): void {
     onTableLayoutChange: async (layout) => {
       vscodeBridge.postMessage('SAVE_SETTING', { key: 'tableLayout', value: layout });
       // Re-render to apply new table layout setting
+      await rerenderCurrentDocumentPreservingScroll();
+    },
+    onImageLayoutChange: async (layout) => {
+      vscodeBridge.postMessage('SAVE_SETTING', { key: 'imageLayout', value: layout });
+      // Re-render to apply new image layout setting
+      await rerenderCurrentDocumentPreservingScroll();
+    },
+    onDiagramLayoutChange: async (layout) => {
+      vscodeBridge.postMessage('SAVE_SETTING', { key: 'diagramLayout', value: layout });
+      // Re-render to apply new diagram layout setting
       await rerenderCurrentDocumentPreservingScroll();
     },
     onDocxEmojiStyleChange: (style) => {

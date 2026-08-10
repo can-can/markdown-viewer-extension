@@ -36,13 +36,14 @@ export function convertPluginResultToHTML(
     // Strategy: design width on the wrapper <div>; <img> stays fully auto, bounded by
     // max-width:100% and (in print) max-height. Both <img> dims auto so the CSS replaced-element
     // sizing algorithm preserves aspect ratio when max-height clamps tall diagrams.
+    // Alignment (centered by default, left with .diagram-layout-left) is controlled by
+    // container-level CSS classes, so no inline margin/text-align is set here.
     const displayWidth = Math.round((width || 0) / 4);
     const wrapperStyle = displayWidth > 0
-      ? `width: ${displayWidth}px; max-width: 100%; margin: 20px auto; text-align: center;`
-      : 'margin: 20px auto; text-align: center;';
+      ? `width: ${displayWidth}px; max-width: 100%;`
+      : '';
     const imgStyle = 'max-width: 100%; height: auto;';
 
-    // Data attributes for DOM diff matching - mark as rendered
     const dataAttrs = sourceHash 
       ? `data-source-hash="${sourceHash}" data-plugin-type="${pluginType}" data-plugin-rendered="true"` 
       : '';
@@ -120,9 +121,12 @@ export function createPluginResultElement(
 
     const wrapper = document.createElement('div');
     wrapper.className = 'diagram-block';
+    // Alignment (centered by default, left with .diagram-layout-left) is
+    // controlled by container-level CSS classes, so no inline margin/text-align
+    // is set here.
     wrapper.style.cssText = displayWidth > 0
-      ? `width: ${displayWidth}px; max-width: 100%; margin: 20px auto; text-align: center;`
-      : 'margin: 20px auto; text-align: center;';
+      ? `width: ${displayWidth}px; max-width: 100%;`
+      : '';
     if (sourceHash) {
       wrapper.dataset.sourceHash = sourceHash;
       wrapper.dataset.pluginType = pluginType;

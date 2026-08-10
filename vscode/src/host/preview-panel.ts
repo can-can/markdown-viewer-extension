@@ -750,6 +750,10 @@ export class MarkdownPreviewPanel {
                   next.tableMergeEmpty = value;
                 } else if (key === 'tableLayout') {
                   next.tableLayout = value;
+                } else if (key === 'imageLayout') {
+                  next.imageLayout = value;
+                } else if (key === 'diagramLayout') {
+                  next.diagramLayout = value;
                 } else if (key === 'docxEmojiStyle') {
                   next.docxEmojiStyle = value;
                 } else if (key === 'frontmatterDisplay') {
@@ -1145,6 +1149,10 @@ export class MarkdownPreviewPanel {
     const tableMergeEmpty = (typeof settings.tableMergeEmpty === 'boolean') ? settings.tableMergeEmpty : true;
     const storedTableLayout = settings.tableLayout;
     const tableLayout = (storedTableLayout === 'left' || storedTableLayout === 'center' || storedTableLayout === 'center-full-width') ? storedTableLayout : 'center';
+    const storedImageLayout = settings.imageLayout;
+    const imageLayout = (storedImageLayout === 'center') ? storedImageLayout : 'left';
+    const storedDiagramLayout = settings.diagramLayout;
+    const diagramLayout = (storedDiagramLayout === 'left') ? storedDiagramLayout : 'center';
     const storedEmojiStyle = settings.docxEmojiStyle;
     const docxEmojiStyle: EmojiStyle = (storedEmojiStyle === 'apple' || storedEmojiStyle === 'windows' || storedEmojiStyle === 'system') ? storedEmojiStyle : 'system';
     const storedFrontmatterDisplay = settings.frontmatterDisplay;
@@ -1157,6 +1165,8 @@ export class MarkdownPreviewPanel {
       docxHrDisplay,
       tableMergeEmpty,
       tableLayout,
+      imageLayout,
+      diagramLayout,
       docxEmojiStyle,
       frontmatterDisplay,
       firstLineIndent,

@@ -16,6 +16,8 @@ class SettingsService {
   static const String _keySupportInfographic = 'supportInfographic';
   static const String _keyTableMergeEmpty = 'tableMergeEmpty';
   static const String _keyTableLayout = 'tableLayout';
+  static const String _keyImageLayout = 'imageLayout';
+  static const String _keyDiagramLayout = 'diagramLayout';
   static const String _keyFirstLineIndent = 'firstLineIndent';
   static const String _keyScrollPositions = 'scrollPositions';
   static const int _maxScrollPositions = 100; // Limit stored positions
@@ -71,9 +73,17 @@ class SettingsService {
   bool get tableMergeEmpty => _prefs?.getBool(_keyTableMergeEmpty) ?? true;
   set tableMergeEmpty(bool value) => _prefs?.setBool(_keyTableMergeEmpty, value);
 
-  // Table layout: 'left' or 'center'
+  // Table layout: 'left', 'center', or 'center-full-width'
   String get tableLayout => _prefs?.getString(_keyTableLayout) ?? 'center';
   set tableLayout(String value) => _prefs?.setString(_keyTableLayout, value);
+
+  // Image layout: 'left' or 'center'
+  String get imageLayout => _prefs?.getString(_keyImageLayout) ?? 'left';
+  set imageLayout(String value) => _prefs?.setString(_keyImageLayout, value);
+
+  // Diagram layout: 'left' or 'center'
+  String get diagramLayout => _prefs?.getString(_keyDiagramLayout) ?? 'center';
+  set diagramLayout(String value) => _prefs?.setString(_keyDiagramLayout, value);
 
   // First-line indent: 0 = off, 1-4 = characters
   int get firstLineIndent => _prefs?.getInt(_keyFirstLineIndent) ?? 2;
@@ -109,6 +119,8 @@ class SettingsService {
       'supportInfographic': supportInfographic,
       'tableMergeEmpty': tableMergeEmpty,
       'tableLayout': tableLayout,
+      'imageLayout': imageLayout,
+      'diagramLayout': diagramLayout,
       'firstLineIndent': firstLineIndent,
     };
   }

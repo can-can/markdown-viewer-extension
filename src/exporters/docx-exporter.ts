@@ -929,7 +929,7 @@ class DocxExporter {
     });
   }
 
-  private convertThematicBreak(): Paragraph {
+  private convertThematicBreak(): Paragraph | null {
     if (this.docxHrDisplay === 'pageBreak') {
       return new Paragraph({
         // Use pageBreakBefore instead of an explicit PageBreak run.
@@ -943,9 +943,8 @@ class DocxExporter {
     }
 
     if (this.docxHrDisplay === 'hide') {
-      return new Paragraph({
-        text: '',
-      });
+      // Completely omit the separator: no empty paragraph, no blank line.
+      return null;
     }
 
     return new Paragraph({

@@ -536,7 +536,7 @@
     "description": "Label for auto refresh checkbox"
   },
   "settings_auto_refresh_interval": {
-    "message": "Aktualisierungsintervall:",
+    "message": "Aktualisierungsintervall",
     "description": "Label for refresh interval selector"
   },
   "settings_auto_refresh_note": {
@@ -550,6 +550,18 @@
   "settings_cache_title": {
     "message": "Cache",
     "description": "Title for cache settings section"
+  },
+  "settings_diagram_layout": {
+    "message": "Diagrammausrichtung",
+    "description": "Label for diagram alignment selector"
+  },
+  "settings_diagram_layout_center": {
+    "message": "Mittig",
+    "description": "Option for centered diagrams"
+  },
+  "settings_diagram_layout_left": {
+    "message": "Links",
+    "description": "Option for left-aligned diagrams"
   },
   "settings_docx_emoji_style": {
     "message": "Emoji-Stil",
@@ -572,11 +584,11 @@
     "description": "Option for Windows emoji style"
   },
   "settings_docx_hr_display": {
-    "message": "DOCX: Trennlinien-Behandlung",
+    "message": "Trennlinien-Behandlung",
     "description": "Label for DOCX horizontal rule handling selector"
   },
   "settings_docx_hr_display_hide": {
-    "message": "Ausblenden (leere Zeile)",
+    "message": "Ausblenden",
     "description": "Option to hide horizontal rules in DOCX"
   },
   "settings_docx_hr_display_line": {
@@ -611,16 +623,12 @@
     "message": "4 Zeichen",
     "description": "Option: 4 characters first-line indent"
   },
-  "settings_first_line_indent_note": {
-    "message": "Anzahl der Zeichen zum Einrücken der ersten Zeile von Textabsätzen. Wirkt nur bei Themes, die Einrückung unterstützen.",
-    "description": "Helper note for first-line indent option"
-  },
   "settings_first_line_indent_off": {
     "message": "Kein Einzug",
     "description": "Option to disable first-line indent"
   },
   "settings_frontmatter_display": {
-    "message": "Frontmatter-Anzeige:",
+    "message": "Frontmatter-Anzeige",
     "description": "Label for frontmatter display mode selector"
   },
   "settings_frontmatter_hide": {
@@ -643,6 +651,18 @@
     "message": "Erweiterungseinstellungen",
     "description": "Überschrift des Einstellungsabschnitts"
   },
+  "settings_image_layout": {
+    "message": "Bildausrichtung",
+    "description": "Label for standalone image alignment selector"
+  },
+  "settings_image_layout_center": {
+    "message": "Mittig",
+    "description": "Option for centered standalone images"
+  },
+  "settings_image_layout_left": {
+    "message": "Links",
+    "description": "Option for left-aligned standalone images"
+  },
   "settings_interface_title": {
     "message": "Oberflächeneinstellungen",
     "description": "Heading for interface settings section"
@@ -660,7 +680,7 @@
     "description": "Toast when language is changed successfully"
   },
   "settings_max_cache_label": {
-    "message": "Maximale Cache-Einträge:",
+    "message": "Maximale Cache-Einträge",
     "description": "Beschriftung für Cache-Feld"
   },
   "settings_reset_btn": {
@@ -724,7 +744,7 @@
     "description": "Meldung bei Theme-Änderung"
   },
   "settings_theme_label": {
-    "message": "Theme auswählen:",
+    "message": "Theme auswählen",
     "description": "Beschriftung für Theme-Auswahl"
   },
   "share": {
