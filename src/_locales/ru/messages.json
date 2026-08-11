@@ -443,10 +443,6 @@
     "message": "Режим аннотаций",
     "description": "Title for remark mode settings card"
   },
-  "remark_change_color": {
-    "message": "Изменить цвет",
-    "description": "Tooltip for changing the remark color"
-  },
   "remark_clear_all": {
     "message": "Очистить все заметки",
     "description": "Tooltip for clearing all remarks"
@@ -850,6 +846,14 @@
   "workspace_desc": {
     "message": "Откройте локальный каталог для просмотра и предварительного просмотра поддерживаемых файлов.",
     "description": "Workspace landing page description"
+  },
+  "workspace_history_back": {
+    "message": "Назад",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "Вперёд",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "Открыть рабочее пространство",

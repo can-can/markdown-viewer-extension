@@ -443,10 +443,6 @@
     "message": "Chế độ chú thích",
     "description": "Title for remark mode settings card"
   },
-  "remark_change_color": {
-    "message": "Đổi màu",
-    "description": "Tooltip for changing the remark color"
-  },
   "remark_clear_all": {
     "message": "Xóa tất cả ghi chú",
     "description": "Tooltip for clearing all remarks"
@@ -850,6 +846,14 @@
   "workspace_desc": {
     "message": "Mở thư mục cục bộ để duyệt và xem trước các tệp được hỗ trợ.",
     "description": "Workspace landing page description"
+  },
+  "workspace_history_back": {
+    "message": "Quay lại",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "Tiếp theo",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "Mở không gian làm việc",

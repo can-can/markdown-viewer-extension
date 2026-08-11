@@ -52,7 +52,7 @@ import { createViewerSurfacePort } from '../../../src/core/viewer/viewer-surface
 import type { ViewerDisplayMode } from '../../../src/core/viewer/viewer-host-adapter';
 import { setupImageContextMenu } from '../../../src/ui/image-context-menu';
 import { setupDiagramLightbox } from '../../../src/ui/diagram-lightbox';
-import { setupCodeBlockCopy } from '../../../src/ui/code-block-copy';
+import { setupCodeBlockCopy, applyCodeBlockCopyLocale } from '../../../src/ui/code-block-copy';
 
 // Extend Window interface for global access
 declare global {
@@ -1466,6 +1466,47 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
     }
   }
 
+  // Tracks the last locale whose UI text was applied in place, so the message
+  // broadcast and the storage event don't both re-apply the same change.
+  let lastAppliedUiLocale: string | null = null;
+
+  /**
+   * Apply a locale change to the already-mounted viewer UI without reloading.
+   * Toolbar tooltips, code-copy button labels and the workspace history
+   * controls are re-translated in place; document content is locale-neutral.
+   * Reloading was previously used here, but in embed contexts the document
+   * arrives via postMessage so a reload blanks the preview.
+   */
+  async function applyUiLocale(locale: string): Promise<void> {
+    if (locale === lastAppliedUiLocale) {
+      return;
+    }
+    try {
+      await Localization.setPreferredLocale(locale);
+      lastAppliedUiLocale = locale;
+      toolbarManager.applyLocale();
+      const contentContainer = document.getElementById('markdown-content');
+      if (contentContainer) {
+        applyCodeBlockCopyLocale(contentContainer, translate);
+      }
+      const historyBack = document.getElementById('workspace-history-back');
+      if (historyBack) {
+        const title = Localization.translate('workspace_history_back') || 'Back';
+        historyBack.setAttribute('title', title);
+        historyBack.setAttribute('aria-label', title);
+      }
+      const historyForward = document.getElementById('workspace-history-forward');
+      if (historyForward) {
+        const title = Localization.translate('workspace_history_forward') || 'Forward';
+        historyForward.setAttribute('title', title);
+        historyForward.setAttribute('aria-label', title);
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to update locale in main script:', error);
+    }
+  }
+
   /**
    * Setup message listener for locale/theme/file changes
    */
@@ -1477,21 +1518,10 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
 
       const msg = message as IncomingBroadcastMessage;
 
-      const nextLocale = (locale: string) => {
-        Localization.setPreferredLocale(locale)
-          .catch((error) => {
-            // eslint-disable-next-line no-console
-            console.error('Failed to update locale in main script:', error);
-          })
-          .finally(() => {
-            window.location.reload();
-          });
-      };
-
       if (msg.type === 'LOCALE_CHANGED') {
         const payload = msg.payload && typeof msg.payload === 'object' ? (msg.payload as Record<string, unknown>) : null;
         const locale = payload && typeof payload.locale === 'string' && payload.locale.length > 0 ? payload.locale : DEFAULT_SETTING_LOCALE;
-        nextLocale(locale);
+        void applyUiLocale(locale);
         return;
       }
 
@@ -1553,6 +1583,20 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
         return;
       }
     });
+
+    // Content scripts do not receive runtime.sendMessage broadcasts sent from
+    // extension pages (Chrome), so also react to locale changes via storage.
+    // This keeps the standalone injected viewer in sync without reloading.
+    if (webExtensionApi.storage?.onChanged) {
+      webExtensionApi.storage.onChanged.addListener((changes, areaName) => {
+        if (areaName !== 'local' || !changes.markdownViewerSettings) {
+          return;
+        }
+        const settings = changes.markdownViewerSettings.newValue as { preferredLocale?: string } | undefined;
+        const nextLocale = settings?.preferredLocale || DEFAULT_SETTING_LOCALE;
+        void applyUiLocale(nextLocale);
+      });
+    }
   }
 
   /**

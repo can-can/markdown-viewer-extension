@@ -443,10 +443,6 @@
     "message": "Märkuste režiim",
     "description": "Title for remark mode settings card"
   },
-  "remark_change_color": {
-    "message": "Muuda värvi",
-    "description": "Tooltip for changing the remark color"
-  },
   "remark_clear_all": {
     "message": "Kustuta kõik märkmed",
     "description": "Tooltip for clearing all remarks"
@@ -850,6 +846,14 @@
   "workspace_desc": {
     "message": "Avage kohalik kataloog toetatud failide sirvimiseks ja eelvaateks.",
     "description": "Workspace landing page description"
+  },
+  "workspace_history_back": {
+    "message": "Tagasi",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "Edasi",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "Ava tööala",

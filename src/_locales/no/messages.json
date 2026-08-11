@@ -443,10 +443,6 @@
     "message": "Merknadsmodus",
     "description": "Title for remark mode settings card"
   },
-  "remark_change_color": {
-    "message": "Endre farge",
-    "description": "Tooltip for changing the remark color"
-  },
   "remark_clear_all": {
     "message": "Fjern alle merknader",
     "description": "Tooltip for clearing all remarks"
@@ -850,6 +846,14 @@
   "workspace_desc": {
     "message": "Åpne en lokal katalog for å bla gjennom og forhåndsvise støttede filer.",
     "description": "Workspace landing page description"
+  },
+  "workspace_history_back": {
+    "message": "Tilbake",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "Frem",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "Åpne arbeidsområde",

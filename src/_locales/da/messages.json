@@ -443,10 +443,6 @@
     "message": "Annotationstilstand",
     "description": "Title for remark mode settings card"
   },
-  "remark_change_color": {
-    "message": "Skift farve",
-    "description": "Tooltip for changing the remark color"
-  },
   "remark_clear_all": {
     "message": "Ryd alle kommentarer",
     "description": "Tooltip for clearing all remarks"
@@ -850,6 +846,14 @@
   "workspace_desc": {
     "message": "Åbn en lokal mappe for at gennemse og forhåndsvise understøttede filer.",
     "description": "Workspace landing page description"
+  },
+  "workspace_history_back": {
+    "message": "Tilbage",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "Frem",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "Åbn arbejdsområde",

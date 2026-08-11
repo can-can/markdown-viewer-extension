@@ -443,10 +443,6 @@
     "message": "โหมดคำอธิบาย",
     "description": "Title for remark mode settings card"
   },
-  "remark_change_color": {
-    "message": "เปลี่ยนสี",
-    "description": "Tooltip for changing the remark color"
-  },
   "remark_clear_all": {
     "message": "ล้างหมายเหตุทั้งหมด",
     "description": "Tooltip for clearing all remarks"
@@ -850,6 +846,14 @@
   "workspace_desc": {
     "message": "เปิดไดเรกทอรีในเครื่องเพื่อเรียกดูและดูตัวอย่างไฟล์ที่รองรับ",
     "description": "Workspace landing page description"
+  },
+  "workspace_history_back": {
+    "message": "ย้อนกลับ",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "ถัดไป",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "เปิดพื้นที่ทำงาน",

@@ -443,10 +443,6 @@
     "message": "टिप्पणी मोड",
     "description": "Title for remark mode settings card"
   },
-  "remark_change_color": {
-    "message": "रंग बदलें",
-    "description": "Tooltip for changing the remark color"
-  },
   "remark_clear_all": {
     "message": "सभी टिप्पणियाँ साफ़ करें",
     "description": "Tooltip for clearing all remarks"
@@ -850,6 +846,14 @@
   "workspace_desc": {
     "message": "समर्थित फ़ाइलों को ब्राउज़ और पूर्वावलोकन करने के लिए स्थानीय निर्देशिका खोलें।",
     "description": "Workspace landing page description"
+  },
+  "workspace_history_back": {
+    "message": "पीछे",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "आगे",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "कार्यक्षेत्र खोलें",

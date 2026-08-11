@@ -443,10 +443,6 @@
     "message": "Mod anotasi",
     "description": "Title for remark mode settings card"
   },
-  "remark_change_color": {
-    "message": "Tukar warna",
-    "description": "Tooltip for changing the remark color"
-  },
   "remark_clear_all": {
     "message": "Kosongkan semua catatan",
     "description": "Tooltip for clearing all remarks"
@@ -850,6 +846,14 @@
   "workspace_desc": {
     "message": "Buka direktori tempatan untuk menyemak imbas dan pratonton fail yang disokong.",
     "description": "Workspace landing page description"
+  },
+  "workspace_history_back": {
+    "message": "Kembali",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "Maju",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "Buka ruang kerja",

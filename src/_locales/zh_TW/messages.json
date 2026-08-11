@@ -443,10 +443,6 @@
     "message": "批注模式",
     "description": "Title for remark mode settings card"
   },
-  "remark_change_color": {
-    "message": "更改顏色",
-    "description": "Tooltip for changing the remark color"
-  },
   "remark_clear_all": {
     "message": "清除所有批註",
     "description": "Tooltip for clearing all remarks"
@@ -850,6 +846,14 @@
   "workspace_desc": {
     "message": "開啟本機目錄，或將檔案、資料夾拖放到此處進行瀏覽和預覽。",
     "description": "Workspace landing page description"
+  },
+  "workspace_history_back": {
+    "message": "上一頁",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "下一頁",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "開啟工作區",

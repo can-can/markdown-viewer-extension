@@ -443,10 +443,6 @@
     "message": "Anmerkungsmodus",
     "description": "Title for remark mode settings card"
   },
-  "remark_change_color": {
-    "message": "Farbe ändern",
-    "description": "Tooltip for changing the remark color"
-  },
   "remark_clear_all": {
     "message": "Alle Anmerkungen löschen",
     "description": "Tooltip for clearing all remarks"
@@ -850,6 +846,14 @@
   "workspace_desc": {
     "message": "Öffnen Sie ein lokales Verzeichnis zum Durchsuchen und Vorschauen unterstützter Dateien.",
     "description": "Workspace landing page description"
+  },
+  "workspace_history_back": {
+    "message": "Zurück",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "Vor",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "Arbeitsbereich öffnen",

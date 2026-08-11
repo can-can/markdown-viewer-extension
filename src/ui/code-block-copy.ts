@@ -144,6 +144,35 @@ export function setupCodeBlockCopy(options: CodeBlockCopyOptions): () => void {
   };
 }
 
+/**
+ * Refresh tooltips/aria-labels of existing copy buttons after the UI locale
+ * changed. Buttons keep their current visual state; only their label
+ * attributes are updated in place (no re-render needed).
+ */
+export function applyCodeBlockCopyLocale(
+  container: ParentNode,
+  translate?: (key: string) => string
+): void {
+  const t = (key: string, fallback: string): string => {
+    const value = translate?.(key);
+    return value && value !== key ? value : fallback;
+  };
+
+  const copyLabel = t('code_copy', 'Copy code');
+  const copiedLabel = t('code_copied', 'Copied');
+  const failedLabel = t('code_copy_failed', 'Copy failed');
+
+  container.querySelectorAll<HTMLButtonElement>(`.${BUTTON_CLASS}`).forEach((button) => {
+    const label = button.dataset.copyState === 'success'
+      ? copiedLabel
+      : button.dataset.copyState === 'error'
+        ? failedLabel
+        : copyLabel;
+    button.title = label;
+    button.setAttribute('aria-label', label);
+  });
+}
+
 async function writeTextToClipboard(text: string): Promise<void> {
   if (navigator.clipboard?.writeText) {
     await navigator.clipboard.writeText(text);

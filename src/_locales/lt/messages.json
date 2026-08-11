@@ -443,10 +443,6 @@
     "message": "Anotacijų režimas",
     "description": "Title for remark mode settings card"
   },
-  "remark_change_color": {
-    "message": "Keisti spalvą",
-    "description": "Tooltip for changing the remark color"
-  },
   "remark_clear_all": {
     "message": "Išvalyti visas pastabas",
     "description": "Tooltip for clearing all remarks"
@@ -850,6 +846,14 @@
   "workspace_desc": {
     "message": "Atidarykite vietinį katalogą, kad galėtumėte naršyti ir peržiūrėti palaikomus failus.",
     "description": "Workspace landing page description"
+  },
+  "workspace_history_back": {
+    "message": "Atgal",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "Pirmyn",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "Atidaryti darbo sritį",

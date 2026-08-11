@@ -198,6 +198,17 @@ function ensureViewerFrameReady(): Promise<void> {
   return previewFrameReadyPromise;
 }
 
+// Re-sync host UI (theme, history controls) to the embedded viewer whenever it
+// (re)loads. The iframe reloads itself on popup locale changes (viewer-main
+// calls window.location.reload()); postMessages sent during that navigation
+// are dropped, so this persistent listener brings the toolbar back in sync
+// once the new document signals VIEWER_READY. Idempotent on the first load.
+window.addEventListener('message', (event: MessageEvent) => {
+  if (event.source !== $previewFrame.contentWindow) return;
+  if (event.data?.type !== 'VIEWER_READY') return;
+  void postHostUiToViewer();
+});
+
 async function getStoredSidebarWidth(): Promise<number | null> {
   try {
     const result = await webExtensionApi.storage.local.get(['markdownViewerSettings']);
@@ -1550,9 +1561,9 @@ Localization.init().then(async () => {
             applyI18nText();
             updateSearchUI();
             renderTreeView();
-            if (activeFilePath) {
-              void restoreLastFile(activeFilePath);
-            }
+            // The embedded viewer re-translates its own UI text in place on
+            // locale change (viewer-main applyUiLocale), so no document
+            // re-send or iframe reload is needed here.
           })
           .catch((error) => {
             console.error('[Workspace] Failed to update locale:', error);

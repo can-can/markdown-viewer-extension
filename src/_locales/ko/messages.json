@@ -443,10 +443,6 @@
     "message": "주석 모드",
     "description": "Title for remark mode settings card"
   },
-  "remark_change_color": {
-    "message": "색상 변경",
-    "description": "Tooltip for changing the remark color"
-  },
   "remark_clear_all": {
     "message": "모든 주석 지우기",
     "description": "Tooltip for clearing all remarks"
@@ -850,6 +846,14 @@
   "workspace_desc": {
     "message": "로컬 디렉터리를 열어 지원되는 파일을 탐색하고 미리 봅니다.",
     "description": "Workspace landing page description"
+  },
+  "workspace_history_back": {
+    "message": "뒤로",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "앞으로",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "워크스페이스 열기",

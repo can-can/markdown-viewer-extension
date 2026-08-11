@@ -88,4 +88,6 @@ export interface ToolbarManagerInstance {
   initializeToolbar: () => void;
   setupToolbarButtons: () => Promise<void>;
   setupKeyboardShortcuts: () => void;
+  /** Re-apply translated tooltips/aria-labels after the UI locale changed. */
+  applyLocale: () => void;
 }

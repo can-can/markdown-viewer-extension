@@ -443,10 +443,6 @@
     "message": "Not modu",
     "description": "Title for remark mode settings card"
   },
-  "remark_change_color": {
-    "message": "Rengi değiştir",
-    "description": "Tooltip for changing the remark color"
-  },
   "remark_clear_all": {
     "message": "Tüm notları temizle",
     "description": "Tooltip for clearing all remarks"
@@ -850,6 +846,14 @@
   "workspace_desc": {
     "message": "Desteklenen dosyaları göz atmak ve önizlemek için yerel bir dizin açın.",
     "description": "Workspace landing page description"
+  },
+  "workspace_history_back": {
+    "message": "Geri",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "İleri",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "Çalışma alanını aç",

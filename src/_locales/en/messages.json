@@ -443,10 +443,6 @@
     "message": "Remark Mode",
     "description": "Title for remark mode settings card"
   },
-  "remark_change_color": {
-    "message": "Change color",
-    "description": "Tooltip for changing the remark color"
-  },
   "remark_clear_all": {
     "message": "Clear all remarks",
     "description": "Tooltip for clearing all remarks"
@@ -850,6 +846,14 @@
   "workspace_desc": {
     "message": "Open a local directory or drop files and folders here to browse and preview supported files.",
     "description": "Description on the workspace landing page"
+  },
+  "workspace_history_back": {
+    "message": "Back",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "Forward",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "Open Workspace",

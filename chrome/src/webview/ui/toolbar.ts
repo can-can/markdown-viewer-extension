@@ -84,6 +84,10 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
   // Global zoom state
   let currentZoomLevel = 100;
 
+  // Current layout mode (normal | fullscreen | narrow). Lives at manager scope
+  // so applyLocale can refresh the layout button tooltip without a reload.
+  let currentLayout = 'normal';
+
   // Remark Mode controller
   let remarkController: RemarkModeController | null = null;
   if (enableRemarkMode && getRemarkContainer) {
@@ -431,7 +435,6 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
     // Layout toggle button
     const layoutBtn = document.getElementById('layout-toggle-btn');
     const pageDiv = document.getElementById('markdown-page');
-    let currentLayout = 'normal'; // normal, fullscreen, narrow
     const layoutSequence = ['normal', 'fullscreen', 'narrow'];
 
     if (layoutBtn && pageDiv) {
@@ -769,6 +772,50 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
     });
   }
 
+  /**
+   * Re-apply translated tooltips/aria-labels after the UI locale changed.
+   * Toolbar text is baked into the DOM at init time, so without this the
+   * tooltips would stay in the old language until the page reloads.
+   */
+  function applyLocale(): void {
+    // Rebuild translated layout titles (button tooltip follows current mode).
+    layoutConfigs.normal.title = translate('toolbar_layout_title_normal');
+    layoutConfigs.fullscreen.title = translate('toolbar_layout_title_fullscreen');
+    layoutConfigs.narrow.title = translate('toolbar_layout_title_narrow');
+
+    const setTitle = (id: string, title: string): void => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.setAttribute('title', title);
+      el.setAttribute('aria-label', title);
+    };
+
+    setTitle('toggle-toc-btn', translate('toolbar_toggle_toc_title'));
+    setTitle('zoom-out-btn', translate('toolbar_zoom_out_title'));
+    setTitle('zoom-in-btn', translate('toolbar_zoom_in_title'));
+    setTitle('download-btn', translate('toolbar_download_title'));
+    setTitle('book-export-btn', translate('book_export_title'));
+
+    const layoutBtnEl = document.getElementById('layout-toggle-btn');
+    if (layoutBtnEl) {
+      const config = layoutConfigs[currentLayout] || layoutConfigs.normal;
+      layoutBtnEl.setAttribute('title', config.title);
+      layoutBtnEl.setAttribute('aria-label', config.title);
+    }
+
+    // Remark toggle tooltip depends on its active state.
+    const remarkBtn = document.getElementById('toggle-remark-btn');
+    if (remarkBtn) {
+      const isActive = remarkBtn.getAttribute('aria-pressed') === 'true';
+      const title = translate(isActive ? 'remark_exit_mode' : 'remark_mode');
+      remarkBtn.setAttribute('title', title);
+      remarkBtn.setAttribute('aria-label', title);
+    }
+
+    // Refresh an open remark sidebar (header/tooltips/placeholders) in place.
+    remarkController?.applyLocale();
+  }
+
   return {
     layoutIcons,
     layoutConfigs,
@@ -777,7 +824,8 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
     setInitialZoom,
     initializeToolbar,
     setupToolbarButtons,
-    setupKeyboardShortcuts
+    setupKeyboardShortcuts,
+    applyLocale
   };
 }
 

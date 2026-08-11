@@ -53,6 +53,8 @@ export interface RemarkModeController {
   downloadAnnotations(): { ok: boolean; reason?: string };
   importAnnotations(): Promise<{ ok: boolean; added?: number; skipped?: number; reason?: string }>;
   loadAnnotations(): Promise<void>;
+  /** Re-apply translated strings to the open sidebar after a locale change. */
+  applyLocale(): void;
   dispose(): void;
 }
 
@@ -1981,6 +1983,45 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
     notifyCount();
   }
 
+  /**
+   * Re-apply translated strings to an already-open sidebar after the UI
+   * locale changed, without re-rendering or rewiring the panel.
+   */
+  function applySidebarLocale(): void {
+    if (!sidebarEl) return;
+
+    // Header title — preserve the count span child.
+    const titleEl = sidebarEl.querySelector('.remark-sidebar-title');
+    const countEl = sidebarEl.querySelector('.remark-sidebar-count');
+    if (titleEl && countEl) {
+      titleEl.textContent = `${t('remark_sidebar_title', 'Remarks')} `;
+      titleEl.appendChild(countEl);
+    }
+
+    const setTooltip = (selector: string, label: string): void => {
+      const btn = sidebarEl?.querySelector<HTMLElement>(selector);
+      if (!btn) return;
+      btn.setAttribute('title', label);
+      btn.setAttribute('aria-label', label);
+    };
+
+    setTooltip('.remark-sidebar-export', t('remark_copy_tooltip', 'Copy all remarks to clipboard'));
+    setTooltip('.remark-sidebar-download', t('remark_download_tooltip', 'Download remarks as a file'));
+    setTooltip('.remark-sidebar-import', t('remark_import_tooltip', 'Import & merge remarks from a file'));
+    setTooltip('.remark-sidebar-clear', t('remark_clear_all', 'Clear all remarks'));
+    setTooltip('.remark-sidebar-delete', t('remark_delete', 'Delete'));
+
+    const empty = sidebarEl.querySelector('.remark-sidebar-empty');
+    if (empty) {
+      empty.textContent = t('remark_empty_hint', 'Select text to add remarks');
+    }
+
+    const noteEditor = sidebarEl.querySelector<HTMLTextAreaElement>('.remark-sidebar-note-editor');
+    if (noteEditor) {
+      noteEditor.placeholder = t('remark_add_note', 'Add a note…');
+    }
+  }
+
   return {
     isActive,
     enter,
@@ -1992,6 +2033,7 @@ export function createRemarkMode(options: RemarkModeOptions): RemarkModeControll
     downloadAnnotations,
     importAnnotations,
     loadAnnotations: loadAnnotationsAndNotify,
+    applyLocale: applySidebarLocale,
     dispose,
   };
 }

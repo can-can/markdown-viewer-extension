@@ -443,10 +443,6 @@
     "message": "Modo de anotación",
     "description": "Title for remark mode settings card"
   },
-  "remark_change_color": {
-    "message": "Cambiar color",
-    "description": "Tooltip for changing the remark color"
-  },
   "remark_clear_all": {
     "message": "Borrar todas las observaciones",
     "description": "Tooltip for clearing all remarks"
@@ -850,6 +846,14 @@
   "workspace_desc": {
     "message": "Abra un directorio local para explorar y previsualizar archivos compatibles.",
     "description": "Workspace landing page description"
+  },
+  "workspace_history_back": {
+    "message": "Atrás",
+    "description": "Tooltip for the workspace preview history back button"
+  },
+  "workspace_history_forward": {
+    "message": "Adelante",
+    "description": "Tooltip for the workspace preview history forward button"
   },
   "workspace_open": {
     "message": "Abrir espacio de trabajo",
