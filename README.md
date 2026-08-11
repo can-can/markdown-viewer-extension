@@ -17,6 +17,30 @@ It is built for technical documentation, engineering notes, research drafts, wee
 - **VS Code:** https://marketplace.visualstudio.com/items?itemName=xicilion.markdown-viewer-extension · https://open-vsx.org/extension/xicilion/markdown-viewer-extension
 - **Mobile:** See the [mobile app docs](https://github.com/markdown-viewer/docs/blob/main/platforms/mobile.md)
 
+## Node.js HTML CLI
+
+The repository includes a headless-Chrome CLI that renders a Markdown file with
+the same parser, themes, math support, and diagram renderers used by the viewer.
+It requires Node.js 24 or newer and an installed Google Chrome browser.
+
+```bash
+npm install
+npm run build:cli
+npm run md-to-html -- README.md --output README.html
+```
+
+Chrome runs headlessly and uses a temporary browser profile. A separate Chromium
+download is not required. Common options include:
+
+```bash
+npm run md-to-html -- notes.md --theme technical
+npm run md-to-html -- report.md --frontmatter table --merge-empty-cells
+npm run md-to-html -- night.md --theme midnight --output night.html
+```
+
+Run `npm run md-to-html -- --help` for all options. Theme IDs are listed in
+`src/themes/registry.json`.
+
 ## Highlights
 
 - Clean Markdown preview for local files and supported web URLs.

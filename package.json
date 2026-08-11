@@ -4,6 +4,9 @@
   "version": "5.2.1",
   "description": "Open Markdown files in the browser and export polished Word documents with diagrams, editable math, code highlighting, and local processing.",
   "type": "module",
+  "bin": {
+    "documd": "scripts/md-to-html.js"
+  },
   "scripts": {
     "build:chrome": "node chrome/build.js",
     "dev:chrome": "node chrome/dev.js",
@@ -14,6 +17,8 @@
     "build:slidev": "npx vite build --config slidev-shell/vite.vscode.config.ts",
     "build:vscode": "node vscode/build.js",
     "build:obsidian": "node obsidian/build.js",
+    "build:cli": "node scripts/build-cli.js",
+    "md-to-html": "node scripts/md-to-html.js",
     "sync:formats": "node scripts/sync-formats.js",
     "build:app": "node mobile/build-app.js all",
     "build:ios": "node mobile/build-app.js ios",
@@ -104,6 +109,7 @@
     "material-icon-theme": "^5.33.1",
     "mathjax-full": "^3.2.2",
     "mermaid": "^11.12.2",
+    "playwright-core": "^1.62.1",
     "rehype-highlight": "^7.0.2",
     "rehype-katex": "^7.0.1",
     "rehype-slug": "^6.0.0",
