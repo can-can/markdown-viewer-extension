@@ -184,6 +184,38 @@ describe('document rendering', () => {
     assert.equal(await frame.textContent('h1'), 'Alpha');
   });
 
+  it('starts with the table of contents closed, and opens it on request', async () => {
+    await window.click('.tree-row[data-rel-path="README.md"]');
+    const frame = await (await window.waitForSelector(
+      'iframe[data-view-key$=":README.md"]',
+    )).contentFrame();
+    await frame!.waitForSelector('h1');
+
+    // The shared viewer opens the panel on every desktop platform unless the
+    // per-file state answers first. Assert the rendered position, not just the
+    // class: a translated panel still reports a non-zero bounding box.
+    await frame!.waitForFunction(
+      () => document.body.classList.contains('toc-hidden'),
+      undefined,
+      { timeout: 15000 },
+    );
+    const closedLeft = await frame!.evaluate(
+      () => document.getElementById('table-of-contents')!.getBoundingClientRect().left,
+    );
+    assert.ok(closedLeft < 0, `panel should sit off-screen, got left=${closedLeft}`);
+
+    await frame!.click('#toggle-toc-btn');
+    await frame!.waitForFunction(
+      () => !document.body.classList.contains('toc-hidden'),
+      undefined,
+      { timeout: 15000 },
+    );
+    const openLeft = await frame!.evaluate(
+      () => document.getElementById('table-of-contents')!.getBoundingClientRect().left,
+    );
+    assert.ok(openLeft >= 0, `panel should be on-screen once opened, got left=${openLeft}`);
+  });
+
   it('renders a Mermaid diagram through the offscreen render frame', async () => {
     await window.click('.tree-row[data-rel-path="diagram.md"]');
 

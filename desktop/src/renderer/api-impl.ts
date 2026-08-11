@@ -159,8 +159,22 @@ class DesktopMessageService {
 class DesktopFileStateService {
   private readonly states = new Map<string, FileState>();
 
+  /**
+   * The table of contents starts closed in the desktop app.
+   *
+   * The shared viewer decides visibility in this order: the viewer snapshot,
+   * then this per-file state, then `!isMobile`. That last step opens the panel
+   * on every desktop platform, so the only way to close it by default without
+   * changing what Chrome, Firefox, VS Code, and Obsidian ship is to answer
+   * here, before the fallback is reached.
+   *
+   * Only the default is set. Once you toggle the panel the viewer writes
+   * tocVisible through set(), and that answer is used from then on.
+   */
+  private static readonly DEFAULTS: FileState = { tocVisible: false };
+
   async get(url: string): Promise<FileState> {
-    return this.states.get(url) || {};
+    return { ...DesktopFileStateService.DEFAULTS, ...(this.states.get(url) || {}) };
   }
 
   set(url: string, state: FileState): void {
