@@ -1,9 +1,9 @@
 {
-  "id": "default",
-  "name": "标准文档",
-  "name_en": "Standard",
-  "description": "小四仿宋正文、黑体/楷体标题、首行缩进，适合通用文档与内部材料",
-  "description_en": "FangSong body with Hei/Kai headings and first-line indent for general documents",
+  "id": "official",
+  "name": "党政公文",
+  "name_en": "Official Document",
+  "description": "国标三号仿宋正文、黑体/楷体标题，符合党政机关公文格式",
+  "description_en": "GB/T 9704 official document: San-hao FangSong body with Hei/Kai headings",
   "author": "docu.md Markdown Viewer",
   "version": "1.0.0",
   "fontScheme": {
@@ -22,7 +22,7 @@
       "fontFamily": "Monaco"
     }
   },
-  "layoutScheme": "standard",
+  "layoutScheme": "formal",
   "colorScheme": "neutral",
   "tableStyle": "grid",
   "codeTheme": "light-clean"

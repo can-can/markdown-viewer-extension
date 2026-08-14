@@ -700,19 +700,20 @@ ${styles.join('\n')}
 }`);
   }
 
-  // Table spacing (plus optional table text size / line-height)
+  // Table text is scaled down from the body font (default 0.85×) with a
+  // tighter line-height so tables read as a distinct, data-dense block across
+  // every theme. blocks.table.fontScale / lineHeight override per theme.
   if (blocks.table) {
     const marginBefore = toPx(blocks.table.spacingBefore);
     const marginAfter = toPx(blocks.table.spacingAfter);
+    const bodyPt = parseFloat(layoutScheme.body.fontSize);
+    const tableScale = blocks.table.fontScale ?? 0.85;
+    const tableLineHeight = blocks.table.lineHeight ?? 1.15;
     const tableStyles: string[] = [
-      `  margin: ${marginBefore} auto ${marginAfter} auto;`
+      `  margin: ${marginBefore} auto ${marginAfter} auto;`,
+      `  font-size: ${themeManager.ptToPx(`${bodyPt * tableScale}pt`)};`,
+      `  line-height: ${tableLineHeight};`,
     ];
-    if (blocks.table.fontSize) {
-      tableStyles.push(`  font-size: ${themeManager.ptToPx(blocks.table.fontSize)};`);
-    }
-    if (blocks.table.lineHeight !== undefined) {
-      tableStyles.push(`  line-height: ${blocks.table.lineHeight};`);
-    }
     css.push(`#markdown-content table {
 ${tableStyles.join('\n')}
 }`);

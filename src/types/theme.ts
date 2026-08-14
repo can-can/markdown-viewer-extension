@@ -206,11 +206,12 @@ export interface LayoutBlockConfig {
    *  lists stay aligned with indented body text; listItem.firstLineIndent
    *  is deprecated and no longer consumed. */
   firstLineIndent?: boolean;
-  /** Block text font size (e.g. "10.5pt" for table cells). Falls back to body
-   *  font size when absent. Applied in web rendering and DOCX export alike. */
-  fontSize?: string;
-  /** Block text line-height multiplier (e.g. 1 for single spacing inside
-   *  tables). Falls back to body line-height when absent. */
+  /** Table text size as a fraction of the body font (e.g. 0.85 = 85%). Falls
+   *  back to a global default so tables read distinct from body text across
+   *  every theme. Applied in web rendering and DOCX export alike. */
+  fontScale?: number;
+  /** Block text line-height multiplier (e.g. 1.15 for tables). Falls back to
+   *  a global table default, or the body line-height for other blocks. */
   lineHeight?: number;
 }
 

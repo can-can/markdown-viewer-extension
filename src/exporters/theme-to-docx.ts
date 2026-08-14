@@ -188,13 +188,11 @@ export function themeToDOCXStyles(
 
   // TableText paragraph spacing used to compensate cell margins so the
   // total visual gap (margin + paragraph before/after) stays symmetric.
-  // Line-height follows blocks.table.lineHeight when declared (e.g. single
-  // spacing in official documents), otherwise the body line-height.
+  // Tables use a tighter line-height (default 1.15) than body text so they
+  // read as a distinct block; blocks.table.lineHeight overrides per theme.
   const bodyLineSpacing = Math.round(layoutScheme.body.lineHeight * 240);
-  const tableLineHeight = layoutScheme.blocks.table?.lineHeight;
-  const tableLineSpacing = tableLineHeight !== undefined
-    ? Math.round(tableLineHeight * 240)
-    : bodyLineSpacing;
+  const tableLineHeight = layoutScheme.blocks.table?.lineHeight ?? 1.15;
+  const tableLineSpacing = Math.round(tableLineHeight * 240);
   const tableTextSpacing = compensateParagraphSpacing(3, 3, tableLineSpacing);
 
   const pageBackground = colorScheme.background.page
@@ -513,19 +511,19 @@ function generateParagraphStyles(
     },
   };
 
-  // TableText follows blocks.table.fontSize when declared (e.g. 10.5pt in
-  // official documents); otherwise it keeps the legacy fixed 10pt size so
-  // existing themes are unaffected. Line spacing comes from tableTextSpacing
-  // (single spacing when blocks.table.lineHeight is declared).
-
+  // Table text is scaled down from the body font (default 0.85×) so tables
+  // read as a distinct, data-dense block across every theme;
+  // blocks.table.fontScale overrides per theme.
   const tableBlock = layoutScheme.blocks.table;
+  const tableScale = tableBlock?.fontScale ?? 0.85;
+  const tableFontPt = parseFloat(layoutScheme.body.fontSize) * tableScale;
   styles.TableText = {
     id: 'TableText',
     name: 'Table Text',
     basedOn: 'Normal',
     next: 'Normal',
     run: {
-      size: tableBlock?.fontSize ? themeManager.ptToHalfPt(tableBlock.fontSize) : 20,
+      size: themeManager.ptToHalfPt(`${tableFontPt}pt`),
     },
     paragraph: {
       spacing: tableTextSpacing,

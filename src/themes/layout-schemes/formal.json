@@ -34,7 +34,7 @@
       "paddingHorizontal": "14pt"
     },
     "codeBlock": { "spacingAfter": "12pt" },
-    "table": { "spacingAfter": "8pt", "fontSize": "10.5pt", "lineHeight": 1 },
+    "table": { "spacingAfter": "8pt" },
     "horizontalRule": { "spacingBefore": "20pt", "spacingAfter": "20pt" }
   }
 }

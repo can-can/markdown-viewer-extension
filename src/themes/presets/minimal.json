@@ -8,7 +8,7 @@
   "version": "1.0.0",
   "fontScheme": {
     "body": {
-      "fontFamily": "Arial"
+      "fontFamily": "system-ui"
     },
     "headings": {},
     "code": {

@@ -2,11 +2,11 @@
   "version": "2.1.0",
   "themes": [
     { "id": "default", "file": "default.json", "category": "classic", "featured": true, "order": 1 },
-    { "id": "academic", "file": "academic.json", "category": "classic", "featured": true, "order": 2 },
-    { "id": "business", "file": "business.json", "category": "classic", "featured": true, "order": 3 },
-    { "id": "manuscript", "file": "manuscript.json", "category": "classic", "featured": false, "order": 4 },
-    { "id": "newspaper", "file": "newspaper.json", "category": "classic", "featured": false, "order": 5 },
-    { "id": "formal-simple", "file": "formal-simple.json", "category": "classic", "featured": false, "order": 6 },
+    { "id": "official", "file": "official.json", "category": "classic", "featured": true, "order": 2 },
+    { "id": "academic", "file": "academic.json", "category": "classic", "featured": true, "order": 3 },
+    { "id": "business", "file": "business.json", "category": "classic", "featured": true, "order": 4 },
+    { "id": "manuscript", "file": "manuscript.json", "category": "classic", "featured": false, "order": 5 },
+    { "id": "newspaper", "file": "newspaper.json", "category": "classic", "featured": false, "order": 6 },
 
     { "id": "palatino", "file": "palatino.json", "category": "reading", "featured": true, "order": 10 },
     { "id": "garamond", "file": "garamond.json", "category": "reading", "featured": true, "order": 11 },

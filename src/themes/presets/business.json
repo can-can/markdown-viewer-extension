@@ -2,22 +2,20 @@
   "id": "business",
   "name": "商务报告",
   "name_en": "Business",
-  "description": "Calibri 字体，现代商务风格，层次清晰",
-  "description_en": "Calibri font with modern business style and clear hierarchy",
+  "description": "无衅线正文、清晰层级，适合商务报告与方案",
+  "description_en": "Sans-serif body with clear hierarchy for business reports and proposals",
   "author": "docu.md Markdown Viewer",
   "version": "1.0.0",
   "fontScheme": {
     "body": {
-      "fontFamily": "SimSun"
+      "fontFamily": "Arial"
     },
-    "headings": {
-      "fontFamily": "SimHei"
-    },
+    "headings": {},
     "code": {
       "fontFamily": "Monaco"
     }
   },
-  "layoutScheme": "formal",
+  "layoutScheme": "standard",
   "colorScheme": "neutral",
   "tableStyle": "professional",
   "codeTheme": "business-contrast"
