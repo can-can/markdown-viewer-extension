@@ -143,8 +143,8 @@ export class PlantumlRenderer extends BaseRenderer {
       svg = applyRoughEffect(svg, this.roughOptions);
     }
 
-    // Step 6: Render SVG to PNG
-    const scale = this.calculateCanvasScale(themeConfig);
+    // Step 6: Render SVG to PNG (scale clamped to Chromium's canvas limits)
+    const scale = this.clampCanvasDimensions(captureWidth, captureHeight, this.calculateCanvasScale(themeConfig));
     const canvas = await this.renderSvgToCanvas(svg, captureWidth * scale, captureHeight * scale);
 
     const pngDataUrl = canvas.toDataURL('image/png', 1.0);

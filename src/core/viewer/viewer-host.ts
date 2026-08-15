@@ -780,24 +780,17 @@ export async function renderMarkdownFlow(options: RenderMarkdownFlowOptions): Pr
     const imageLayout = await getImageLayout(platform);
     const diagramLayout = await getDiagramLayout(platform);
 
-    // Apply table/image/diagram layout classes to both the render container and
-    // the outer #markdown-content wrapper. Some hosts render into a child element
-    // inside #markdown-content, while theme CSS targets the wrapper itself.
-    const outerContent = container.closest('#markdown-content') as HTMLElement | null;
+    // Apply table/image/diagram layout classes to the RENDER TARGET only.
+    // Hosts either render directly into #markdown-content or into a child
+    // .markdown-viewer-content (content-script takeover, embed, custom
+    // elements); the shared layout rules are dual-root, so a single layer of
+    // classes hits every host (see layout-rules-dual-root change card).
     container.classList.remove(
       'table-layout-left', 'table-layout-center', 'table-layout-center-full-width',
       'image-layout-left', 'image-layout-center',
       'diagram-layout-left', 'diagram-layout-center'
     );
     container.classList.add(`table-layout-${tableLayout}`, `image-layout-${imageLayout}`, `diagram-layout-${diagramLayout}`);
-    if (outerContent && outerContent !== container) {
-      outerContent.classList.remove(
-        'table-layout-left', 'table-layout-center', 'table-layout-center-full-width',
-        'image-layout-left', 'image-layout-center',
-        'diagram-layout-left', 'diagram-layout-center'
-      );
-      outerContent.classList.add(`table-layout-${tableLayout}`, `image-layout-${imageLayout}`, `diagram-layout-${diagramLayout}`);
-    }
 
     // Render markdown
     const { taskManager: renderedTaskManager } = await renderMarkdownDocument({
@@ -1134,6 +1127,81 @@ export interface HtmlExportFlowOptions {
 
   /** Error callback with error message. */
   onError?: (error: string) => void;
+}
+
+// ============================================================================
+// EPUB Export Flow
+// ============================================================================
+
+export interface EpubExportFlowOptions {
+  /** Rendered container to serialize (typically #markdown-page). */
+  container: HTMLElement;
+  /** Original filename (will be converted to .epub). */
+  filename: string;
+  /** Optional EPUB title/chapter title. */
+  title?: string;
+  /** Optional platform override (defaults to global platform). */
+  platform?: PlatformAPI;
+  /** Progress callback during export. */
+  onProgress?: (completed: number, total: number, phase?: 'processing' | 'saving') => void;
+  /** Success callback with generated filename. */
+  onSuccess?: (filename: string) => void;
+  /** Error callback with error message. */
+  onError?: (error: string) => void;
+}
+
+export async function exportEpubFlow(options: EpubExportFlowOptions): Promise<void> {
+  const {
+    container,
+    filename,
+    title,
+    platform,
+    onProgress,
+    onSuccess,
+    onError,
+  } = options;
+
+  try {
+    onProgress?.(0, 100, 'processing');
+
+    const effectivePlatform = platform || (globalThis.platform as PlatformAPI | undefined);
+    if (!effectivePlatform?.file) {
+      throw new Error('File service is not available');
+    }
+
+    const EpubExporterModule = await import('../../exporters/epub-exporter');
+    const epubTitle = title || filename || document.title || 'Markdown Viewer';
+    const result = await EpubExporterModule.exportToEpub({
+      container,
+      title: epubTitle,
+      filename,
+      documentService: effectivePlatform.document,
+      onProgress: (phase, done, total) => {
+        let percent = 0;
+        if (phase === 'render') {
+          percent = total > 0 ? Math.round((done / total) * 50) : 0;
+        } else if (phase === 'convert') {
+          percent = total > 0 ? 50 + Math.round((done / total) * 35) : 50;
+        } else if (phase === 'pack') {
+          percent = total > 0 ? 85 + Math.round((done / total) * 15) : 85;
+        }
+        onProgress?.(Math.max(0, Math.min(100, percent)), 100, phase === 'pack' ? 'saving' : 'processing');
+      },
+    });
+
+    if (!result.success || !result.filename) {
+      throw new Error(result.error || 'Export failed');
+    }
+
+    onProgress?.(100, 100, 'saving');
+    onSuccess?.(result.filename);
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    if (errMsg === 'Download cancelled by user') return;
+    // eslint-disable-next-line no-console
+    console.error('[ViewerHost] EPUB export failed:', errMsg);
+    onError?.(errMsg);
+  }
 }
 
 /**

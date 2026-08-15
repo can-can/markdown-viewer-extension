@@ -21,8 +21,8 @@ import { DrawioPlugin } from './drawio-plugin';
 import { PlantumlPlugin } from './plantuml-plugin';
 import { EchartsPlugin } from './echarts-plugin';
 import { replacePlaceholderWithImage } from './plugin-html-utils';
-import { createErrorHTML } from './plugin-content-utils';
-import { convertPluginResultToDOCX } from '../exporters/docx-exporter';
+import { createErrorHTML, withNodeSourceInfo } from './plugin-content-utils';
+import { convertPluginResultToDOCX, withBlockImageAlignment } from '../exporters/docx-exporter';
 import { syncBlockHtmlFromDOM } from '../core/viewer/viewer-controller';
 import type { BasePlugin } from './base-plugin';
 import type { Processor } from 'unified';
@@ -145,8 +145,7 @@ export function registerRemarkPlugins(
                 
                 if (!placeholderBefore) {
                   return;
-                }
-                
+                }                
                 try {
                   // Preprocess content (e.g., inline local images for HTML plugin)
                   const processedCode = await plugin.preprocessContent(code || '');
@@ -169,7 +168,14 @@ export function registerRemarkPlugins(
                       (error as Error).message === 'Request cancelled') {
                     return;
                   }
-                  console.error('[PluginTask] Render error for:', id, error);
+                  // Report as a concise warning with the source line — the
+                  // error is already surfaced in the document itself via the
+                  // placeholder error block, so a full stack trace here is
+                  // noise (and would be dumped into every CLI export).
+                  const sourceLine = typeof data.sourceLine === 'number' ? data.sourceLine : null;
+                  console.warn(
+                    `[PluginTask] ${plugin.type} render failed for ${id}${sourceLine ? ` (line ${sourceLine})` : ''}: ${(error as Error).message}`,
+                  );
                   const placeholder = document.getElementById(id);
                   if (placeholder) {
                     const errorDetail = escapeHtml((error as Error).message || '');
@@ -181,7 +187,7 @@ export function registerRemarkPlugins(
                   }
                 }
               },
-              plugin.createTaskData(content),
+              withNodeSourceInfo(plugin.createTaskData(content), node),
               placeholderPlugin,
               translate,
               initialStatus
@@ -286,7 +292,23 @@ export async function convertNodeToDOCX(
   }
 
   // Render to unified format
-  const renderResult = await plugin.renderToCommon(renderer, content);
+  let renderResult = await plugin.renderToCommon(renderer, content);
+
+  // Report plugin failures once, as a concise warning with the source line —
+  // the error text is also carried into the DOCX itself via the error result.
+  if (renderResult.type === 'error') {
+    const position = (node as { position?: { start?: { line?: number } } }).position;
+    const line = position?.start?.line;
+    console.warn(
+      `[PluginTask] ${plugin.type} render failed${line ? ` (line ${line})` : ''}: ${renderResult.content.text}`,
+    );
+  }
+
+  // Block diagrams/charts should follow the user's diagram alignment setting in DOCX.
+  if (plugin.type !== 'image' && renderResult.type === 'image' && !renderResult.display.inline) {
+    const diagramLayout = (docxHelpers.diagramLayout === 'left' ? 'left' : 'center') as 'left' | 'center';
+    renderResult = withBlockImageAlignment(renderResult, diagramLayout);
+  }
   
   // Convert to DOCX
   const result = convertPluginResultToDOCX(renderResult, plugin.type);

@@ -3,6 +3,7 @@ import { showActionMenu, type ActionMenuHandle } from './action-menu';
 export interface ExportMenuOptions {
   translate?: (key: string) => string;
   onExportDocx: () => void | Promise<void>;
+  onExportEpub?: () => void | Promise<void>;
   onExportHtml?: () => void | Promise<void>;
   onSaveFile?: () => void | Promise<void>;
   onPrint?: () => void | Promise<void>;
@@ -49,6 +50,12 @@ export function createExportMenu(options: ExportMenuOptions): ExportMenu {
             await options.onExportDocx();
           },
         },
+        ...(options.onExportEpub ? [{
+          label: translate('export_menu_export_epub'),
+          onSelect: async () => {
+            await options.onExportEpub!();
+          },
+        }] : []),
         ...(options.onExportHtml ? [{
           label: translate('export_menu_export_html'),
           onSelect: async () => {
@@ -84,6 +91,7 @@ export function createExportMenu(options: ExportMenuOptions): ExportMenu {
 function fallbackTranslation(key: string): string {
   const map: Record<string, string> = {
     export_menu_export_docx: 'Export to DOCX',
+    export_menu_export_epub: 'Export to EPUB',
     export_menu_export_html: 'Export to HTML',
     export_menu_save_file: 'Save File',
     export_menu_print_pdf: 'Print to PDF',

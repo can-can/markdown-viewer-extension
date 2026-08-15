@@ -54,6 +54,8 @@ interface InlineConverterOptions {
   renderer?: Renderer | null;
   emojiStyle?: EmojiStyle;
   linkColor?: string;  // Link color from colorScheme (hex without #)
+  imageLayout?: 'left' | 'center';
+  diagramLayout?: 'left' | 'center';
 }
 
 /**
@@ -180,6 +182,8 @@ export interface InlineConverter {
   convertInlineNodes(nodes: InlineNode[], parentStyle?: ParentStyle): Promise<InlineResult[]>;
   convertInlineNode(node: InlineNode, parentStyle?: ParentStyle): Promise<InlineResult | InlineResult[] | null>;
   convertImage(node: ImageNode): Promise<ImageRun | TextRun>;
+  isBlockImageNode(node: InlineNode): boolean;
+  isBlockDiagramNode(node: InlineNode): boolean;
   extractText(node: InlineNode | { type: string; children?: InlineNode[]; value?: string }): string;
 }
 
@@ -278,7 +282,9 @@ export function createInlineConverter({
   linkDefinitions,
   renderer,
   emojiStyle = 'system',
-  linkColor = '0366D6'  // Default to GitHub blue
+  linkColor = '0366D6',  // Default to GitHub blue
+  imageLayout = 'left',
+  diagramLayout = 'center'
 }: InlineConverterOptions): InlineConverter {
   // Get emoji font based on user preference (null for system style)
   const emojiFont = emojiStyle === 'system' ? null : getEmojiFont(emojiStyle);
@@ -519,7 +525,9 @@ export function createInlineConverter({
         },
       });
     } catch (error) {
-      console.warn('[DOCX] Failed to load image:', node.url, error);
+      // Concise warning — the error text is already shown inside the DOCX as
+      // a red placeholder; a stack trace here is noise in CLI logs.
+      console.warn(`[DOCX] Failed to load image: ${node.url} — ${(error as Error).message}`);
       reportResourceProgress();
 
       return new TextRun({
@@ -670,10 +678,20 @@ export function createInlineConverter({
     return '';
   }
 
+  function isBlockImageNode(node: InlineNode): boolean {
+    return node.type === 'image';
+  }
+
+  function isBlockDiagramNode(node: InlineNode): boolean {
+    return node.type === 'image' && isSvgImage(node.url);
+  }
+
   return { 
     convertInlineNodes, 
     convertInlineNode,
     convertImage,
+    isBlockImageNode,
+    isBlockDiagramNode,
     extractText
   };
 }

@@ -242,8 +242,8 @@ export class MermaidRenderer extends BaseRenderer {
     // Get font family from theme config
     const fontFamily = themeConfig?.fontFamily || "'SimSun', 'Times New Roman', Times, serif";
 
-    // Calculate scale for PNG dimensions
-    const scale = this.calculateCanvasScale(themeConfig);
+    // Calculate scale for PNG dimensions (clamped to canvas limits)
+    const scale = this.clampCanvasDimensions(captureWidth, captureHeight, this.calculateCanvasScale(themeConfig));
 
     // Apply rough.js hand-drawn effect:
     // - Sequence diagrams: full rough effect (Mermaid's native handDrawn doesn't support them well)

@@ -30,6 +30,7 @@ import {
   renderMarkdownFlow,
   handleThemeSwitchFlow,
   exportDocxFlow,
+  exportEpubFlow,
   exportHtmlFlow,
 } from '../../../src/core/viewer/viewer-host';
 
@@ -713,6 +714,34 @@ async function handleExportHtml(): Promise<void> {
   });
 }
 
+async function handleExportEpub(): Promise<void> {
+  const page = rootContainer?.querySelector('#markdown-page') as HTMLElement | null;
+  if (!page) {
+    return;
+  }
+
+  await exportEpubFlow({
+    container: page,
+    filename: currentDocument.filename,
+    title: currentDocument.filename || document.title || 'Markdown Viewer',
+    platform,
+    onProgress: (completed, total, phase) => {
+      obsidianBridge.postMessage('EXPORT_PROGRESS', {
+        completed,
+        total,
+        phase: phase || 'processing',
+        format: 'epub',
+      });
+    },
+    onSuccess: (filename) => {
+      obsidianBridge.postMessage('EXPORT_EPUB_RESULT', { success: true, filename });
+    },
+    onError: (error) => {
+      obsidianBridge.postMessage('EXPORT_EPUB_RESULT', { success: false, error });
+    },
+  });
+}
+
 async function handlePrint(): Promise<void> {
   const page = rootContainer?.querySelector('#markdown-page') as HTMLElement | null;
   if (!page) {
@@ -846,6 +875,7 @@ function initializeUI(): void {
   exportMenu = createExportMenu({
     translate: (key) => Localization.translate(key),
     onExportDocx: () => handleExportDocx(),
+    onExportEpub: () => handleExportEpub(),
     onExportHtml: () => handleExportHtml(),
     menuClassName: 'mv-action-menu-panel',
     rightAligned: true,

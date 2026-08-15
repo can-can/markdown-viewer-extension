@@ -28,6 +28,8 @@ interface GitbookPanel {
   getGitbookNavItems(): GitbookNavItem[];
   /** Derive a book title from the SUMMARY.md location (null when unknown) */
   getGitbookBookTitle(): string | null;
+  /** Preferred export filename base for the detected book */
+  getGitbookBookExportName(): string | null;
 }
 
 function isMarkdownDocumentUrl(url: string): boolean {
@@ -99,6 +101,24 @@ function getRepositoryRootPath(url: string): string {
     return '/';
   } catch {
     return '/';
+  }
+}
+
+function getSummaryDirectoryName(summaryUrl: string): string | null {
+  try {
+    const parsed = new URL(summaryUrl, window.location.href);
+    const segments = parsed.pathname.split('/').filter(Boolean);
+    if (segments.length < 2) {
+      return null;
+    }
+    const summaryFile = segments[segments.length - 1]?.toLowerCase();
+    if (summaryFile !== 'summary.md') {
+      return null;
+    }
+    const directory = segments[segments.length - 2] || '';
+    return directory ? decodeURIComponent(directory) : null;
+  } catch {
+    return null;
   }
 }
 
@@ -483,10 +503,21 @@ export function createGitbookPanel(
     return cachedBookTitle;
   }
 
+  /**
+   * Preferred export filename base: first the explicit SUMMARY heading, then
+   * the SUMMARY.md parent directory name. This keeps the document title logic
+   * conservative while avoiding exports named after the current page (e.g.
+   * README.docx).
+   */
+  function getGitbookBookExportName(): string | null {
+    return cachedBookTitle || (cachedSummaryUrl ? getSummaryDirectoryName(cachedSummaryUrl) : null);
+  }
+
   return {
     generateGitbookPanel,
     setupResponsivePanel,
     getGitbookNavItems,
     getGitbookBookTitle,
+    getGitbookBookExportName,
   };
 }

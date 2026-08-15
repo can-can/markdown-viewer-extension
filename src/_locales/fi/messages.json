@@ -23,6 +23,10 @@
     "message": "Vie kirja DOCX-muotoon",
     "description": "Menu item: export the whole GitBook book as a single DOCX"
   },
+  "book_export_epub": {
+    "message": "Vie kirja EPUB-muotoon",
+    "description": "Menu item: export the whole GitBook book as a single EPUB ebook"
+  },
   "book_export_failed": {
     "message": "Kirjan vienti epäonnistui: {0}",
     "description": "Alert shown when whole-book export fails, with error detail"
@@ -222,6 +226,10 @@
   "export_menu_export_docx": {
     "message": "Vie DOCX-muotoon",
     "description": "Export menu item for exporting to DOCX"
+  },
+  "export_menu_export_epub": {
+    "message": "Vie EPUB-muotoon",
+    "description": "Export menu item for exporting the current document to EPUB"
   },
   "export_menu_export_html": {
     "message": "Vie HTML-muotoon",

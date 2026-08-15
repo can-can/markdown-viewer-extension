@@ -191,14 +191,25 @@ function tryConvertHtmlSequence(
   if (tagName === 'img') {
     const srcMatch = openTag.value.match(/src\s*=\s*["']([^"']*)["']/i);
     const altMatch = openTag.value.match(/alt\s*=\s*["']([^"']*)["']/i);
+    const widthMatch = openTag.value.match(/\bwidth\s*=\s*["']([^"']*)["']/i);
+    const heightMatch = openTag.value.match(/\bheight\s*=\s*["']([^"']*)["']/i);
     const url = srcMatch ? srcMatch[1] : '';
     const alt = altMatch ? altMatch[1] : '';
+
+    // Preserve authored width/height. They are carried in data.hProperties
+    // (the remark-rehype convention) so normal images get width="24" in the
+    // rendered HTML, and plugins that take over the image node can read them
+    // from the same place.
+    const hProperties: Record<string, string> = {};
+    if (widthMatch) hProperties.width = widthMatch[1];
+    if (heightMatch) hProperties.height = heightMatch[1];
 
     return {
       node: {
         type: 'image',
         url,
-        alt
+        alt,
+        data: Object.keys(hProperties).length > 0 ? { hProperties } : undefined
       } as PhrasingContent,
       endIndex: startIndex
     };

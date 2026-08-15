@@ -14,7 +14,145 @@ import themeManager from './theme-manager';
 import { fetchJSON } from './fetch-utils';
 import type { PlatformAPI, ColorScheme } from '../types/index';
 
-const CONTENT_ROOT_SELECTOR = ':is(#markdown-content, .markdown-viewer-content)';
+/**
+ * Content-root selectors. Theme CSS is generated against `#markdown-content`
+ * and then expanded to also cover `.markdown-viewer-content` (embed/book
+ * hosts). The expansion is explicit dual selectors — NOT `:is(...)` — because
+ * EPUB readers and older CSS engines do not support `:is()` reliably, and the
+ * shared content CSS must stay within the weakest consumer's compatibility
+ * boundary.
+ */
+const CONTENT_ROOT_SELECTOR = '#markdown-content';
+const CONTENT_ROOT_ALTERNATE = '.markdown-viewer-content';
+
+/**
+ * Expand a CSS selector list: every selector that targets `#markdown-content`
+ * is duplicated with `#markdown-content` replaced by the alternate content
+ * root class, producing explicit dual selectors with equivalent semantics.
+ * Selectors without the content root are kept byte-for-byte.
+ */
+function expandContentRootSelectors(selectorList: string): string {
+  const expanded = selectorList
+    .split(',')
+    .map((raw) => raw.trim())
+    .map((selector) => {
+      if (!selector.includes(CONTENT_ROOT_SELECTOR)) {
+        return selector;
+      }
+      const alternate = selector.replace(/#markdown-content/g, CONTENT_ROOT_ALTERNATE);
+      // Hosts that render into a child `.markdown-viewer-content` inside
+      // #markdown-content (content-script takeover, embed, GitBook panel)
+      // carry the layout classes on the child only. For classed/id/attr
+      // content-root selectors (`#markdown-content.foo ...`) also emit the
+      // nested child branch so the variant keeps at least the specificity of
+      // the base rules (which include the #markdown-content id).
+      const nested = selector.replace(
+        /#markdown-content([.#\[])/g,
+        `#markdown-content ${CONTENT_ROOT_ALTERNATE}$1`,
+      );
+      return `${selector}, ${alternate}${nested !== selector ? `, ${nested}` : ''}`;
+    })
+    .join(',\n');
+  return `${expanded} `;
+}
+
+/**
+ * Expand every rule in a generated CSS string whose selector(s) target
+ * `#markdown-content`. Rules without the content root are left untouched.
+ */
+function expandCssContentRoots(css: string): string {
+  return css.replace(/([^{}]+)\{/g, (match: string, selectors: string) => {
+    return `${expandContentRootSelectors(selectors)}{`;
+  });
+}
+
+// ============================================================================
+// Color Mixing (no color-mix())
+// ============================================================================
+
+interface RgbColor {
+  r: number;
+  g: number;
+  b: number;
+  /** 0..1; 1 = fully opaque */
+  a: number;
+}
+
+function parseColor(input: string): RgbColor | null {
+  const value = input.trim().toLowerCase();
+  if (value === 'transparent') {
+    return { r: 0, g: 0, b: 0, a: 0 };
+  }
+
+  const hex = value.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (hex) {
+    const raw = hex[1];
+    const full = raw.length === 3
+      ? raw.split('').map((ch) => ch + ch).join('')
+      : raw;
+    return {
+      r: parseInt(full.slice(0, 2), 16),
+      g: parseInt(full.slice(2, 4), 16),
+      b: parseInt(full.slice(4, 6), 16),
+      a: 1,
+    };
+  }
+
+  const rgb = value.match(/^rgba?\(([^)]+)\)$/i);
+  if (rgb) {
+    const parts = rgb[1].split(',').map((part) => part.trim());
+    if (parts.length < 3) {
+      return null;
+    }
+    return {
+      r: Number(parts[0]),
+      g: Number(parts[1]),
+      b: Number(parts[2]),
+      a: parts.length >= 4 ? Number(parts[3]) : 1,
+    };
+  }
+
+  return null;
+}
+
+function formatColor(color: RgbColor): string {
+  if (color.a >= 1) {
+    const hex = [color.r, color.g, color.b]
+      .map((channel) => Math.round(channel).toString(16).padStart(2, '0'))
+      .join('');
+    return `#${hex}`;
+  }
+  return `rgba(${Math.round(color.r)}, ${Math.round(color.g)}, ${Math.round(color.b)}, ${color.a})`;
+}
+
+/**
+ * Mix two colors in sRGB and return a concrete CSS color, replicating
+ * `color-mix(in srgb, first W%, second)` without relying on color-mix() —
+ * EPUB readers and older CSS engines do not support it reliably.
+ *
+ * When `second` is transparent the result keeps the first color and uses the
+ * first color's weight as the alpha channel.
+ */
+function mixColors(first: string, firstWeightPercent: number, second: string): string {
+  const firstColor = parseColor(first);
+  const secondColor = parseColor(second);
+  if (!firstColor || !secondColor) {
+    return first;
+  }
+
+  const weight = Math.max(0, Math.min(100, firstWeightPercent)) / 100;
+
+  if (secondColor.a === 0) {
+    // Over transparent: keep the first color, alpha = weight.
+    return formatColor({ r: firstColor.r, g: firstColor.g, b: firstColor.b, a: weight });
+  }
+
+  // Straight sRGB interpolation of two opaque colors.
+  const r = firstColor.r * weight + secondColor.r * (1 - weight);
+  const g = firstColor.g * weight + secondColor.g * (1 - weight);
+  const b = firstColor.b * weight + secondColor.b * (1 - weight);
+  return formatColor({ r, g, b, a: 1 });
+}
 
 // ============================================================================
 // Type Definitions
@@ -232,7 +370,7 @@ export function themeToCSS(
   // GitHub-style alerts (blockquote.markdown-alert)
   css.push(generateAlertCSS(colorScheme));
 
-  return css.join('\n\n').replace(/#markdown-content/g, CONTENT_ROOT_SELECTOR);
+  return expandCssContentRoots(css.join('\n\n'));
 }
 
 /**
@@ -267,8 +405,9 @@ function generateFontAndLayoutCSS(fontScheme: FontScheme, layoutScheme: LayoutSc
       const accentBase = colorScheme.accent.link;
       const accentSurface = colorScheme.background.surface || colorScheme.background.page || 'transparent';
       vars.push(`  --md-accent: ${accentBase};`);
-      vars.push(`  --md-accent-bg: color-mix(in srgb, ${accentBase} 16%, ${accentSurface});`);
-      vars.push(`  --md-accent-subtle: color-mix(in srgb, ${accentBase} 22%, transparent);`);
+      // Concrete colors instead of color-mix(): EPUB readers don't support it.
+      vars.push(`  --md-accent-bg: ${mixColors(accentBase, 16, accentSurface)};`);
+      vars.push(`  --md-accent-subtle: ${mixColors(accentBase, 22, 'transparent')};`);
     }
     if (colorScheme.accent.linkHover) vars.push(`  --md-accent-hover: ${colorScheme.accent.linkHover};`);
     css.push(`:root {\n${vars.join('\n')}\n}`);
@@ -369,14 +508,15 @@ ${styles.join('\n')}
 function generateTableCSS(tableStyle: TableStyleConfig, colorScheme: ColorScheme): string {
   const css: string[] = [];
 
-  // Base table styles - display:block + overflow-x:auto enables horizontal
-  // scrolling for wide tables while width:fit-content + margin:auto preserves
-  // centering for narrow ones.
+  // Base table styles - display:table + width:auto gives the classic
+  // content-width table (narrow tables size to their content, wide tables are
+  // constrained by max-width). width:fit-content is intentionally avoided:
+  // EPUB readers and older CSS engines do not support it, and display:table
+  // provides the same content-width behavior everywhere.
   css.push(`#markdown-content table {
   border-collapse: collapse;
-  display: block;
-  overflow-x: auto;
-  width: fit-content;
+  display: table;
+  width: auto;
   max-width: 100%;
   margin: 13px auto;
 }
@@ -387,15 +527,13 @@ function generateTableCSS(tableStyle: TableStyleConfig, colorScheme: ColorScheme
   margin-right: auto;
 }
 
-/* Table layout: centered auto width */
+/* Table layout: centered auto width (explicit; base rule already auto) */
 #markdown-content.table-layout-center table {
-  width: fit-content;
+  width: auto;
 }
 
 /* Table layout: full width */
 #markdown-content.table-layout-center-full-width table {
-  display: table;
-  overflow-x: visible;
   width: 100%;
   margin-left: auto;
   margin-right: auto;
@@ -619,10 +757,11 @@ function generateBlockSpacingCSS(layoutScheme: LayoutScheme, colorScheme: ColorS
     const styles: string[] = [
       `  margin: ${marginBefore} 0 ${marginAfter} 0;`
     ];
-    // First-line indent: only if theme supports it AND user has enabled it
+    // First-line indent: only if theme supports it AND user has enabled it.
+    // Plain text-indent only — the `each-line` keyword (indent every wrapped
+    // line) is not supported by EPUB readers and older CSS engines.
     if (blocks.paragraph.firstLineIndent && firstLineIndent > 0) {
       styles.push(`  text-indent: ${firstLineIndent}em;`);
-      styles.push(`  text-indent: ${firstLineIndent}em each-line;`);
     }
     css.push(`#markdown-content p {
 ${styles.join('\n')}
@@ -793,8 +932,9 @@ function generateFootnoteCSS(): string {
  *
  * Alerts are blockquotes tagged with `markdown-alert` (+ a per-kind class) by
  * the remark-github-alerts plugin. Each kind gets a signature border/background
- * colour; backgrounds are tinted against the page colour via color-mix so they
- * adapt to both light and dark themes without extra rules.
+ * colour; backgrounds are tinted against the page colour so they adapt to both
+ * light and dark themes without extra rules. Tints are materialized as
+ * concrete colors (no color-mix()) for EPUB reader compatibility.
  *
  * @param colorScheme - Color scheme configuration (page/surface colours)
  * @returns CSS string for alert styling
@@ -841,7 +981,7 @@ function generateAlertCSS(colorScheme: ColorScheme): string {
 }`);
 
   for (const kind of alertKinds) {
-    const bg = `color-mix(in srgb, ${kind.color} 10%, ${page})`;
+    const bg = mixColors(kind.color, 10, page);
     rules.push(`#markdown-content blockquote.markdown-alert-${kind.key} {
   border-left-color: ${kind.color};
   background-color: ${bg};

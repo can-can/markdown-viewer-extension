@@ -46,16 +46,20 @@ export function fallbackDownload(blob: Blob, filename: string): void {
  */
 export type UploadProgressCallback = (uploaded: number, total: number) => void;
 
+const DEFAULT_DOCX_MIME_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
 /**
  * Download blob as file using platform file service
  * @param blob - File blob
  * @param filename - Output filename
  * @param onProgress - Optional progress callback for upload phase
+ * @param mimeType - Optional MIME type override (defaults to DOCX)
  */
 export async function downloadBlob(
   blob: Blob,
   filename: string,
-  onProgress?: UploadProgressCallback
+  onProgress?: UploadProgressCallback,
+  mimeType?: string
 ): Promise<void> {
   const platform = globalThis.platform as PlatformAPI | undefined;
   
@@ -71,7 +75,7 @@ export async function downloadBlob(
 
   if (platform?.file?.download) {
     await platform.file.download(blob, filename, {
-      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      mimeType: mimeType || DEFAULT_DOCX_MIME_TYPE,
       onProgress: onProgress
         ? (progress: { uploaded: number; total: number }) => {
             onProgress(progress.uploaded, progress.total);

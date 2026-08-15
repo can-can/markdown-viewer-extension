@@ -13,18 +13,27 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDir, '..');
 const cliAssetDir = path.join(projectRoot, 'dist', 'cli');
 
-const HELP = `documd - render Markdown to a standalone HTML file with headless Chrome
+const HELP = `documd - render Markdown / diagrams / books with headless Chrome
 
 Usage:
-  documd <input.md> [options]
+  documd <input> [--format <f>] [-o <output>] [options]
+
+Output formats (--format; inferred from the output extension when omitted):
+  html, epub, docx, pdf        markdown / SUMMARY.md (--book) documents
+  svg, png, drawio             diagram sources (PlantUML/Mermaid/DOT/Vega/...)
 
 Options:
-  -o, --output <file>       Output path (default: input name with .html)
+  -o, --output <file>       Output path
+      --format <f>          html, epub, docx, pdf, svg, png or drawio
+  -b, --book                Whole-book export: input is a GitBook SUMMARY.md
+      --diagram-type <t>    Diagram renderer (default: inferred from the extension)
   -t, --theme <id>          Viewer theme (default: default)
-      --title <text>        Override the HTML document title
-      --language <code>     HTML language code (default: en)
+      --title <text>        Override the document title
+      --language <code>     Document language code (default: en)
       --frontmatter <mode>  hide, table, or raw (default: hide)
       --table-layout <mode> left, center, or center-full-width
+      --image-layout <mode> left or center (default: center)
+      --diagram-layout <mode> left or center (default: center)
       --merge-empty-cells   Merge empty Markdown table cells
       --chrome <path>       Explicit Chrome executable path
       --timeout <seconds>   Overall render timeout (default: 120)
@@ -37,12 +46,50 @@ function takeValue(args, index, option) {
   return value;
 }
 
+const OUTPUT_FORMATS = ['html', 'epub', 'docx', 'pdf', 'svg', 'png', 'drawio'];
+const DIAGRAM_FORMATS = ['svg', 'png', 'drawio'];
+const OUTPUT_EXT_FORMATS = {
+  '.html': 'html',
+  '.epub': 'epub',
+  '.docx': 'docx',
+  '.pdf': 'pdf',
+  '.svg': 'svg',
+  '.png': 'png',
+  '.drawio': 'drawio',
+};
+const DIAGRAM_EXT_TYPES = {
+  '.puml': 'plantuml',
+  '.plantuml': 'plantuml',
+  '.wsd': 'plantuml',
+  '.mmd': 'mermaid',
+  '.mermaid': 'mermaid',
+  '.dot': 'dot',
+  '.gv': 'dot',
+  '.vega': 'vega',
+  '.vl': 'vega-lite',
+  '.drawio': 'drawio',
+  '.echarts': 'echarts',
+  '.svg': 'svg',
+  '.infographic': 'infographic',
+  '.canvas': 'canvas',
+};
+
+function isDiagramInput(inputPath) {
+  return Boolean(DIAGRAM_EXT_TYPES[path.extname(inputPath).toLowerCase()]);
+}
+
+function inferDiagramType(inputPath) {
+  return DIAGRAM_EXT_TYPES[path.extname(inputPath).toLowerCase()] || null;
+}
+
 export function parseArgs(args) {
   const options = {
     theme: 'default',
     language: 'en',
     frontmatterDisplay: 'hide',
     tableLayout: 'center',
+    imageLayout: 'center',
+    diagramLayout: 'center',
     tableMergeEmpty: false,
     timeoutMs: 120_000,
   };
@@ -52,6 +99,14 @@ export function parseArgs(args) {
     const arg = args[i];
     if (arg === '-h' || arg === '--help') {
       options.help = true;
+    } else if (arg === '-b' || arg === '--book') {
+      options.bookMode = true;
+    } else if (arg === '--diagram-type') {
+      options.diagramType = takeValue(args, i, arg);
+      i += 1;
+    } else if (arg === '--format') {
+      options.format = takeValue(args, i, arg);
+      i += 1;
     } else if (arg === '-o' || arg === '--output') {
       options.output = takeValue(args, i, arg);
       i += 1;
@@ -69,6 +124,12 @@ export function parseArgs(args) {
       i += 1;
     } else if (arg === '--table-layout') {
       options.tableLayout = takeValue(args, i, arg);
+      i += 1;
+    } else if (arg === '--image-layout') {
+      options.imageLayout = takeValue(args, i, arg);
+      i += 1;
+    } else if (arg === '--diagram-layout') {
+      options.diagramLayout = takeValue(args, i, arg);
       i += 1;
     } else if (arg === '--merge-empty-cells') {
       options.tableMergeEmpty = true;
@@ -98,15 +159,101 @@ export function parseArgs(args) {
   if (!['left', 'center', 'center-full-width'].includes(options.tableLayout)) {
     throw new Error('--table-layout must be left, center, or center-full-width');
   }
+  if (!['left', 'center'].includes(options.imageLayout)) {
+    throw new Error('--image-layout must be left or center');
+  }
+  if (!['left', 'center'].includes(options.diagramLayout)) {
+    throw new Error('--diagram-layout must be left or center');
+  }
+  if (options.format && !OUTPUT_FORMATS.includes(options.format)) {
+    throw new Error('--format must be html, epub, docx, pdf, svg, png or drawio');
+  }
+
+  // Infer the output format when --format is omitted.
+  if (!options.format) {
+    if (options.output) {
+      const ext = path.extname(options.output).toLowerCase();
+      options.format = OUTPUT_EXT_FORMATS[ext];
+      if (!options.format) {
+        throw new Error(`Cannot infer --format from output "${options.output}"; use --format html|epub|docx|pdf|svg|png|drawio`);
+      }
+    } else if (options.bookMode) {
+      options.format = 'epub';
+    } else if (isDiagramInput(options.input)) {
+      options.format = 'svg';
+    } else {
+      options.format = 'html';
+    }
+  }
+
+  const diagramInput = isDiagramInput(options.input);
+  if (DIAGRAM_FORMATS.includes(options.format)) {
+    if (!diagramInput) {
+      throw new Error(`Format "${options.format}" requires a diagram input (PlantUML/Mermaid/DOT/Vega/...); "${options.input}" is not one`);
+    }
+    options.diagramMode = true;
+  } else if (diagramInput) {
+    throw new Error(`Diagram input "${options.input}" cannot be exported as ${options.format}; use --format svg, png or drawio`);
+  }
+
+  if (options.bookMode) {
+    if (!['epub', 'docx', 'pdf'].includes(options.format)) {
+      throw new Error('--book requires --format epub, docx or pdf');
+    }
+  }
 
   options.input = positional[0];
   return options;
 }
 
-function outputPathFor(inputPath, requestedOutput) {
-  if (requestedOutput) return path.resolve(requestedOutput);
-  const parsed = path.parse(inputPath);
-  return path.join(parsed.dir, `${parsed.name}.html`);
+/**
+ * Parse a GitBook SUMMARY.md into book pages (same format as the viewer's
+ * GitBook panel): `- [Title](relative-link)` with indentation depth.
+ */
+export function parseSummaryPages(summaryContent, summaryDir) {
+  const pages = [];
+  for (const line of summaryContent.split(/\r?\n/)) {
+    const match = line.match(/^(\s*)(?:[-*+]|\d+\.)\s+\[([^\]]+)\]\(([^)]+)\)\s*$/);
+    if (!match) continue;
+    const indent = match[1] || '';
+    const title = match[2].trim();
+    const target = match[3].trim();
+    if (!target || /^(?:mailto:|javascript:|#)/i.test(target)) continue;
+    let href = target;
+    if (!href.startsWith('http')) {
+      href = href.replace(/^\.?\//, '');
+      if (summaryDir) {
+        href = path.posix.join(summaryDir.replace(/\\/g, '/'), href);
+      }
+    }
+    const depth = Math.floor(indent.replace(/\t/g, '  ').length / 2);
+    pages.push({ href, title, depth });
+  }
+  return pages;
+}
+
+const DIAGRAM_EXT_TYPES = {
+  '.puml': 'plantuml',
+  '.plantuml': 'plantuml',
+  '.wsd': 'plantuml',
+  '.mmd': 'mermaid',
+  '.mermaid': 'mermaid',
+  '.dot': 'dot',
+  '.gv': 'dot',
+  '.vega': 'vega',
+  '.vl': 'vega-lite',
+  '.drawio': 'drawio',
+  '.echarts': 'echarts',
+  '.svg': 'svg',
+  '.infographic': 'infographic',
+  '.canvas': 'canvas',
+};
+
+function inferDiagramType(inputPath) {
+  return DIAGRAM_EXT_TYPES[path.extname(inputPath).toLowerCase()] || null;
+}
+
+function outputPathFor(inputPath, requestedOutput, format) {
 }
 
 export async function ensureOutputDirectory(outputPath) {
@@ -169,7 +316,7 @@ function rendererHtml(basePath) {
   <link rel="stylesheet" href="${basePath}/styles.css">
 </head>
 <body>
-  <div id="markdown-page"><main id="markdown-content"></main></div>
+  <div id="markdown-page"><div id="markdown-content"></div></div>
   <script src="${basePath}/browser-renderer.js"></script>
 </body>
 </html>`;
@@ -296,7 +443,7 @@ async function withTimeout(promise, timeoutMs) {
 
 export async function renderMarkdownFile(options) {
   const inputPath = path.resolve(options.input);
-  const outputPath = outputPathFor(inputPath, options.output);
+  const outputPath = outputPathFor(inputPath, options.output, options.format);
   const markdown = await fs.readFile(inputPath, 'utf8');
 
   await fs.access(path.join(cliAssetDir, 'browser-renderer.js')).catch(() => {
@@ -334,6 +481,8 @@ export async function renderMarkdownFile(options) {
       frontmatterDisplay: options.frontmatterDisplay,
       tableMergeEmpty: options.tableMergeEmpty,
       tableLayout: options.tableLayout,
+      imageLayout: options.imageLayout,
+      diagramLayout: options.diagramLayout,
       documentPath: inputPath,
       documentDir: path.dirname(inputPath),
       documentBaseUrl: server.documentBaseUrl,
@@ -350,11 +499,525 @@ export async function renderMarkdownFile(options) {
   }
 }
 
+export async function snapshotMarkdownFile(options) {
+  const inputPath = path.resolve(options.input);
+  const markdown = await fs.readFile(inputPath, 'utf8');
+
+  await fs.access(path.join(cliAssetDir, 'browser-renderer.js')).catch(() => {
+    throw new Error('CLI browser assets are missing. Run "npm run build:cli" first.');
+  });
+
+  const server = await startAssetServer(path.dirname(inputPath));
+  let browser;
+  try {
+    browser = await chromium.launch({
+      headless: true,
+      ...(options.chromePath
+        ? { executablePath: path.resolve(options.chromePath) }
+        : { channel: 'chrome' }),
+    });
+
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    await page.goto(server.pageUrl, { waitUntil: 'load' });
+    await page.waitForFunction(() => typeof window.markdownCli?.snapshotDom === 'function');
+
+    return await withTimeout(page.evaluate((request) => {
+      return window.markdownCli.snapshotDom(request);
+    }, {
+      markdown,
+      filename: path.basename(inputPath),
+      title: options.title,
+      theme: options.theme,
+      language: options.language,
+      frontmatterDisplay: options.frontmatterDisplay,
+      tableMergeEmpty: options.tableMergeEmpty,
+      tableLayout: options.tableLayout,
+      documentPath: inputPath,
+      documentDir: path.dirname(inputPath),
+      documentBaseUrl: server.documentBaseUrl,
+      fileReadUrl: server.fileReadUrl,
+      resourceBaseUrl: server.resourceBaseUrl,
+    }), options.timeoutMs);
+  } finally {
+    await browser?.close();
+    await server.close();
+  }
+}
+
+function base64ToBuffer(base64) {
+  // The page serializes bytes with String.fromCharCode, so the base64 payload
+  // must be decoded as latin1 to recover the original binary bytes.
+  return Buffer.from(Buffer.from(base64, 'base64').toString('latin1'), 'binary');
+}
+
+/**
+ * Run the REAL single-document EPUB export pipeline (same code path as the
+ * extension: HTML staticizing -> collectEpubCss -> JSZip packaging) and write
+ * the generated .epub to disk.
+ */
+export async function exportMarkdownEpub(options) {
+  const inputPath = path.resolve(options.input);
+  const outputPath = outputPathFor(inputPath, options.output, 'epub');
+  const markdown = await fs.readFile(inputPath, 'utf8');
+
+  await fs.access(path.join(cliAssetDir, 'browser-renderer.js')).catch(() => {
+    throw new Error('CLI browser assets are missing. Run "npm run build:cli" first.');
+  });
+
+  const server = await startAssetServer(path.dirname(inputPath));
+  let browser;
+  try {
+    browser = await chromium.launch({
+      headless: true,
+      ...(options.chromePath
+        ? { executablePath: path.resolve(options.chromePath) }
+        : { channel: 'chrome' }),
+    });
+
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    const browserErrors = [];
+    page.on('console', (message) => {
+      if (message.type() === 'error') browserErrors.push(message.text());
+    });
+    page.on('pageerror', (error) => browserErrors.push(error.message));
+
+    await page.goto(server.pageUrl, { waitUntil: 'load' });
+    await page.waitForFunction(() => typeof window.markdownCli?.renderEpub === 'function');
+
+    const result = await withTimeout(page.evaluate((request) => {
+      return window.markdownCli.renderEpub(request);
+    }, {
+      markdown,
+      filename: path.basename(inputPath),
+      title: options.title,
+      theme: options.theme,
+      language: options.language,
+      frontmatterDisplay: options.frontmatterDisplay,
+      tableMergeEmpty: options.tableMergeEmpty,
+      tableLayout: options.tableLayout,
+      imageLayout: options.imageLayout,
+      diagramLayout: options.diagramLayout,
+      documentPath: inputPath,
+      documentDir: path.dirname(inputPath),
+      documentBaseUrl: server.documentBaseUrl,
+      fileReadUrl: server.fileReadUrl,
+      resourceBaseUrl: server.resourceBaseUrl,
+    }), options.timeoutMs);
+
+    await ensureOutputDirectory(outputPath);
+    await fs.writeFile(outputPath, base64ToBuffer(result.base64));
+    return { outputPath, filename: result.filename, browserErrors };
+  } finally {
+    await browser?.close();
+    await server.close();
+  }
+}
+
+/**
+ * Render a diagram source file (PlantUML / Mermaid / DOT / Vega / ...) to
+ * SVG, PNG or DrawIO XML through the shared renderer registry.
+ */
+export async function exportMarkdownDiagram(options) {
+  const inputPath = path.resolve(options.input);
+  const diagramType = options.diagramType || inferDiagramType(inputPath);
+  if (!diagramType) {
+    throw new Error(`Cannot infer a diagram renderer from ${inputPath}; use --diagram-type`);
+  }
+  const format = options.format || 'svg';
+  const content = await fs.readFile(inputPath, 'utf8');
+
+  await fs.access(path.join(cliAssetDir, 'browser-renderer.js')).catch(() => {
+    throw new Error('CLI browser assets are missing. Run "npm run build:cli" first.');
+  });
+
+  const server = await startAssetServer(path.dirname(inputPath));
+  let browser;
+  try {
+    browser = await chromium.launch({
+      headless: true,
+      ...(options.chromePath
+        ? { executablePath: path.resolve(options.chromePath) }
+        : { channel: 'chrome' }),
+    });
+
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    const browserErrors = [];
+    page.on('console', (message) => {
+      if (message.type() === 'error') browserErrors.push(message.text());
+    });
+    page.on('pageerror', (error) => browserErrors.push(error.message));
+
+    await page.goto(server.pageUrl, { waitUntil: 'load' });
+    await page.waitForFunction(() => typeof window.markdownCli?.renderDiagram === 'function');
+
+    const result = await withTimeout(page.evaluate((request) => {
+      return window.markdownCli.renderDiagram(request);
+    }, {
+      diagramType,
+      content,
+      theme: options.theme || 'default',
+      documentBaseUrl: server.documentBaseUrl,
+      fileReadUrl: server.fileReadUrl,
+      resourceBaseUrl: server.resourceBaseUrl,
+    }), options.timeoutMs);
+
+    const ext = format === 'png' ? '.png' : format === 'drawio' ? '.drawio' : '.svg';
+    const outputPath = options.output
+      ? path.resolve(options.output)
+      : path.join(path.dirname(inputPath), path.basename(inputPath, path.extname(inputPath)) + ext);
+
+    await ensureOutputDirectory(outputPath);
+    if (format === 'png') {
+      if (!result.pngBase64) {
+        throw new Error(`Diagram type "${diagramType}" produced no PNG`);
+      }
+      await fs.writeFile(outputPath, Buffer.from(result.pngBase64, 'base64'));
+    } else if (format === 'drawio') {
+      if (!result.drawioXml) {
+        throw new Error(`Diagram type "${diagramType}" does not produce DrawIO XML (PlantUML only)`);
+      }
+      await fs.writeFile(outputPath, result.drawioXml, 'utf8');
+    } else {
+      if (!result.svg) {
+        if (result.pngBase64) {
+          throw new Error(`Diagram type "${diagramType}" produces PNG only; use --format png (or an output ending in .png)`);
+        }
+        throw new Error(`Diagram type "${diagramType}" produced no SVG`);
+      }
+      await fs.writeFile(outputPath, result.svg, 'utf8');
+    }
+    return { outputPath, browserErrors };
+  } finally {
+    await browser?.close();
+    await server.close();
+  }
+}
+
+/**
+ * Run the REAL DOCX export pipeline (DocxExporter on the raw markdown) and
+ * write the generated .docx to disk.
+ */
+export async function exportMarkdownDocx(options) {
+  const inputPath = path.resolve(options.input);
+  const outputPath = outputPathFor(inputPath, options.output, 'docx');
+  const markdown = await fs.readFile(inputPath, 'utf8');
+
+  await fs.access(path.join(cliAssetDir, 'browser-renderer.js')).catch(() => {
+    throw new Error('CLI browser assets are missing. Run "npm run build:cli" first.');
+  });
+
+  const server = await startAssetServer(path.dirname(inputPath));
+  let browser;
+  try {
+    browser = await chromium.launch({
+      headless: true,
+      ...(options.chromePath
+        ? { executablePath: path.resolve(options.chromePath) }
+        : { channel: 'chrome' }),
+    });
+
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    const browserErrors = [];
+    page.on('console', (message) => {
+      if (message.type() === 'error') browserErrors.push(message.text());
+    });
+    page.on('pageerror', (error) => browserErrors.push(error.message));
+
+    await page.goto(server.pageUrl, { waitUntil: 'load' });
+    await page.waitForFunction(() => typeof window.markdownCli?.renderDocx === 'function');
+
+    const result = await withTimeout(page.evaluate((request) => {
+      return window.markdownCli.renderDocx(request);
+    }, {
+      markdown,
+      filename: path.basename(inputPath),
+      title: options.title,
+      theme: options.theme,
+      language: options.language,
+      frontmatterDisplay: options.frontmatterDisplay,
+      tableMergeEmpty: options.tableMergeEmpty,
+      tableLayout: options.tableLayout,
+      imageLayout: options.imageLayout,
+      diagramLayout: options.diagramLayout,
+      firstLineIndent: options.firstLineIndent ?? 0,
+      documentPath: inputPath,
+      documentDir: path.dirname(inputPath),
+      documentBaseUrl: server.documentBaseUrl,
+      fileReadUrl: server.fileReadUrl,
+      resourceBaseUrl: server.resourceBaseUrl,
+    }), options.timeoutMs);
+
+    await ensureOutputDirectory(outputPath);
+    await fs.writeFile(outputPath, base64ToBuffer(result.base64));
+    return { outputPath, browserErrors };
+  } finally {
+    await browser?.close();
+    await server.close();
+  }
+}
+
+/**
+ * Whole-book export: parse the SUMMARY.md pages and run the real book
+ * pipeline (book-renderer + exportToEpub / exportBookToDocx).
+ */
+export async function exportMarkdownBook(options) {
+  const inputPath = path.resolve(options.input);
+  const summaryDir = path.dirname(inputPath);
+  const summaryContent = await fs.readFile(inputPath, 'utf8');
+  const pages = parseSummaryPages(summaryContent, '');
+  if (pages.length === 0) {
+    throw new Error(`No book pages found in ${inputPath}`);
+  }
+  const bookTitle = options.title || path.basename(summaryDir) || 'Book';
+
+  await fs.access(path.join(cliAssetDir, 'browser-renderer.js')).catch(() => {
+    throw new Error('CLI browser assets are missing. Run "npm run build:cli" first.');
+  });
+
+  const server = await startAssetServer(summaryDir);
+  let browser;
+  try {
+    browser = await chromium.launch({
+      headless: true,
+      ...(options.chromePath
+        ? { executablePath: path.resolve(options.chromePath) }
+        : { channel: 'chrome' }),
+    });
+
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    const browserErrors = [];
+    page.on('console', (message) => {
+      if (message.type() === 'error') browserErrors.push(message.text());
+    });
+    page.on('pageerror', (error) => browserErrors.push(error.message));
+
+    await page.goto(server.pageUrl, { waitUntil: 'load' });
+    const apiName = options.format === 'epub' ? 'renderBookEpub' : 'renderBookDocx';
+    await page.waitForFunction((name) => typeof window.markdownCli?.[name] === 'function', apiName);
+
+    const result = await withTimeout(page.evaluate((request) => {
+      const api = request.format === 'epub' ? window.markdownCli.renderBookEpub : window.markdownCli.renderBookDocx;
+      return api(request);
+    }, {
+      markdown: '',
+      filename: `${bookTitle}${options.format === 'epub' ? '.epub' : '.docx'}`,
+      title: bookTitle,
+      bookTitle,
+      format: options.format,
+      pages,
+      theme: options.theme,
+      language: options.language,
+      frontmatterDisplay: options.frontmatterDisplay,
+      tableMergeEmpty: options.tableMergeEmpty,
+      tableLayout: options.tableLayout,
+      imageLayout: options.imageLayout,
+      diagramLayout: options.diagramLayout,
+      firstLineIndent: 0,
+      documentPath: inputPath,
+      documentDir: summaryDir,
+      documentBaseUrl: server.documentBaseUrl,
+      fileReadUrl: server.fileReadUrl,
+      resourceBaseUrl: server.resourceBaseUrl,
+    }), options.timeoutMs);
+
+    const ext = options.format === 'epub' ? '.epub' : '.docx';
+    const outputPath = options.output
+      ? path.resolve(options.output)
+      : path.join(summaryDir, `${bookTitle}${ext}`);
+    await ensureOutputDirectory(outputPath);
+    await fs.writeFile(outputPath, base64ToBuffer(result.base64));
+    return { outputPath, browserErrors };
+  } finally {
+    await browser?.close();
+    await server.close();
+  }
+}
+
+function pdfOptions() {
+  return {
+    printBackground: true,
+    preferCSSPageSize: true,
+  };
+}
+
+/**
+ * Export a single markdown file to PDF through the headless Chrome print
+ * pipeline (shared print styles from print-utils).
+ */
+export async function exportMarkdownPdf(options) {
+  const inputPath = path.resolve(options.input);
+  const outputPath = outputPathFor(inputPath, options.output, 'pdf');
+  const markdown = await fs.readFile(inputPath, 'utf8');
+
+  await fs.access(path.join(cliAssetDir, 'browser-renderer.js')).catch(() => {
+    throw new Error('CLI browser assets are missing. Run "npm run build:cli" first.');
+  });
+
+  const server = await startAssetServer(path.dirname(inputPath));
+  let browser;
+  try {
+    browser = await chromium.launch({
+      headless: true,
+      ...(options.chromePath
+        ? { executablePath: path.resolve(options.chromePath) }
+        : { channel: 'chrome' }),
+    });
+
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    const browserErrors = [];
+    page.on('console', (message) => {
+      if (message.type() === 'error') browserErrors.push(message.text());
+    });
+    page.on('pageerror', (error) => browserErrors.push(error.message));
+
+    await page.goto(server.pageUrl, { waitUntil: 'load' });
+    await page.waitForFunction(() => typeof window.markdownCli?.renderPdf === 'function');
+
+    await withTimeout(page.evaluate((request) => {
+      return window.markdownCli.renderPdf(request);
+    }, {
+      markdown,
+      filename: path.basename(inputPath),
+      title: options.title,
+      theme: options.theme,
+      language: options.language,
+      frontmatterDisplay: options.frontmatterDisplay,
+      tableMergeEmpty: options.tableMergeEmpty,
+      tableLayout: options.tableLayout,
+      imageLayout: options.imageLayout,
+      diagramLayout: options.diagramLayout,
+      firstLineIndent: options.firstLineIndent ?? 0,
+      documentPath: inputPath,
+      documentDir: path.dirname(inputPath),
+      documentBaseUrl: server.documentBaseUrl,
+      fileReadUrl: server.fileReadUrl,
+      resourceBaseUrl: server.resourceBaseUrl,
+    }), options.timeoutMs);
+
+    const pdf = await withTimeout(page.pdf(pdfOptions()), options.timeoutMs);
+    await ensureOutputDirectory(outputPath);
+    await fs.writeFile(outputPath, pdf);
+    return { outputPath, browserErrors };
+  } finally {
+    await browser?.close();
+    await server.close();
+  }
+}
+
+/**
+ * Whole-book PDF export: parse the SUMMARY.md pages, render the book into
+ * #book-print-root and print it through headless Chrome.
+ */
+export async function exportMarkdownBookPdf(options) {
+  const inputPath = path.resolve(options.input);
+  const summaryDir = path.dirname(inputPath);
+  const summaryContent = await fs.readFile(inputPath, 'utf8');
+  const pages = parseSummaryPages(summaryContent, '');
+  if (pages.length === 0) {
+    throw new Error(`No book pages found in ${inputPath}`);
+  }
+  const bookTitle = options.title || path.basename(summaryDir) || 'Book';
+
+  await fs.access(path.join(cliAssetDir, 'browser-renderer.js')).catch(() => {
+    throw new Error('CLI browser assets are missing. Run "npm run build:cli" first.');
+  });
+
+  const server = await startAssetServer(summaryDir);
+  let browser;
+  try {
+    browser = await chromium.launch({
+      headless: true,
+      ...(options.chromePath
+        ? { executablePath: path.resolve(options.chromePath) }
+        : { channel: 'chrome' }),
+    });
+
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    const browserErrors = [];
+    page.on('console', (message) => {
+      if (message.type() === 'error') browserErrors.push(message.text());
+    });
+    page.on('pageerror', (error) => browserErrors.push(error.message));
+
+    await page.goto(server.pageUrl, { waitUntil: 'load' });
+    await page.waitForFunction(() => typeof window.markdownCli?.renderBookPdf === 'function');
+
+    await withTimeout(page.evaluate((request) => {
+      return window.markdownCli.renderBookPdf(request);
+    }, {
+      markdown: '',
+      filename: `${bookTitle}.pdf`,
+      title: bookTitle,
+      pages,
+      theme: options.theme,
+      language: options.language,
+      frontmatterDisplay: options.frontmatterDisplay,
+      tableMergeEmpty: options.tableMergeEmpty,
+      tableLayout: options.tableLayout,
+      imageLayout: options.imageLayout,
+      diagramLayout: options.diagramLayout,
+      firstLineIndent: 0,
+      documentPath: inputPath,
+      documentDir: summaryDir,
+      documentBaseUrl: server.documentBaseUrl,
+      fileReadUrl: server.fileReadUrl,
+      resourceBaseUrl: server.resourceBaseUrl,
+    }), options.timeoutMs);
+
+    const pdf = await withTimeout(page.pdf(pdfOptions()), options.timeoutMs);
+    const outputPath = options.output
+      ? path.resolve(options.output)
+      : path.join(summaryDir, `${bookTitle}.pdf`);
+    await ensureOutputDirectory(outputPath);
+    await fs.writeFile(outputPath, pdf);
+    return { outputPath, browserErrors };
+  } finally {
+    await browser?.close();
+    await server.close();
+  }
+}
+
 async function main() {
   try {
     const options = parseArgs(process.argv.slice(2));
     if (options.help) {
       process.stdout.write(HELP);
+      return;
+    }
+    if (options.bookMode) {
+      if (options.format === 'pdf') {
+        const result = await exportMarkdownBookPdf(options);
+        for (const warning of result.browserErrors) console.warn(`[browser] ${warning}`);
+        console.log(`Exported ${result.outputPath}`);
+        return;
+      }
+      const result = await exportMarkdownBook(options);
+      for (const warning of result.browserErrors) console.warn(`[browser] ${warning}`);
+      console.log(`Exported ${result.outputPath}`);
+      return;
+    }
+    if (options.format === 'pdf') {
+      const result = await exportMarkdownPdf(options);
+      for (const warning of result.browserErrors) console.warn(`[browser] ${warning}`);
+      console.log(`Exported ${result.outputPath}`);
+      return;
+    }
+    if (options.diagramMode) {
+      const result = await exportMarkdownDiagram(options);
+      for (const warning of result.browserErrors) console.warn(`[browser] ${warning}`);
+      console.log(`Exported ${result.outputPath}`);
+      return;
+    }
+    if (options.format === 'docx') {
+      const result = await exportMarkdownDocx(options);
+      for (const warning of result.browserErrors) console.warn(`[browser] ${warning}`);
+      console.log(`Exported ${result.outputPath}`);
+      return;
+    }
+    if (options.format === 'epub') {
+      const result = await exportMarkdownEpub(options);
+      for (const warning of result.browserErrors) console.warn(`[browser] ${warning}`);
+      console.log(`Exported ${result.outputPath}`);
       return;
     }
     const result = await renderMarkdownFile(options);

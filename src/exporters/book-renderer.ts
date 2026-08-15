@@ -24,6 +24,12 @@ export interface RenderBookForPrintOptions {
   translate: TranslateFunction;
   /** Auto-merge empty table cells (mirrors the viewer setting) */
   tableMergeEmpty?: boolean;
+  /** Table layout setting (mirrors the viewer setting) */
+  tableLayout?: 'left' | 'center' | 'center-full-width';
+  /** Standalone image layout setting (mirrors the viewer setting) */
+  imageLayout?: 'left' | 'center';
+  /** Diagram/chart layout setting (mirrors the viewer setting) */
+  diagramLayout?: 'left' | 'center';
   onProgress?: BookExportProgressHandler;
   signal?: AbortSignal;
 }
@@ -48,7 +54,18 @@ function escapeHtml(text: string): string {
  * print CSS) and then call `cleanup()`.
  */
 export async function renderBookForPrint(options: RenderBookForPrintOptions): Promise<RenderedBook> {
-  const { pages, fetchPage, renderer, translate, tableMergeEmpty = false, onProgress, signal } = options;
+  const {
+    pages,
+    fetchPage,
+    renderer,
+    translate,
+    tableMergeEmpty = false,
+    tableLayout = 'center',
+    imageLayout = 'left',
+    diagramLayout = 'center',
+    onProgress,
+    signal,
+  } = options;
 
   const root = document.createElement('div');
   root.id = 'book-print-root';
@@ -65,6 +82,15 @@ export async function renderBookForPrint(options: RenderBookForPrintOptions): Pr
       const page = pages[i];
       const chapter = document.createElement('div');
       chapter.className = 'book-chapter';
+      const chapterContent = document.createElement('div');
+      chapterContent.id = 'markdown-content';
+      chapterContent.className = [
+        'markdown-viewer-content',
+        `table-layout-${tableLayout}`,
+        `image-layout-${imageLayout}`,
+        `diagram-layout-${diagramLayout}`,
+      ].join(' ');
+      chapter.appendChild(chapterContent);
       root.appendChild(chapter);
 
       try {
@@ -75,12 +101,12 @@ export async function renderBookForPrint(options: RenderBookForPrintOptions): Pr
         const processor = createMarkdownProcessor(renderer, taskManager, translate, { tableMergeEmpty });
         const footnotes = parseFootnotes(rewriteObsidianLinks(processed));
         const file = await processor.process(footnotes.bodyMarkdown);
-        chapter.innerHTML = String(file);
-        await applyFootnotes(chapter, footnotes, processor);
+        chapterContent.innerHTML = String(file);
+        await applyFootnotes(chapterContent, footnotes, processor);
         await taskManager.processAll();
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        chapter.innerHTML = `<p class="book-chapter-error" style="color:#c0392b">`
+        chapterContent.innerHTML = `<p class="book-chapter-error" style="color:#c0392b">`
           + `${escapeHtml(page.title)} — ${escapeHtml(message)}</p>`;
       }
 

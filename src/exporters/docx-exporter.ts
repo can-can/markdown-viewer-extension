@@ -65,7 +65,7 @@ import { createInlineConverter, type InlineConverter, type InlineNode } from './
 import { ResourceEmbedder } from './resource-embedder';
 
 // Re-export for external use
-export { convertPluginResultToDOCX } from './docx-image-utils';
+export { convertPluginResultToDOCX, withBlockImageAlignment } from './docx-image-utils';
 
 /**
  * DOCX helpers for plugins
@@ -78,6 +78,7 @@ interface DOCXHelpers {
   AlignmentType: typeof AlignmentType;
   convertInchesToTwip: typeof convertInchesToTwip;
   themeStyles: DOCXThemeStyles | null;
+  diagramLayout: 'left' | 'center';
 }
 
 /**
@@ -102,6 +103,8 @@ class DocxExporter {
   private frontmatterDisplay: FrontmatterDisplay = 'hide';
   private tableMergeEmpty = true;  // Default: enabled
   private tableLayout: 'left' | 'center' | 'center-full-width' = 'center';  // Default: center
+  private imageLayout: 'left' | 'center' = 'left';
+  private diagramLayout: 'left' | 'center' = 'center';
   private firstLineIndent = 0;  // Default: no indent (0-4 characters)
   
   // Converters (initialized in exportToDocx)
@@ -183,6 +186,8 @@ class DocxExporter {
       renderer: rendererAdapter,
       emojiStyle: this.docxEmojiStyle,
       linkColor: this.themeStyles.linkColor,
+      imageLayout: this.imageLayout,
+      diagramLayout: this.diagramLayout,
     });
 
     // Create other converters
@@ -223,12 +228,14 @@ class DocxExporter {
       try {
         const settings = globalThis.platform?.settings;
         if (settings) {
-          const [hrDisplay, emojiStyle, frontmatterDisplay, tableMergeEmpty, tableLayout, firstLineIndent] = await Promise.all([
+          const [hrDisplay, emojiStyle, frontmatterDisplay, tableMergeEmpty, tableLayout, imageLayout, diagramLayout, firstLineIndent] = await Promise.all([
             settings.get('docxHrDisplay'),
             settings.get('docxEmojiStyle'),
             settings.get('frontmatterDisplay'),
             settings.get('tableMergeEmpty'),
             settings.get('tableLayout'),
+            settings.get('imageLayout'),
+            settings.get('diagramLayout'),
             settings.get('firstLineIndent'),
           ]);
           this.docxHrDisplay = hrDisplay;
@@ -236,18 +243,24 @@ class DocxExporter {
           this.frontmatterDisplay = frontmatterDisplay;
           this.tableMergeEmpty = tableMergeEmpty;
           this.tableLayout = tableLayout || 'center';
+          this.imageLayout = imageLayout === 'center' ? 'center' : 'left';
+          this.diagramLayout = diagramLayout === 'left' ? 'left' : 'center';
           this.firstLineIndent = typeof firstLineIndent === 'number' ? firstLineIndent : 0;
         } else {
           this.docxHrDisplay = 'hide';
           this.frontmatterDisplay = 'hide';
           this.tableMergeEmpty = true;
           this.tableLayout = 'center';
+          this.imageLayout = 'left';
+          this.diagramLayout = 'center';
         }
       } catch {
         this.docxHrDisplay = 'hide';
         this.frontmatterDisplay = 'hide';
         this.tableMergeEmpty = true;
         this.tableLayout = 'center';
+        this.imageLayout = 'left';
+        this.diagramLayout = 'center';
       }
 
       const selectedThemeId = await themeManager.loadSelectedTheme();
@@ -743,7 +756,8 @@ class DocxExporter {
   ): Promise<FileChild | FileChild[] | null> {
     const docxHelpers: DOCXHelpers = {
       Paragraph, TextRun, ImageRun, AlignmentType, convertInchesToTwip,
-      themeStyles: this.themeStyles
+      themeStyles: this.themeStyles,
+      diagramLayout: this.diagramLayout,
     };
 
     const pluginRenderer: PluginRenderer = this.renderer
@@ -853,7 +867,13 @@ class DocxExporter {
       indentTwips = Math.round(this.firstLineIndent * twipsPerEm);
     }
 
-    const astChildren = (node.children || []) as unknown as { type?: string }[];
+    const astChildren = (node.children || []) as unknown as { type?: string; value?: string }[];
+    const significantChildren = astChildren.filter((child) => {
+      if (child.type !== 'text') {
+        return true;
+      }
+      return typeof child.value === 'string' && child.value.trim().length > 0;
+    });
 
     // Find break positions and split AST children into segments
     const breakIndices: number[] = [];
@@ -869,9 +889,17 @@ class DocxExporter {
         astChildren as unknown as InlineNode[],
         parentStyle
       );
+      const isSingleImageParagraph = significantChildren.length === 1 && this.inlineConverter!.isBlockImageNode(significantChildren[0] as InlineNode);
+      const isSingleDiagramParagraph = significantChildren.length === 1 && this.inlineConverter!.isBlockDiagramNode(significantChildren[0] as InlineNode);
+      const paragraphAlignment = isSingleDiagramParagraph
+        ? (this.diagramLayout === 'left' ? AlignmentType.LEFT : AlignmentType.CENTER)
+        : isSingleImageParagraph
+          ? (this.imageLayout === 'center' ? AlignmentType.CENTER : AlignmentType.LEFT)
+          : undefined;
       return new Paragraph({
         children: children.length > 0 ? children : undefined,
         text: children.length === 0 ? '' : undefined,
+        ...(paragraphAlignment ? { alignment: paragraphAlignment } : {}),
         ...(indentTwips > 0 ? { indent: { firstLine: indentTwips } } : {}),
       });
     }

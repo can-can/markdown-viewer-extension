@@ -4,7 +4,7 @@
  */
 
 import { getFilenameFromURL, getDocumentFilename, toMarkdownFilename } from '../../../../src/core/document-utils';
-import { applyZoom as applyZoomCore, exportHtmlFlow } from '../../../../src/core/viewer/viewer-host';
+import { applyZoom as applyZoomCore, exportEpubFlow, exportHtmlFlow } from '../../../../src/core/viewer/viewer-host';
 import { createExportMenu } from '../../../../src/ui/export-menu';
 import { showActionMenu } from '../../../../src/ui/action-menu';
 import { printElement, isPrintAvailable, PRINT_BLOCKED_BY_SANDBOX } from '../../../../src/ui/print-utils';
@@ -65,6 +65,7 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
     getRemarkContainer,
     getRemarkRawMarkdown,
     onExportBookDocx,
+    onExportBookEpub,
     onExportBookPdf,
   } = options;
 
@@ -260,9 +261,83 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
     }
   }
 
+  async function exportEpubFromToolbar(): Promise<void> {
+    const downloadBtn = document.getElementById('download-btn') as HTMLButtonElement | null;
+    if (!downloadBtn || downloadBtn.disabled) {
+      return;
+    }
+
+    if (!window.location.protocol.startsWith('file')) {
+      try {
+        await chrome.runtime.sendMessage({ type: 'REQUEST_DOWNLOADS_PERMISSION' });
+      } catch {
+        // Ignore - background will fall back if permission denied
+      }
+    }
+
+    const originalContent = downloadBtn.innerHTML;
+    let exportError: string | null = null;
+
+    try {
+      downloadBtn.disabled = true;
+      downloadBtn.classList.add('downloading');
+      downloadBtn.setAttribute('data-original-content', originalContent);
+      const progressHTML = `
+        <svg class="progress-circle" width="18" height="18" viewBox="0 0 18 18">
+          <circle class="progress-circle-bg" cx="9" cy="9" r="7" stroke="currentColor" stroke-width="2" fill="none" opacity="0.3"/>
+          <circle class="download-progress-circle" cx="9" cy="9" r="7" stroke="currentColor" stroke-width="2" fill="none"
+                  stroke-dasharray="43.98" stroke-dashoffset="43.98" transform="rotate(-90 9 9)"/>
+        </svg>
+      `;
+      downloadBtn.innerHTML = progressHTML;
+
+      const page = document.getElementById('markdown-page') as HTMLElement | null;
+      if (!page) {
+        throw new Error('Rendered page not found');
+      }
+
+      await exportEpubFlow({
+        container: page,
+        filename: getFilenameFromURL(),
+        title: document.title || getFilenameFromURL(),
+        platform: globalThis.platform,
+        onProgress: (completed, total) => {
+          const progressCircle = downloadBtn.querySelector('.download-progress-circle');
+          if (progressCircle && total > 0) {
+            const progress = completed / total;
+            const circumference = 43.98;
+            const offset = circumference * (1 - progress);
+            (progressCircle as SVGCircleElement).style.strokeDashoffset = String(offset);
+          }
+        },
+        onError: (error) => {
+          exportError = error;
+        },
+      });
+
+      if (exportError) {
+        throw new Error(exportError);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      alert(`Export EPUB failed: ${message}`);
+    } finally {
+      const fallbackIcon = `
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M10 3v10m0 0l-3-3m3 3l3-3M3 16h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      `;
+      downloadBtn.innerHTML = downloadBtn.getAttribute('data-original-content') || fallbackIcon;
+      downloadBtn.disabled = false;
+      downloadBtn.classList.remove('downloading');
+      downloadBtn.removeAttribute('data-original-content');
+    }
+  }
+
   const exportMenu = createExportMenu({
     translate,
     onExportDocx: () => exportDocxFromToolbar(),
+    onExportEpub: () => exportEpubFromToolbar(),
     onExportHtml: () => exportHtmlFromToolbar(),
     onSaveFile: () => triggerSaveFile(),
     onPrint: () => triggerPrint(),
@@ -594,9 +669,9 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
   }
 
   /**
-   * Run a whole-book export (DOCX or PDF) with the button progress ring.
+   * Run a whole-book export (DOCX, EPUB or PDF) with the button progress ring.
    */
-  async function runBookExport(kind: 'docx' | 'pdf'): Promise<void> {
+  async function runBookExport(kind: 'docx' | 'epub' | 'pdf'): Promise<void> {
     const btn = document.getElementById('book-export-btn') as HTMLButtonElement | null;
     if (!btn || btn.disabled) {
       return;
@@ -604,12 +679,15 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
     if (kind === 'docx' && !onExportBookDocx) {
       return;
     }
+    if (kind === 'epub' && !onExportBookEpub) {
+      return;
+    }
     if (kind === 'pdf' && !onExportBookPdf) {
       return;
     }
 
     // Request downloads permission only for remote files (local files use <a download> fallback)
-    if (kind === 'docx' && !window.location.protocol.startsWith('file')) {
+    if (kind !== 'pdf' && !window.location.protocol.startsWith('file')) {
       try {
         await chrome.runtime.sendMessage({ type: 'REQUEST_DOWNLOADS_PERMISSION' });
       } catch {
@@ -645,6 +723,16 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
         if (result.skippedCount && result.skippedCount > 0) {
           alert(translate('book_export_skipped_pages', [String(result.skippedCount)]));
         }
+      } else if (kind === 'epub') {
+        const result = await onExportBookEpub!({ onProgress });
+        if (!result.success) {
+          const detail = result.error ? `: ${result.error}` : '';
+          alert(translate('book_export_failed', [detail]));
+          return;
+        }
+        if (result.skippedCount && result.skippedCount > 0) {
+          alert(translate('book_export_skipped_pages', [String(result.skippedCount)]));
+        }
       } else {
         const result = await onExportBookPdf!({ onProgress });
         if (!result.success) {
@@ -668,11 +756,11 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
   }
 
   /**
-   * Wire the SUMMARY panel header export button (dropdown with DOCX/PDF items).
+   * Wire the SUMMARY panel header export button (dropdown with DOCX/EPUB/PDF items).
    */
   function setupBookExportButton(): void {
     const btn = document.getElementById('book-export-btn') as HTMLButtonElement | null;
-    if (!btn || (!onExportBookDocx && !onExportBookPdf)) {
+    if (!btn || (!onExportBookDocx && !onExportBookEpub && !onExportBookPdf)) {
       return;
     }
 
@@ -687,6 +775,10 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
           ...(onExportBookDocx ? [{
             label: translate('book_export_docx'),
             onSelect: () => runBookExport('docx'),
+          }] : []),
+          ...(onExportBookEpub ? [{
+            label: translate('book_export_epub'),
+            onSelect: () => runBookExport('epub'),
           }] : []),
           ...(onExportBookPdf ? [{
             label: translate('book_export_pdf'),

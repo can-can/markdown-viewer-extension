@@ -691,17 +691,20 @@ body.remark-panel-open.toc-position-right #markdown-wrapper {
 }
 
 
+/* Page container carries the card chrome (background/shadow/padding). The
+   content root itself stays pure content so Web / HTML / EPUB consume the
+   exact same content styles — the card is a page-level concept. */
 #markdown-page {
   max-width: 1060px;
   margin: 0 auto;
+  background: var(--color-bg-surface);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+  padding: 40px;
+  box-sizing: border-box;
 }
 
 #markdown-content {
-  background: var(--color-bg-surface);
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-  margin: 0 auto;
-  padding: 40px;
-  box-sizing: border-box;
+  /* Pure content root: no page chrome here. */
 }
 
 #markdown-content:empty {
@@ -779,11 +782,15 @@ body.remark-panel-open.toc-position-right #markdown-wrapper {
 #markdown-content pre {
   border-radius: 6px;
   padding: 13px;
-  overflow: auto;
   line-height: 1.45;
   white-space: pre-wrap;
   word-break: break-all;
   position: relative;
+  /* No overflow:auto here. In EPUB readers a scroll container's overflowed
+     content is clipped at page breaks instead of flowing to the next page,
+     leaving the second page of a split code block empty. pre-wrap +
+     break-all already prevent horizontal overflow, so the block flows like
+     regular content in every environment. */
 }
 
 #markdown-content pre code {
@@ -932,23 +939,45 @@ html[data-code-view] #markdown-content pre code .mv-code-line-content:empty::bef
   height: auto;
 }
 
-/* Standalone images: left-aligned by default (inline flow).
-   With .image-layout-center on the container, standalone images are centered. */
-#markdown-content.image-layout-center p > img:only-child,
-#markdown-content.image-layout-center p > a:only-child > img:only-child {
+#markdown-content svg {
+  max-width: 100%;
+}
+
+/* Standalone images are block-level in BOTH layout modes; only the centering
+   margin differs. Without an image-layout class they fall back to left. */
+#markdown-content p > img:only-child,
+#markdown-content p > a:only-child > img:only-child {
   display: block;
+}
+
+#markdown-content.image-layout-center p > img:only-child,
+#markdown-content.image-layout-center p > a:only-child > img:only-child,
+.markdown-viewer-content.image-layout-center p > img:only-child,
+.markdown-viewer-content.image-layout-center p > a:only-child > img:only-child {
   margin-left: auto;
+  margin-right: auto;
+}
+
+#markdown-content.image-layout-left p > img:only-child,
+#markdown-content.image-layout-left p > a:only-child > img:only-child,
+.markdown-viewer-content.image-layout-left p > img:only-child,
+.markdown-viewer-content.image-layout-left p > a:only-child > img:only-child {
+  margin-left: 0;
   margin-right: auto;
 }
 
 /* Diagram blocks (Mermaid, Vega, PlantUML, etc.): centered by default.
    With .diagram-layout-left on the container, they become left-aligned. */
-#markdown-content .diagram-block {
+#markdown-content .diagram-block,
+.markdown-viewer-content .diagram-block {
   margin: 20px auto;
   text-align: center;
+  max-width: 100%;
 }
 
-#markdown-content.diagram-layout-left .diagram-block {
+#markdown-content.diagram-layout-left .diagram-block,
+#markdown-content .markdown-viewer-content.diagram-layout-left .diagram-block,
+.markdown-viewer-content.diagram-layout-left .diagram-block {
   margin-left: 0;
   margin-right: auto;
   text-align: left;

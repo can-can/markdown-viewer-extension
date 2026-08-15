@@ -99,6 +99,8 @@ export interface ASTNode {
   title?: string;
   children?: ASTNode[];
   data?: unknown;
+  /** Source position from the remark AST (used for error locations). */
+  position?: { start: { line: number }; end?: { line: number } };
 }
 
 /**

@@ -112,9 +112,11 @@ export class EchartsRenderer extends BaseRenderer {
     const container = this.createContainer();
     container.style.cssText = `position: absolute; left: -9999px; top: -9999px; width: ${width}px; height: ${height}px; background: transparent; padding: 0; margin: 0;`;
 
-    // Initialize ECharts with canvas renderer and dark theme when applicable
+    // Initialize ECharts with the SVG renderer: it produces an SVG string
+    // (renderToSVGString) while still supporting PNG export (getDataURL
+    // converts internally), so both representations are available.
     const chart = echarts.init(container, isDark ? 'dark' : null, {
-      renderer: 'canvas',
+      renderer: 'svg',
       width,
       height,
     });
@@ -143,23 +145,29 @@ export class EchartsRenderer extends BaseRenderer {
       // Wait again after setOption to ensure the canvas is fully painted
       await this.waitForFinished(chart);
 
-      // Calculate scale for PNG dimensions (same formula as Vega/Mermaid)
-      const scale = this.calculateCanvasScale(themeConfig);
+      // Calculate scale for PNG dimensions (clamped to canvas limits)
+      const scale = this.clampCanvasDimensions(width, height, this.calculateCanvasScale(themeConfig));
 
-      // Export the canvas to a PNG data URL
-      const dataUrl = chart.getDataURL({
-        type: 'png',
-        pixelRatio: scale,
-        backgroundColor: 'transparent',
-      });
+      // SVG representation from the svg renderer.
+      const svg = chart.renderToSVGString();
 
-      const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
+      // Render the SVG to a canvas for the PNG (same path as PlantUML/Mermaid:
+      // the svg renderer's own getDataURL('png') does not produce a valid
+      // bitmap).
+      const canvas = await this.renderSvgToCanvas(
+        svg,
+        Math.round(width * scale),
+        Math.round(height * scale),
+      );
+      const pngDataUrl = canvas.toDataURL('image/png', 1.0);
+      const base64Data = pngDataUrl.replace(/^data:image\/png;base64,/, '');
 
       return {
         base64: base64Data,
         width: Math.round(width * scale),
         height: Math.round(height * scale),
         format: 'png',
+        svg,
       };
     } finally {
       chart.dispose();

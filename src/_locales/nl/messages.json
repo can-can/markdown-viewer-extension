@@ -23,6 +23,10 @@
     "message": "Boek exporteren naar DOCX",
     "description": "Menu item: export the whole GitBook book as a single DOCX"
   },
+  "book_export_epub": {
+    "message": "Boek exporteren naar EPUB",
+    "description": "Menu item: export the whole GitBook book as a single EPUB ebook"
+  },
   "book_export_failed": {
     "message": "Boek exporteren mislukt: {0}",
     "description": "Alert shown when whole-book export fails, with error detail"
@@ -222,6 +226,10 @@
   "export_menu_export_docx": {
     "message": "Exporteren naar DOCX",
     "description": "Export menu item for exporting to DOCX"
+  },
+  "export_menu_export_epub": {
+    "message": "Exporteren naar EPUB",
+    "description": "Export menu item for exporting the current document to EPUB"
   },
   "export_menu_export_html": {
     "message": "Exporteren naar HTML",

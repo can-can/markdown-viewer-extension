@@ -169,6 +169,7 @@ describe('buildBookDocumentMarkdown', () => {
   });
 });
 
+
 describe('findFirstHeadingLevel', () => {
   it('returns 0 for documents without headings', () => {
     assert.strictEqual(findFirstHeadingLevel('plain text\nmore text'), 0);

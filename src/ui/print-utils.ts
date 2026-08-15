@@ -20,19 +20,19 @@ export function isPrintAvailable(): boolean {
 
 export const PRINT_BLOCKED_BY_SANDBOX = 'PRINT_BLOCKED_BY_SANDBOX';
 
-export async function printElement(element: HTMLElement, title = document.title, extraCss = ''): Promise<void> {
+/**
+ * Build the print stylesheet for a rendered document: @page margins plus the
+ * @media print rules (hide chrome, clamp media, keep diagrams unbroken).
+ * Shared by the in-viewer window.print() path and the CLI headless PDF path.
+ */
+export function buildPrintCss(element: HTMLElement, extraCss = ''): string {
   const markdownContent = element.querySelector('#markdown-content') as HTMLElement | null;
   // Extract theme background color for @page and html/body rules
   const pageBackgroundColor = markdownContent
     ? getComputedStyle(markdownContent).backgroundColor
     : (getComputedStyle(document.body).backgroundColor || '');
 
-  // Firefox does not support @page { background-color }; margin area will remain white on Firefox.
-  // Chrome 131+ supports it, so we always use 12mm margins.
-
-  const printStyle = document.createElement('style');
-  printStyle.id = 'mv-print-inject';
-  printStyle.textContent = `
+  return `
     @page {
       margin: 12mm;
       /* @page { background-color } is Chrome 131+ only; covers the bleed area including margin zone */
@@ -96,6 +96,47 @@ export async function printElement(element: HTMLElement, title = document.title,
     }
     ${extraCss}
   `;
+}
+
+/**
+ * Print CSS for whole-book PDF export: hide the current page, show the
+ * off-screen book container, and start every chapter on a new page.
+ */
+export const BOOK_PRINT_CSS = `
+    @media print {
+      #markdown-page { display: none !important; }
+      #book-print-root {
+        position: static !important;
+        left: 0 !important;
+      }
+      #book-print-root .book-chapter {
+        break-before: page;
+        page-break-before: always;
+      }
+      #book-print-root .book-chapter:first-child {
+        break-before: auto;
+        page-break-before: auto;
+      }
+      #book-print-root img {
+        max-width: 100%;
+        max-height: 9.5in;
+        height: auto;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      #book-print-root .diagram-block {
+        overflow: visible !important;
+        max-width: 100% !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+    }
+  `;
+
+export async function printElement(element: HTMLElement, title = document.title, extraCss = ''): Promise<void> {
+  const printStyle = document.createElement('style');
+  printStyle.id = 'mv-print-inject';
+  printStyle.textContent = buildPrintCss(element, extraCss);
   document.head.appendChild(printStyle);
 
   const cleanup = () => {

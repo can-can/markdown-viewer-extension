@@ -51,6 +51,12 @@ export type { TranslateFunction };
  */
 interface TaskContext {
   cancelled: boolean;
+  /**
+   * Document-level start line of the block currently being rendered (0-based).
+   * Block contents are parsed independently, so remark positions restart at
+   * line 1; error reports add this offset to name the real document line.
+   */
+  blockStartLine?: number;
 }
 
 /**
@@ -369,6 +375,16 @@ export class AsyncTaskManager {
   }
 
   /**
+   * Set the document-level start line (0-based) of the block currently being
+   * processed, so task error reports can name the real source line even when
+   * block contents are parsed independently (remark positions restart at 1).
+   * @param line - 0-based start line of the current block
+   */
+  setBlockStartLine(line: number): void {
+    this.context.blockStartLine = line;
+  }
+
+  /**
    * Abort all pending tasks
    * Called when starting a new render to cancel previous tasks
    */
@@ -436,10 +452,20 @@ export class AsyncTaskManager {
     const content = (data.code as string) || '';
     const sourceHash = generateContentHash(type, content);
 
+    // Convert the block-relative remark line to a document line. In whole-
+    // document parsing the block offset is 0 and the remark line is already
+    // absolute; in block-level streaming renders the viewer sets the offset.
+    const rawSourceLine = typeof data.sourceLine === 'number' && data.sourceLine > 0
+      ? data.sourceLine
+      : null;
+    const sourceLine = rawSourceLine === null
+      ? null
+      : rawSourceLine + (this.context.blockStartLine ?? 0);
+
     const task: AsyncTask = {
       id: placeholderId,
       callback: async (taskData: TaskData) => callback(taskData, taskContext),
-      data: { ...data, id: placeholderId, sourceHash },
+      data: { ...data, id: placeholderId, sourceHash, sourceLine },
       type,
       status: initialStatus,
       error: null,
@@ -450,12 +476,23 @@ export class AsyncTaskManager {
 
     this.queue.push(task);
 
+    // Authored <img> attributes (width/height/alt) flow through the task data
+    // (set by withImageNodeAttrs in the remark visitors) onto the placeholder
+    // element so the replacement step can re-apply them after rendering.
+    const imgAttrs = {
+      width: typeof data.sourceWidth === 'string' && data.sourceWidth !== '' ? data.sourceWidth : null,
+      height: typeof data.sourceHeight === 'string' && data.sourceHeight !== '' ? data.sourceHeight : null,
+      alt: typeof data.sourceAlt === 'string' && data.sourceAlt !== '' ? data.sourceAlt : null,
+    };
+    const hasImgAttrs = imgAttrs.width !== null || imgAttrs.height !== null || imgAttrs.alt !== null;
+
     const placeholderHtml = createPlaceholderElement(
       placeholderId,
       type,
       plugin?.isInline?.() || false,
       this.translate,
-      sourceHash
+      sourceHash,
+      hasImgAttrs ? imgAttrs : null
     );
 
     return {
@@ -532,7 +569,9 @@ export class AsyncTaskManager {
         if (task.context.cancelled) {
           return;
         }
-        console.error('[TaskManager] Task processing error:', task.id, error);
+        // Concise warning: the error is already shown in the document via the
+        // placeholder error block — a stack trace here is noise in CLI logs.
+        console.warn(`[TaskManager] Task failed for ${task.id}: ${(error as Error).message}`);
         const placeholder = document.getElementById(task.id);
         if (placeholder) {
           const errorDetail = escapeHtml((error as Error).message || '');

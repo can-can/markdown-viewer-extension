@@ -105,6 +105,24 @@ export class BaseRenderer {
   }
 
   /**
+   * Clamp a canvas scale factor to Chromium's canvas limits. An SVG with a
+   * huge natural size (e.g. a 7917×7917 logo icon) times the default scale
+   * factor (×4) exceeds the maximum canvas area; after that toDataURL
+   * returns an empty data URL ("data:,") and the PNG export silently
+   * breaks. The returned scale keeps the final canvas within the limits.
+   */
+  clampCanvasDimensions(width: number, height: number, scale: number): number {
+    const MAX_CANVAS_SIDE = 16384;
+    const MAX_CANVAS_AREA = 268_000_000; // Chromium's practical max (~16384²)
+    const sideLimit = Math.min(
+      MAX_CANVAS_SIDE / Math.max(width, 1),
+      MAX_CANVAS_SIDE / Math.max(height, 1),
+    );
+    const areaLimit = Math.sqrt(MAX_CANVAS_AREA / Math.max(width * height, 1));
+    return Math.min(scale, sideLimit, areaLimit);
+  }
+
+  /**
    * Render SVG directly to canvas
    * @param svgContent - SVG content string
    * @param width - Canvas width

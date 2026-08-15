@@ -20,6 +20,7 @@ import {
   renderMarkdownFlow,
   handleThemeSwitchFlow,
   exportDocxFlow,
+  exportEpubFlow,
   exportHtmlFlow,
 } from '../../../src/core/viewer/viewer-host';
 import { setupImageContextMenu } from '../../../src/ui/image-context-menu';
@@ -288,6 +289,10 @@ function setupMessageHandlers(): void {
 
         case 'EXPORT_DOCX':
           await handleExportDocx();
+          break;
+
+        case 'EXPORT_EPUB':
+          await handleExportEpub();
           break;
 
         case 'EXPORT_HTML':
@@ -588,6 +593,37 @@ async function handleExportHtml(): Promise<void> {
         total,
         phase: phase || 'processing',
         format: 'html',
+      });
+    },
+    onSuccess: () => {
+      // Mobile share flow is handled by DOWNLOAD_FILE response pipeline.
+    },
+    onError: (error) => {
+      bridge.postMessage('EXPORT_ERROR', { error });
+    },
+  });
+}
+
+/**
+ * Handle EPUB export
+ */
+async function handleExportEpub(): Promise<void> {
+  const page = document.getElementById('markdown-page') as HTMLElement | null;
+  if (!page) {
+    return;
+  }
+
+  await exportEpubFlow({
+    container: page,
+    filename: currentDocument.filename,
+    title: currentDocument.filename || document.title || 'Markdown Viewer',
+    platform,
+    onProgress: (completed, total, phase) => {
+      bridge.postMessage('EXPORT_PROGRESS', {
+        completed,
+        total,
+        phase: phase || 'processing',
+        format: 'epub',
       });
     },
     onSuccess: () => {

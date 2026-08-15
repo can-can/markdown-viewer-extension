@@ -23,6 +23,10 @@
     "message": "Экспартаваць кнігу ў DOCX",
     "description": "Menu item: export the whole GitBook book as a single DOCX"
   },
+  "book_export_epub": {
+    "message": "Экспартаваць кнігу ў EPUB",
+    "description": "Menu item: export the whole GitBook book as a single EPUB ebook"
+  },
   "book_export_failed": {
     "message": "Не атрымалася экспартаваць кнігу: {0}",
     "description": "Alert shown when whole-book export fails, with error detail"
@@ -222,6 +226,10 @@
   "export_menu_export_docx": {
     "message": "Экспартаваць у DOCX",
     "description": "Export menu item for exporting to DOCX"
+  },
+  "export_menu_export_epub": {
+    "message": "Экспартаваць у EPUB",
+    "description": "Export menu item for exporting the current document to EPUB"
   },
   "export_menu_export_html": {
     "message": "Экспартаваць у HTML",

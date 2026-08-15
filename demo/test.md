@@ -189,6 +189,7 @@ Markdown Viewer 是一个强大的浏览器扩展[^mve]。
 ![Random Photo](https://picsum.photos/400/300)
 
 **本地图片（相对路径）：**
+
 ![Icon](../icons/icon128.png)
 
 **Base64 Data URI 图片：**

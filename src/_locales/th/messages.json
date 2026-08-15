@@ -23,6 +23,10 @@
     "message": "ส่งออกหนังสือเป็น DOCX",
     "description": "Menu item: export the whole GitBook book as a single DOCX"
   },
+  "book_export_epub": {
+    "message": "ส่งออกหนังสือเป็น EPUB",
+    "description": "Menu item: export the whole GitBook book as a single EPUB ebook"
+  },
   "book_export_failed": {
     "message": "ส่งออกหนังสือล้มเหลว: {0}",
     "description": "Alert shown when whole-book export fails, with error detail"
@@ -222,6 +226,10 @@
   "export_menu_export_docx": {
     "message": "ส่งออกเป็น DOCX",
     "description": "Export menu item for exporting to DOCX"
+  },
+  "export_menu_export_epub": {
+    "message": "ส่งออกเป็น EPUB",
+    "description": "Export menu item for exporting the current document to EPUB"
   },
   "export_menu_export_html": {
     "message": "ส่งออกเป็น HTML",

@@ -157,6 +157,23 @@ export function convertPluginResultToDOCX(renderResult: UnifiedRenderResult, plu
   });
 }
 
+export function withBlockImageAlignment(
+  renderResult: UnifiedRenderResult,
+  alignment: 'left' | 'center' | 'right'
+): UnifiedRenderResult {
+  if (renderResult.type !== 'image' || renderResult.display.inline) {
+    return renderResult;
+  }
+
+  return {
+    ...renderResult,
+    display: {
+      ...renderResult.display,
+      alignment,
+    },
+  };
+}
+
 /**
  * Get image dimensions from buffer
  * @param buffer - Image buffer

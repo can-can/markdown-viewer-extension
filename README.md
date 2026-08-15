@@ -26,19 +26,19 @@ It requires Node.js 24 or newer and an installed Google Chrome browser.
 ```bash
 npm install
 npm run build:cli
-npm run md-to-html -- README.md --output README.html
+npm run documd -- README.md README.html
 ```
 
 Chrome runs headlessly and uses a temporary browser profile. A separate Chromium
 download is not required. Common options include:
 
 ```bash
-npm run md-to-html -- notes.md --theme technical
-npm run md-to-html -- report.md --frontmatter table --merge-empty-cells
-npm run md-to-html -- night.md --theme midnight --output night.html
+npm run documd -- notes.md --theme technical
+npm run documd -- report.md --frontmatter table --merge-empty-cells
+npm run documd -- night.md night.pdf --theme midnight
 ```
 
-Run `npm run md-to-html -- --help` for all options. Theme IDs are listed in
+Run `npm run documd -- --help` for all options. Theme IDs are listed in
 `src/themes/registry.json`.
 
 ## Highlights

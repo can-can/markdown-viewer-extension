@@ -21,6 +21,7 @@ import type {
  * @param isInline - Whether to render inline or block
  * @param translate - Translation function
  * @param sourceHash - Content hash for DOM diff matching
+ * @param imgAttrs - Authored <img> attributes (width/height/alt) to carry into the placeholder so the rendered replacement can apply them
  * @returns Placeholder HTML
  */
 export function createPlaceholderElement(
@@ -28,7 +29,8 @@ export function createPlaceholderElement(
   pluginType: string,
   isInline: boolean,
   translate: TranslateFunction,
-  sourceHash?: string
+  sourceHash?: string,
+  imgAttrs?: { width?: string | null; height?: string | null; alt?: string | null } | null
 ): string {
   // Generate translation key dynamically based on type
   const typeLabelKey = `async_placeholder_type_${pluginType.replace(/-/g, '')}`;
@@ -44,8 +46,18 @@ export function createPlaceholderElement(
     ? `data-source-hash="${sourceHash}" data-plugin-type="${pluginType}"` 
     : '';
 
+  // Authored <img> attributes survive the takeover via data-* attributes on
+  // the placeholder; replacePlaceholderWithImage reads them back and applies
+  // them to the rendered <img> element.
+  const imgDataAttrs = imgAttrs
+    ? (['width', 'height', 'alt'] as const)
+        .filter((key) => imgAttrs[key] != null && imgAttrs[key] !== '')
+        .map((key) => ` data-${key}="${escapeHtmlAttr(String(imgAttrs[key]))}"`)
+        .join('')
+    : '';
+
   if (isInline) {
-    return `<span id="${id}" class="async-placeholder ${pluginType}-placeholder inline-placeholder" ${dataAttrs}>
+    return `<span id="${id}" class="async-placeholder ${pluginType}-placeholder inline-placeholder" ${dataAttrs}${imgDataAttrs}>
       <span class="async-loading">
         <span class="async-spinner"></span>
         <span class="async-text">${processingText}</span>
@@ -53,12 +65,49 @@ export function createPlaceholderElement(
     </span>`;
   }
 
-  return `<div id="${id}" class="async-placeholder ${pluginType}-placeholder" ${dataAttrs}>
+  return `<div id="${id}" class="async-placeholder ${pluginType}-placeholder" ${dataAttrs}${imgDataAttrs}>
     <div class="async-loading">
       <div class="async-spinner"></div>
       <div class="async-text">${processingText}</div>
     </div>
   </div>`;
+}
+
+/**
+ * Escape a value for use inside a double-quoted HTML attribute.
+ */
+function escapeHtmlAttr(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+/**
+ * Carry authored <img> attributes (width/height/alt) and the source line from
+ * the AST node into the async task data, so the placeholder element can expose
+ * them to the replacement step and error reports can name the location. The
+ * attributes come from node.data.hProperties (set by remark-inline-html); the
+ * alt text is the standard mdast image field; the line comes from the remark
+ * AST position.
+ * @param data - Task data created by plugin.createTaskData()
+ * @param node - The AST node being processed
+ * @returns Task data enriched with sourceWidth/sourceHeight/sourceAlt/sourceLine
+ */
+export function withNodeSourceInfo(
+  data: Record<string, unknown>,
+  node: ASTNode
+): Record<string, unknown> {
+  const enriched = { ...data };
+  if (node.type === 'image') {
+    const hProperties = (node.data as { hProperties?: Record<string, string> } | undefined)?.hProperties;
+    enriched.sourceWidth = hProperties?.width ?? null;
+    enriched.sourceHeight = hProperties?.height ?? null;
+    enriched.sourceAlt = node.alt ?? null;
+  }
+  enriched.sourceLine = node.position?.start?.line ?? null;
+  return enriched;
 }
 
 /**
@@ -148,7 +197,7 @@ export function createRemarkPlugin(
                 }
               }
             },
-            plugin.createTaskData(content),
+            withNodeSourceInfo(plugin.createTaskData(content), node),
             placeholderPlugin,
             translate,
             initialStatus

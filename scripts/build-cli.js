@@ -67,4 +67,55 @@ try {
   if (error?.code !== 'ENOENT') throw error;
 }
 
+// ── Publishable CLI entry: copy documd.js next to its assets and emit a
+// package.json so dist/cli is a standalone, installable directory. The entry
+// locates its assets relative to itself when run from dist/cli (see the
+// existsSync detection in documd.js).
+await fs.copyFile(path.join(projectRoot, 'scripts', 'documd.js'), path.join(outputDir, 'documd.js'));
+
+const rootPackage = JSON.parse(await fs.readFile(path.join(projectRoot, 'package.json'), 'utf8'));
+const cliPackage = {
+  name: '@markdown-viewer/documd',
+  version: rootPackage.version,
+  description: 'documd — render Markdown, diagrams and books (html / epub / docx / pdf / svg / png / drawio)',
+  type: 'module',
+  bin: { documd: './documd.js' },
+  engines: { node: '>=18' },
+  license: rootPackage.license || 'MIT',
+  author: rootPackage.author,
+  homepage: rootPackage.homepage || 'https://docu.md',
+  repository: rootPackage.repository,
+  bugs: rootPackage.bugs,
+  private: false,
+  // Scoped packages default to private access on the npm registry; this opts
+  // the CLI package into a public publish without requiring --access public.
+  publishConfig: { access: 'public' },
+  // Runtime dependencies: documd.js launches headless Chrome via
+  // playwright-core — without this entry the installed CLI fails with
+  // "Cannot find package 'playwright-core'".
+  dependencies: {
+    'playwright-core': rootPackage.dependencies?.['playwright-core'] || '^1.0.0',
+  },
+  // Explicit tarball contents: everything documd needs at runtime, nothing else.
+  files: ['documd.js', 'browser-renderer.js', 'styles.css', 'themes/', 'stencils/', 'README.md'],
+  keywords: [
+    'markdown',
+    'markdown-viewer',
+    'documd',
+    'diagram',
+    'mermaid',
+    'plantuml',
+    'vega',
+    'export',
+    'epub',
+    'docx',
+    'pdf',
+    'cli',
+  ],
+};
+await fs.writeFile(path.join(outputDir, 'package.json'), `${JSON.stringify(cliPackage, null, 2)}\n`, 'utf8');
+
+// Publishable README for the standalone dist/cli package.
+await fs.copyFile(path.join(projectRoot, 'scripts', 'cli-README.md'), path.join(outputDir, 'README.md'));
+
 console.log(`CLI browser assets built in ${path.relative(projectRoot, outputDir)}`);

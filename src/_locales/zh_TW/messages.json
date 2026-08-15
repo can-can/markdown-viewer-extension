@@ -23,6 +23,10 @@
     "message": "匯出整本書為 DOCX",
     "description": "Menu item: export the whole GitBook book as a single DOCX"
   },
+  "book_export_epub": {
+    "message": "匯出整本書為 EPUB",
+    "description": "Menu item: export the whole GitBook book as a single EPUB ebook"
+  },
   "book_export_failed": {
     "message": "整本書匯出失敗：{0}",
     "description": "Alert shown when whole-book export fails, with error detail"
@@ -222,6 +226,10 @@
   "export_menu_export_docx": {
     "message": "匯出為 DOCX",
     "description": "匯出選單中的 DOCX 項"
+  },
+  "export_menu_export_epub": {
+    "message": "匯出為 EPUB",
+    "description": "Export menu item for exporting the current document to EPUB"
   },
   "export_menu_export_html": {
     "message": "匯出為 HTML",

@@ -75,7 +75,7 @@
     "FangSong": {
       "name": "FangSong",
       "displayName": "仿宋 (FangSong)",
-      "webFallback": "FangSong, STFangsong, 'Zhuque Fangsong', Georgia, 'Times New Roman', serif",
+      "webFallback": "FangSong, STFangsong, 'Zhuque Fangsong', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans CJK SC', 'Microsoft YaHei', Georgia, 'Times New Roman', serif",
       "docx": {
         "ascii": "Georgia",
         "eastAsia": "FangSong"

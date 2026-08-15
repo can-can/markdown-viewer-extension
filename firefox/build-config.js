@@ -66,6 +66,7 @@ export const createBuildConfig = () => {
       'core/runtime-bridge': 'firefox/src/webview/runtime-bridge.ts',
       'core/main': 'firefox/src/webview/main.ts',
       'core/html-to-markdown': 'chrome/src/webview/html-to-markdown.ts',
+      'core/inject-styles': 'firefox/src/webview/inject-styles.ts',
       'core/drawio2svg': 'src/renderers/entries/drawio2svg-global.ts',
       'core/draw-uml': 'src/renderers/entries/draw-uml-global.ts',
       'core/render-worker': 'firefox/src/host/render-worker.ts',

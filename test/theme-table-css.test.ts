@@ -75,19 +75,15 @@ function generateCSS(): string {
 }
 
 describe('Table CSS Generation', () => {
-  it('generates display:block for horizontal scroll support', () => {
+  it('generates display:table for content-width sizing', () => {
     const css = generateCSS();
-    assert.ok(css.includes('display: block'), 'table should use display:block for scroll container');
+    assert.ok(css.includes('display: table;'), 'table should use display:table (no fit-content)');
   });
 
-  it('generates overflow-x:auto for wide tables', () => {
+  it('generates width:auto for content-width centering', () => {
     const css = generateCSS();
-    assert.ok(css.includes('overflow-x: auto'), 'table should have overflow-x:auto');
-  });
-
-  it('generates width:fit-content for centering narrow tables', () => {
-    const css = generateCSS();
-    assert.ok(css.includes('width: fit-content'), 'table should use fit-content width');
+    assert.ok(css.includes('width: auto;'), 'table should use width:auto instead of fit-content');
+    assert.ok(!css.includes('fit-content'), 'table must not rely on fit-content');
   });
 
   it('generates max-width:100% to constrain within container', () => {
@@ -109,12 +105,13 @@ describe('Table CSS Generation', () => {
     assert.ok(css.includes('margin-left: 0'), 'left layout should have margin-left:0');
   });
 
-  it('generates center layout variant with fit-content', () => {
+  it('generates center layout variant', () => {
     const css = generateCSS();
-    const centerMatch = css.match(
-      /\.table-layout-center table\s*\{[^}]*width:\s*fit-content/,
+    assert.ok(
+      css.includes('.table-layout-center table'),
+      'should include center layout variant',
     );
-    assert.ok(centerMatch, 'center layout should use fit-content width');
+    assert.ok(!css.includes('width: fit-content'), 'center layout must not rely on fit-content');
   });
 
   it('generates full-width layout variant', () => {

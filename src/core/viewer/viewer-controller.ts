@@ -298,7 +298,7 @@ async function renderAllBlocksStreaming(
     }
     
     // Render block content
-    const html = await renderBlockContent(block.content, processor);
+    const html = await renderBlockContent(block.content, processor, taskManager, block.startLine);
     doc.setBlockHtml(i, html);
     
     // Create and append DOM element
@@ -367,7 +367,7 @@ async function applyIncrementalUpdate(
           doc.setBlockHtmlById(cmd.blockId, html);
           cmd.html = html;
         } else {
-          const html = await renderBlockContent(block.content, processor);
+          const html = await renderBlockContent(block.content, processor, taskManager, block.startLine);
           doc.setBlockHtmlById(cmd.blockId, html);
           cmd.html = html;
         }
@@ -389,7 +389,7 @@ async function applyIncrementalUpdate(
           doc.setBlockHtmlById(cmd.blockId, html);
           cmd.html = html;
         } else {
-          const html = await renderBlockContent(block.content, processor);
+          const html = await renderBlockContent(block.content, processor, taskManager, block.startLine);
           doc.setBlockHtmlById(cmd.blockId, html);
           cmd.html = html;
         }
@@ -417,8 +417,21 @@ function normalizeHeadingIds(container: HTMLElement): void {
 
 /**
  * Render a single block's content to HTML
+ * @param content - Block content (parsed independently, remark positions restart at line 1)
+ * @param processor - Markdown processor
+ * @param taskManager - Task manager to carry the block's document-level start line
+ * @param blockStartLine - 0-based document line where the block begins
  */
-async function renderBlockContent(content: string, processor: Processor): Promise<string> {
+async function renderBlockContent(
+  content: string,
+  processor: Processor,
+  taskManager: AsyncTaskManager,
+  blockStartLine: number
+): Promise<string> {
+  // Block contents are parsed on their own, so remark node positions are
+  // block-relative; the task manager offsets them so error reports can name
+  // the real document line.
+  taskManager.setBlockStartLine(blockStartLine);
   const normalizedContent = escapePipesInTableCodeSpans(normalizeMathBlocks(content));
   const file = await processor.process(normalizedContent);
   let html = String(file);

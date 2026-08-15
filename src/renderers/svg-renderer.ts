@@ -62,8 +62,9 @@ export class SvgRenderer extends BaseRenderer {
       captureHeight = Math.ceil(parseFloat(svgEl.getAttribute('height') || '600'));
     }
 
-    // Calculate scale for PNG dimensions
-    const scale = this.calculateCanvasScale(themeConfig);
+    // Calculate scale for PNG dimensions (clamped to canvas limits: a huge
+    // SVG × scale(4) would exceed Chromium's max canvas and break toDataURL).
+    const scale = this.clampCanvasDimensions(captureWidth, captureHeight, this.calculateCanvasScale(themeConfig));
 
     // Render SVG to canvas as PNG
     const canvas = await this.renderSvgToCanvas(svg, captureWidth * scale, captureHeight * scale);
@@ -85,12 +86,17 @@ export class SvgRenderer extends BaseRenderer {
    * Avoids fetch() entirely — uses browser's native image loading.
    */
   private async renderFromUrl(url: string, themeConfig: RendererThemeConfig | null): Promise<RenderResult> {
-    const scale = this.calculateCanvasScale(themeConfig);
-
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.onload = () => {
+        // Clamp to canvas limits (a huge remote SVG × scale(4) would exceed
+        // Chromium's max canvas and make toDataURL return an empty string).
+        const scale = this.clampCanvasDimensions(
+          img.naturalWidth,
+          img.naturalHeight,
+          this.calculateCanvasScale(themeConfig),
+        );
         const width = Math.ceil(img.naturalWidth * scale);
         const height = Math.ceil(img.naturalHeight * scale);
         const canvas = document.createElement('canvas');

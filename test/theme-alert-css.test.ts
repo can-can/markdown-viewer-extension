@@ -94,7 +94,7 @@ function generateCSS(page: string = '#ffffff'): string {
 describe('Alert CSS Generation', () => {
   it('emits a base rule for blockquote.markdown-alert', () => {
     const css = generateCSS();
-    assert.ok(css.includes('blockquote.markdown-alert {'), 'should emit a base alert rule');
+    assert.ok(css.includes('blockquote.markdown-alert,'), 'should emit a base alert rule');
     assert.ok(css.includes('border-left: 4px solid'), 'base rule should set a left border');
   });
 
@@ -108,7 +108,7 @@ describe('Alert CSS Generation', () => {
     it(`emits per-kind colour for ${kind}`, () => {
       const css = generateCSS();
       assert.ok(
-        css.includes(`blockquote.markdown-alert-${kind} {`),
+        css.includes(`blockquote.markdown-alert-${kind},`),
         `should emit a ${kind} rule`
       );
       assert.ok(
@@ -123,9 +123,15 @@ describe('Alert CSS Generation', () => {
 
     it(`tints ${kind} background against the page colour`, () => {
       const css = generateCSS('#ffffff');
+      // Tints are materialized as concrete colors (no color-mix()) for EPUB
+      // reader compatibility.
       assert.ok(
-        css.includes(`color-mix(in srgb, ${color} 10%, #ffffff)`),
-        `${kind} background should mix ${color} into the page colour`
+        !css.includes('color-mix('),
+        `${kind} background must not rely on color-mix()`
+      );
+      assert.ok(
+        /background-color: #[0-9a-f]{6};/.test(css),
+        `${kind} background should be a concrete hex color`
       );
     });
   }
@@ -133,14 +139,15 @@ describe('Alert CSS Generation', () => {
   it('adapts alert backgrounds to a dark page colour', () => {
     const darkPage = '#0d1117';
     const css = generateCSS(darkPage);
+    // 10% #0969da over #0d1117 = rgb(13, 26, 43) = #0d1a2b
     assert.ok(
-      css.includes(`color-mix(in srgb, ${ALERT_COLORS.note} 10%, ${darkPage})`),
-      'note background should mix against the dark page'
+      css.includes('background-color: #0d1a2b;'),
+      'note background should be tinted against the dark page'
     );
-    // Light-theme page should no longer appear in the dark output.
+    // Light-theme tint should no longer appear in the dark output.
     assert.ok(
-      !css.includes(`color-mix(in srgb, ${ALERT_COLORS.note} 10%, #ffffff)`),
-      'dark theme should not use the light page colour'
+      !css.includes('#e6f0fb'),
+      'dark theme should not use the light page tint'
     );
   });
 });

@@ -228,8 +228,12 @@ export class VegaRenderer extends BaseRenderer {
     // Render the spec using vega-embed
     const result = await embed(container, processedSpec, embedOptions);
     
-    // Calculate scale for PNG dimensions
-    const scale = this.calculateCanvasScale(themeConfig);
+    // Calculate scale for PNG dimensions (clamped to canvas limits)
+    const scale = this.clampCanvasDimensions(
+      result.view.width(),
+      result.view.height(),
+      this.calculateCanvasScale(themeConfig),
+    );
 
     // Get Canvas directly from the view object
     // toCanvas() returns a Promise<HTMLCanvasElement>
@@ -244,6 +248,9 @@ export class VegaRenderer extends BaseRenderer {
     const pngDataUrl = sourceCanvas.toDataURL('image/png', 1.0);
     const base64Data = pngDataUrl.replace(/^data:image\/png;base64,/, '');
 
+    // SVG representation: view.toSVG() is renderer-independent.
+    const svg = await result.view.toSVG();
+
     // Cleanup container
     this.removeContainer(container);
 
@@ -251,7 +258,8 @@ export class VegaRenderer extends BaseRenderer {
       base64: base64Data,
       width: sourceCanvas.width,
       height: sourceCanvas.height,
-      format: 'png'
+      format: 'png',
+      svg,
     };
   }
 }

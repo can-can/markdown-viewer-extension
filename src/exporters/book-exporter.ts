@@ -2,19 +2,23 @@
  * Book Exporter — GitBook whole-book export core.
  *
  * Platform-agnostic: page fetching, per-page preprocessing (frontmatter strip,
- * relative URL absolutization, heading level shifting) and merged markdown
- * assembly for DOCX export. The DOCX conversion reuses the existing
- * DocxExporter (dynamically imported to avoid circular dependencies).
+ * relative URL absolutization, heading level shifting), merged markdown
+ * assembly for DOCX export, and per-chapter assembly for EPUB export.
+ * The DOCX conversion reuses the existing DocxExporter; the EPUB conversion
+ * lives in epub-exporter.ts (both dynamically imported to avoid circular
+ * dependencies).
  *
  * DOM/print rendering (PDF path) lives in book-renderer.ts.
  */
 
 import type {
   BookExportDocxResult,
+  BookExportEpubResult,
   BookExportProgressHandler,
   BookPage,
 } from '../types/book-export';
 import type { PluginRenderer } from '../types/plugin';
+import type { TranslateFunction } from '../types/core';
 
 // ============================================================================
 // Markers
@@ -248,4 +252,95 @@ export async function exportBookToDocx(options: ExportBookToDocxOptions): Promis
     skippedCount: merged.skipped.length,
     filename: result.success ? filename : undefined,
   };
+}
+
+export interface ExportBookToEpubOptions {
+  pages: BookPage[];
+  /**
+   * Book title (EPUB metadata + fallback filename). Used when non-empty;
+   * otherwise the filename option (or a generic name) is used.
+   */
+  bookTitle?: string | null;
+  /** Output filename (may include or omit the .epub extension) */
+  filename?: string;
+  fetchPage: (href: string) => Promise<string>;
+  /** Diagram renderer (mermaid/plantuml etc.); optional */
+  renderer?: PluginRenderer | null;
+  translate: TranslateFunction;
+  /** Auto-merge empty table cells (mirrors the viewer setting) */
+  tableMergeEmpty?: boolean;
+  /** Table layout setting (mirrors the viewer setting) */
+  tableLayout?: 'left' | 'center' | 'center-full-width';
+  /** Standalone image layout setting (mirrors the viewer setting) */
+  imageLayout?: 'left' | 'center';
+  /** Diagram/chart layout setting (mirrors the viewer setting) */
+  diagramLayout?: 'left' | 'center';
+  onProgress?: BookExportProgressHandler;
+  signal?: AbortSignal;
+}
+
+/**
+ * Export a whole book to a single EPUB: each SUMMARY page becomes one
+ * chapter. Math follows the HTML export pattern (KaTeX HTML + embedded
+ * KaTeX fonts), images follow the DOCX pattern (data-URL embedding).
+ */
+export async function exportBookToEpub(options: ExportBookToEpubOptions): Promise<BookExportEpubResult> {
+  const {
+    pages,
+    bookTitle = null,
+    filename: filenameOption,
+    fetchPage,
+    renderer = null,
+    translate,
+    tableMergeEmpty,
+    tableLayout,
+    imageLayout,
+    diagramLayout,
+    onProgress,
+    signal,
+  } = options;
+
+  const BookRendererModule = await import('./book-renderer');
+  const rendered = await BookRendererModule.renderBookForPrint({
+    pages,
+    fetchPage,
+    renderer: renderer ?? { render: async () => null },
+    translate,
+    tableMergeEmpty,
+    tableLayout,
+    imageLayout,
+    diagramLayout,
+    onProgress,
+    signal,
+  });
+
+  const title = (bookTitle || filenameOption || 'Book').trim();
+  const filename = filenameOption || title;
+
+  try {
+    // Dynamically import to avoid circular dependencies (same pattern as viewer-host)
+    const EpubExporterModule = await import('./epub-exporter');
+    const chapterElements = Array.from(rendered.container.querySelectorAll('.book-chapter'));
+    const result = await EpubExporterModule.exportToEpub({
+      chapters: chapterElements.map((element, index) => ({
+        title: pages[index]?.title || `Chapter ${index + 1}`,
+        container: element as HTMLElement,
+      })),
+      title,
+      filename,
+      onProgress: (phase, done, total) => {
+        onProgress?.(phase, done, total);
+      },
+      signal,
+    });
+
+    return {
+      success: result.success,
+      error: result.error,
+      skippedCount: 0,
+      filename: result.success ? result.filename : undefined,
+    };
+  } finally {
+    rendered.cleanup();
+  }
 }

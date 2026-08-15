@@ -1,6 +1,8 @@
 import mermaid from 'mermaid';
 
 import { exportToHtml } from '../exporters/html-exporter';
+import { collectEpubCss } from '../exporters/export-styles';
+import { exportEpubFlow } from '../core/viewer/viewer-host';
 import { renderMarkdownDocument, resetDocument } from '../core/viewer/viewer-controller';
 import { handleRender, initRenderEnvironment } from '../renderers/render-worker-core';
 import { loadAndApplyTheme } from '../utils/theme-to-css';
@@ -18,6 +20,10 @@ export interface CliBrowserRenderRequest {
   frontmatterDisplay?: FrontmatterDisplay;
   tableMergeEmpty?: boolean;
   tableLayout?: 'left' | 'center' | 'center-full-width';
+  imageLayout?: 'left' | 'center';
+  diagramLayout?: 'left' | 'center';
+  /** First-line indent in em (0 = disabled); exercised via platform settings */
+  firstLineIndent?: number;
   documentPath: string;
   documentDir: string;
   documentBaseUrl: string;
@@ -25,8 +31,65 @@ export interface CliBrowserRenderRequest {
   resourceBaseUrl: string;
 }
 
+export interface CliBrowserDomSnapshot {
+  pageHtml: string;
+  contentClassName: string;
+  contentStyle: string;
+  blockquoteCount: number;
+  imageCount: number;
+  diagramBlockCount: number;
+  tableCount: number;
+}
+
+export interface CliBookPageInput {
+  /** Relative page path (resolved against the document directory). */
+  href: string;
+  title: string;
+  depth?: number;
+}
+
+export interface CliBookDomSnapshot {
+  /** Every chapter's content-root outerHTML (the book wrapper contract). */
+  chapters: Array<{ href: string; html: string }>;
+}
+
+export interface CliDiagramRequest {
+  /** Renderer type: mermaid / plantuml / dot / vega / vega-lite / drawio / echarts / svg / infographic / canvas. */
+  diagramType: string;
+  content: string;
+  theme?: string;
+  /** Resource base (server) — theme assets are fetched through it. */
+  documentBaseUrl?: string;
+  fileReadUrl?: string;
+  resourceBaseUrl?: string;
+}
+
+export interface CliDiagramResult {
+  svg?: string;
+  pngBase64?: string;
+  /** PlantUML renderers may also produce a DrawIO XML representation. */
+  drawioXml?: string;
+  width: number;
+  height: number;
+}
+
 type CliBrowserApi = {
   render(request: CliBrowserRenderRequest): Promise<string>;
+  snapshotDom(request: CliBrowserRenderRequest): Promise<CliBrowserDomSnapshot>;
+  collectEpubCss(request: CliBrowserRenderRequest): Promise<string>;
+  renderEpub(request: CliBrowserRenderRequest): Promise<{ filename: string; base64: string }>;
+  renderBookDom(request: CliBrowserRenderRequest & { pages: CliBookPageInput[] }): Promise<CliBookDomSnapshot>;
+  renderBookEpub(
+    request: CliBrowserRenderRequest & { pages: CliBookPageInput[]; bookTitle?: string },
+  ): Promise<{ filename: string; base64: string }>;
+  renderDiagram(request: CliDiagramRequest & { theme?: string }): Promise<CliDiagramResult>;
+  renderDocx(request: CliBrowserRenderRequest): Promise<{ filename: string; base64: string }>;
+  renderBookDocx(
+    request: CliBrowserRenderRequest & { pages: CliBookPageInput[]; bookTitle?: string },
+  ): Promise<{ filename: string; base64: string }>;
+  /** Prepare the page for a headless PDF: render + inject print styles. */
+  renderPdf(request: CliBrowserRenderRequest): Promise<void>;
+  renderBookPdf(request: CliBrowserRenderRequest & { pages: CliBookPageInput[] }): Promise<void>;
 };
 
 declare global {
@@ -40,6 +103,9 @@ window.mermaid = mermaid;
 initRenderEnvironment();
 
 let rendererThemeConfig: RendererThemeConfig | null = null;
+
+/** Captures the blob passed to platform.file.download during an export. */
+let capturedDownload: Blob | null = null;
 
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
@@ -125,16 +191,107 @@ function configurePlatform(request: CliBrowserRenderRequest): DocumentService {
       },
     },
     settings: {
-      get: async (key: string) => key === 'firstLineIndent' ? 0 : undefined,
+      get: async (key: string) => {
+        switch (key) {
+          case 'themeId': return request.theme || 'default';
+          case 'firstLineIndent': return request.firstLineIndent || 0;
+          case 'tableLayout': return request.tableLayout || 'center';
+          case 'imageLayout': return request.imageLayout || 'center';
+          case 'diagramLayout': return request.diagramLayout || 'center';
+          case 'frontmatterDisplay': return request.frontmatterDisplay || 'hide';
+          case 'tableMergeEmpty': return request.tableMergeEmpty ?? false;
+          case 'docxHrDisplay': return 'hide';
+          case 'docxEmojiStyle': return 'system';
+          default: return undefined;
+        }
+      },
       set: async () => {},
     },
     document: documentService,
+    file: {
+      download: async (blob: Blob) => {
+        capturedDownload = blob;
+      },
+    },
   } as unknown as PlatformAPI;
 
   return documentService;
 }
 
+/**
+ * Reset the page, apply the theme and render the requested markdown into the
+ * content root with the requested layout classes (shared by render and
+ * renderEpub).
+ */
+async function renderContent(request: CliBrowserRenderRequest): Promise<void> {
+  const markdownContent = document.getElementById('markdown-content');
+  if (!(markdownContent instanceof HTMLElement)) {
+    throw new Error('CLI renderer page is missing its Markdown containers');
+  }
+
+  resetDocument();
+  markdownContent.replaceChildren();
+  rendererThemeConfig = null;
+  capturedDownload = null;
+
+  configurePlatform(request);
+  document.documentElement.lang = request.language || 'en';
+  document.title = request.title || request.filename;
+
+  await loadAndApplyTheme(request.theme || 'default');
+
+  markdownContent.classList.remove(
+    'table-layout-left',
+    'table-layout-center',
+    'table-layout-center-full-width',
+    'image-layout-left',
+    'image-layout-center',
+    'diagram-layout-left',
+    'diagram-layout-center',
+  );
+  markdownContent.classList.add(
+    `table-layout-${request.tableLayout || 'center'}`,
+    `image-layout-${request.imageLayout || 'center'}`,
+    `diagram-layout-${request.diagramLayout || 'center'}`,
+  );
+
+  const result = await renderMarkdownDocument({
+    markdown: request.markdown,
+    container: markdownContent,
+    renderer: globalThis.platform!.renderer,
+    translate: (key) => key,
+    frontmatterDisplay: request.frontmatterDisplay || 'hide',
+    tableMergeEmpty: request.tableMergeEmpty ?? false,
+    tableLayout: request.tableLayout || 'center',
+  });
+
+  await result.taskManager.processAll();
+  await document.fonts?.ready;
+}
+
 async function render(request: CliBrowserRenderRequest): Promise<string> {
+  const markdownPage = document.getElementById('markdown-page');
+  if (!(markdownPage instanceof HTMLElement)) {
+    throw new Error('CLI renderer page is missing its Markdown containers');
+  }
+
+  await renderContent(request);
+
+  const exported = await exportToHtml({
+    container: markdownPage,
+    filename: request.filename,
+    title: request.title || request.filename,
+    documentService: (globalThis.platform as PlatformAPI)?.document,
+    includeKatexCdn: true,
+  });
+
+  if (!exported.success || !exported.html) {
+    throw new Error(exported.error || 'HTML export failed');
+  }
+  return exported.html;
+}
+
+async function snapshotDom(request: CliBrowserRenderRequest): Promise<CliBrowserDomSnapshot> {
   const markdownContent = document.getElementById('markdown-content');
   const markdownPage = document.getElementById('markdown-page');
   if (!(markdownContent instanceof HTMLElement) || !(markdownPage instanceof HTMLElement)) {
@@ -145,7 +302,7 @@ async function render(request: CliBrowserRenderRequest): Promise<string> {
   markdownContent.replaceChildren();
   rendererThemeConfig = null;
 
-  const documentService = configurePlatform(request);
+  configurePlatform(request);
   document.documentElement.lang = request.language || 'en';
   document.title = request.title || request.filename;
 
@@ -155,8 +312,16 @@ async function render(request: CliBrowserRenderRequest): Promise<string> {
     'table-layout-left',
     'table-layout-center',
     'table-layout-center-full-width',
+    'image-layout-left',
+    'image-layout-center',
+    'diagram-layout-left',
+    'diagram-layout-center',
   );
-  markdownContent.classList.add(`table-layout-${request.tableLayout || 'center'}`);
+  markdownContent.classList.add(
+    `table-layout-${request.tableLayout || 'center'}`,
+    `image-layout-${request.imageLayout || 'center'}`,
+    `diagram-layout-${request.diagramLayout || 'center'}`,
+  );
 
   const result = await renderMarkdownDocument({
     markdown: request.markdown,
@@ -171,18 +336,319 @@ async function render(request: CliBrowserRenderRequest): Promise<string> {
   await result.taskManager.processAll();
   await document.fonts?.ready;
 
-  const exported = await exportToHtml({
-    container: markdownPage,
-    filename: request.filename,
-    title: request.title || result.title || request.filename,
-    documentService,
-    includeKatexCdn: true,
-  });
-
-  if (!exported.success || !exported.html) {
-    throw new Error(exported.error || 'HTML export failed');
-  }
-  return exported.html;
+  return {
+    pageHtml: markdownPage.outerHTML,
+    contentClassName: markdownContent.className,
+    contentStyle: markdownContent.getAttribute('style') || '',
+    blockquoteCount: markdownContent.querySelectorAll('blockquote').length,
+    imageCount: markdownContent.querySelectorAll('img').length,
+    diagramBlockCount: markdownContent.querySelectorAll('.diagram-block').length,
+    tableCount: markdownContent.querySelectorAll('table').length,
+  };
 }
 
-window.markdownCli = { render };
+/**
+ * Collect the EPUB stylesheet exactly as the exporter would (shared
+ * `collectEpubCss`), after applying the requested theme. Exposed for the
+ * EPUB CSS contract tests: the output must be the raw collected content CSS
+ * with embedded fonts — no exporter-side rewriting.
+ */
+async function collectEpubCssForCli(request: CliBrowserRenderRequest): Promise<string> {
+  configurePlatform(request);
+  await loadAndApplyTheme(request.theme || 'default');
+  return collectEpubCss();
+}
+
+/**
+ * Run the REAL single-document EPUB export pipeline (same as the extension:
+ * HTML staticizing -> collectEpubCss -> JSZip packaging -> platform download)
+ * and return the generated .epub bytes instead of downloading them.
+ */
+async function renderEpub(request: CliBrowserRenderRequest): Promise<{ filename: string; base64: string }> {
+  const markdownPage = document.getElementById('markdown-page');
+  if (!(markdownPage instanceof HTMLElement)) {
+    throw new Error('CLI renderer page is missing its Markdown containers');
+  }
+
+  await renderContent(request);
+
+  let resultFilename = '';
+  let exportError: string | null = null;
+  await exportEpubFlow({
+    container: markdownPage,
+    filename: request.filename,
+    title: request.title || request.filename,
+    onSuccess: (filename) => {
+      resultFilename = filename;
+    },
+    onError: (error) => {
+      exportError = error;
+    },
+  });
+
+  if (exportError) {
+    throw new Error(exportError);
+  }
+  if (!capturedDownload) {
+    throw new Error('EPUB export completed but no download blob was captured');
+  }
+
+  const bytes = new Uint8Array(await capturedDownload.arrayBuffer());
+  return { filename: resultFilename || toEpubFallbackName(request.filename), base64: bytesToBase64(bytes) };
+}
+
+function toEpubFallbackName(filename: string): string {
+  const name = filename || 'document.epub';
+  return name.toLowerCase().endsWith('.epub') ? name : `${name}.epub`;
+}
+
+/**
+ * Render a whole book through the REAL print renderer (same pipeline as the
+ * whole-book PDF/EPUB export) and return every chapter's content root.
+ */
+async function renderBookDom(
+  request: CliBrowserRenderRequest & { pages: CliBookPageInput[] },
+): Promise<CliBookDomSnapshot> {
+  configurePlatform(request);
+  await loadAndApplyTheme(request.theme || 'default');
+
+  const { renderBookForPrint } = await import('../exporters/book-renderer');
+  const platform = globalThis.platform as PlatformAPI;
+  const rendered = await renderBookForPrint({
+    pages: request.pages.map((p) => ({ href: p.href, title: p.title, depth: p.depth })),
+    fetchPage: async (href) => {
+      const content = await platform.document.readRelativeFile(href);
+      return content;
+    },
+    renderer: platform.renderer,
+    translate: (key) => key,
+    tableMergeEmpty: request.tableMergeEmpty ?? false,
+    tableLayout: request.tableLayout || 'center',
+    imageLayout: request.imageLayout || 'center',
+    diagramLayout: request.diagramLayout || 'center',
+  });
+
+  try {
+    const chapters = Array.from(rendered.container.querySelectorAll('.book-chapter')).map(
+      (chapter) => {
+        const content = chapter.querySelector('#markdown-content') as HTMLElement | null;
+        return {
+          href: chapter.getAttribute('data-href') || '',
+          html: content ? content.outerHTML : '',
+        };
+      },
+    );
+    return { chapters };
+  } finally {
+    rendered.cleanup();
+  }
+}
+
+/**
+ * Run the REAL whole-book EPUB export pipeline (renderBookForPrint ->
+ * exportToEpub with chapter containers) and return the generated .epub.
+ */
+async function renderBookEpub(
+  request: CliBrowserRenderRequest & { pages: CliBookPageInput[]; bookTitle?: string },
+): Promise<{ filename: string; base64: string }> {
+  configurePlatform(request);
+  await loadAndApplyTheme(request.theme || 'default');
+  capturedDownload = null;
+
+  const { exportBookToEpub } = await import('../exporters/book-exporter');
+  const platform = globalThis.platform as PlatformAPI;
+  let resultFilename = '';
+  let exportError: string | null = null;
+
+  const result = await exportBookToEpub({
+    pages: request.pages.map((p) => ({ href: p.href, title: p.title, depth: p.depth })),
+    bookTitle: request.bookTitle || request.title,
+    filename: request.filename,
+    fetchPage: async (href) => platform.document.readRelativeFile(href),
+    renderer: platform.renderer,
+    translate: (key) => key,
+    tableMergeEmpty: request.tableMergeEmpty ?? false,
+    tableLayout: request.tableLayout || 'center',
+    imageLayout: request.imageLayout || 'center',
+    diagramLayout: request.diagramLayout || 'center',
+    onProgress: () => {},
+  });
+
+  if (!result.success || !result.filename) {
+    throw new Error(result.error || 'Book EPUB export failed');
+  }
+  resultFilename = result.filename;
+  if (!capturedDownload) {
+    throw new Error('Book EPUB export completed but no download blob was captured');
+  }
+
+  const bytes = new Uint8Array(await capturedDownload.arrayBuffer());
+  return { filename: resultFilename, base64: bytesToBase64(bytes) };
+}
+
+/**
+ * Render a single diagram source file through the shared renderer registry
+ * and return its SVG / PNG / DrawIO representations.
+ */
+async function renderDiagram(request: CliDiagramRequest): Promise<CliDiagramResult> {
+  configurePlatform({
+    markdown: '',
+    filename: 'diagram',
+    documentPath: '/diagram',
+    documentDir: '/',
+    documentBaseUrl: request.documentBaseUrl || 'http://127.0.0.1/',
+    fileReadUrl: request.fileReadUrl || 'http://127.0.0.1/',
+    resourceBaseUrl: request.resourceBaseUrl || 'http://127.0.0.1/',
+    theme: request.theme,
+  });
+  await loadAndApplyTheme(request.theme || 'default');
+
+  const result = await handleRender({
+    renderType: request.diagramType,
+    input: request.content,
+    themeConfig: rendererThemeConfig,
+  });
+
+  return {
+    svg: result.svg,
+    pngBase64: result.base64,
+    drawioXml: result.drawioXml,
+    width: result.width,
+    height: result.height,
+  };
+}
+
+function toDocxFilename(filename: string): string {
+  let docxFilename = filename || 'document.docx';
+  if (docxFilename.toLowerCase().endsWith('.md')) {
+    docxFilename = docxFilename.slice(0, -3) + '.docx';
+  } else if (docxFilename.toLowerCase().endsWith('.markdown')) {
+    docxFilename = docxFilename.slice(0, -9) + '.docx';
+  } else if (!docxFilename.toLowerCase().endsWith('.docx')) {
+    docxFilename += '.docx';
+  }
+  return docxFilename;
+}
+
+/**
+ * Run the REAL DOCX export pipeline (DocxExporter on the raw markdown) and
+ * return the generated .docx bytes.
+ */
+async function renderDocx(request: CliBrowserRenderRequest): Promise<{ filename: string; base64: string }> {
+  configurePlatform(request);
+  await loadAndApplyTheme(request.theme || 'default');
+  capturedDownload = null;
+
+  const DocxExporterModule = await import('../exporters/docx-exporter');
+  const DocxExporter = DocxExporterModule.default;
+  const exporter = new DocxExporter(globalThis.platform?.renderer);
+  const result = await exporter.exportToDocx(request.markdown, request.filename);
+
+  if (!result.success) {
+    throw new Error(result.error || 'DOCX export failed');
+  }
+  if (!capturedDownload) {
+    throw new Error('DOCX export completed but no download blob was captured');
+  }
+
+  const bytes = new Uint8Array(await capturedDownload.arrayBuffer());
+  return { filename: toDocxFilename(request.filename), base64: bytesToBase64(bytes) };
+}
+
+/**
+ * Run the REAL whole-book DOCX export pipeline (merged markdown -> DocxExporter)
+ * and return the generated .docx bytes.
+ */
+async function renderBookDocx(
+  request: CliBrowserRenderRequest & { pages: CliBookPageInput[]; bookTitle?: string },
+): Promise<{ filename: string; base64: string }> {
+  configurePlatform(request);
+  await loadAndApplyTheme(request.theme || 'default');
+  capturedDownload = null;
+
+  const { exportBookToDocx } = await import('../exporters/book-exporter');
+  const platform = globalThis.platform as PlatformAPI;
+  const result = await exportBookToDocx({
+    pages: request.pages.map((p) => ({ href: p.href, title: p.title, depth: p.depth })),
+    bookTitle: request.bookTitle || request.title,
+    filename: request.filename,
+    fetchPage: async (href) => platform.document.readRelativeFile(href),
+    renderer: platform.renderer,
+    onProgress: () => {},
+  });
+
+  if (!result.success) {
+    throw new Error(result.error || 'Book DOCX export failed');
+  }
+  if (!capturedDownload) {
+    throw new Error('Book DOCX export completed but no download blob was captured');
+  }
+
+  const bytes = new Uint8Array(await capturedDownload.arrayBuffer());
+  return { filename: result.filename || toDocxFilename(request.filename), base64: bytesToBase64(bytes) };
+}
+
+/**
+ * Prepare the page for a headless PDF: render the document and inject the
+ * shared print stylesheet. The caller (Node) then calls page.pdf().
+ */
+async function renderPdf(request: CliBrowserRenderRequest): Promise<void> {
+  await renderContent(request);
+
+  const { buildPrintCss } = await import('../ui/print-utils');
+  const markdownPage = document.getElementById('markdown-page');
+  if (!(markdownPage instanceof HTMLElement)) {
+    throw new Error('CLI renderer page is missing its Markdown containers');
+  }
+  const printStyle = document.createElement('style');
+  printStyle.id = 'mv-print-inject';
+  printStyle.textContent = buildPrintCss(markdownPage);
+  document.head.appendChild(printStyle);
+  await document.fonts?.ready;
+}
+
+/**
+ * Prepare the page for a whole-book headless PDF: render the book into
+ * #book-print-root (kept in the DOM for printing) and inject the shared
+ * print stylesheet plus the chapter-page-break CSS.
+ */
+async function renderBookPdf(
+  request: CliBrowserRenderRequest & { pages: CliBookPageInput[] },
+): Promise<void> {
+  configurePlatform(request);
+  await loadAndApplyTheme(request.theme || 'default');
+
+  const { renderBookForPrint } = await import('../exporters/book-renderer');
+  const { buildPrintCss, BOOK_PRINT_CSS } = await import('../ui/print-utils');
+  const platform = globalThis.platform as PlatformAPI;
+  await renderBookForPrint({
+    pages: request.pages.map((p) => ({ href: p.href, title: p.title, depth: p.depth })),
+    fetchPage: async (href) => platform.document.readRelativeFile(href),
+    renderer: platform.renderer,
+    translate: (key) => key,
+    tableMergeEmpty: request.tableMergeEmpty ?? false,
+    tableLayout: request.tableLayout || 'center',
+    imageLayout: request.imageLayout || 'center',
+    diagramLayout: request.diagramLayout || 'center',
+  });
+
+  const printStyle = document.createElement('style');
+  printStyle.id = 'mv-print-inject';
+  printStyle.textContent = buildPrintCss(document.body, BOOK_PRINT_CSS);
+  document.head.appendChild(printStyle);
+  await document.fonts?.ready;
+}
+
+window.markdownCli = {
+  render,
+  snapshotDom,
+  collectEpubCss: collectEpubCssForCli,
+  renderEpub,
+  renderBookDom,
+  renderBookEpub,
+  renderDiagram,
+  renderDocx,
+  renderBookDocx,
+  renderPdf,
+  renderBookPdf,
+};

@@ -1011,10 +1011,14 @@ async function handleContentScriptInjection(tabId: number, fromContextMenu = fal
         files: ['core/html-to-markdown.js'],
       });
     }
-    // Inject CSS
-    await chrome.scripting.insertCSS({
+    // Inject the content stylesheet as a real <style> element. insertCSS is
+    // deliberately NOT used: its injected stylesheets never appear in
+    // document.styleSheets, so the export CSS collectors would miss every
+    // structural content rule (diagram-block centering etc.) and exported
+    // HTML/EPUB would lose the shared stylesheet.
+    await chrome.scripting.executeScript({
       target: { tabId },
-      files: ['ui/styles.css'],
+      files: ['core/inject-styles.js'],
     });
     // Inject the viewer (handles markdown, .slides.md, and converted HTML)
     await chrome.scripting.executeScript({

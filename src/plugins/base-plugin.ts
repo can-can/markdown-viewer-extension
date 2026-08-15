@@ -177,8 +177,9 @@ export class BasePlugin {
         }
       };
     } catch (error) {
-      console.warn(`Failed to render ${this.type}:`, error);
-      
+      // The failure is propagated as an error result; the pipeline layer
+      // (e.g. convertNodeToDOCX) reports it once as a concise warning with
+      // the source line — never log the raw error object here (stack trace).
       return {
         type: 'error',
         content: {

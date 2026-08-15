@@ -6,9 +6,9 @@
  */
 
 import DocxExporter from '../../../src/exporters/docx-exporter';
-import { exportBookToDocx } from '../../../src/exporters/book-exporter';
+import { exportBookToDocx, exportBookToEpub } from '../../../src/exporters/book-exporter';
 import { renderBookForPrint } from '../../../src/exporters/book-renderer';
-import { printElement, PRINT_BLOCKED_BY_SANDBOX } from '../../../src/ui/print-utils';
+import { printElement, BOOK_PRINT_CSS, PRINT_BLOCKED_BY_SANDBOX } from '../../../src/ui/print-utils';
 import Localization, { DEFAULT_SETTING_LOCALE } from '../../../src/utils/localization';
 import themeManager from '../../../src/utils/theme-manager';
 import { loadAndApplyTheme } from '../../../src/utils/theme-to-css';
@@ -16,6 +16,7 @@ import { wrapFileContent } from '../../../src/utils/file-wrapper';
 import { buildCodeReadingRender, applyCodeViewPresentation } from '../../../src/utils/code-preview';
 import { initSlidevViewer } from '../../../src/slidev/slidev-viewer';
 import { getWebExtensionApi } from '../../../src/utils/platform-info';
+import { getTableLayout, getImageLayout, getDiagramLayout } from '../../../src/core/viewer/viewer-host';
 
 import type { PluginRenderer, RendererThemeConfig, PlatformAPI } from '../../../src/types/index';
 
@@ -570,37 +571,8 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
   /**
    * Print CSS for whole-book PDF export: hide the current page, show the
    * off-screen book container, and start every chapter on a new page.
+   * (Shared with the CLI headless PDF path via print-utils.)
    */
-  const BOOK_PRINT_CSS = `
-    @media print {
-      #markdown-page { display: none !important; }
-      #book-print-root {
-        position: static !important;
-        left: 0 !important;
-      }
-      #book-print-root .book-chapter {
-        break-before: page;
-        page-break-before: always;
-      }
-      #book-print-root .book-chapter:first-child {
-        break-before: auto;
-        page-break-before: auto;
-      }
-      #book-print-root img {
-        max-width: 100%;
-        max-height: 9.5in;
-        height: auto;
-        break-inside: avoid;
-        page-break-inside: avoid;
-      }
-      #book-print-root .diagram-block {
-        overflow: visible !important;
-        max-width: 100% !important;
-        break-inside: avoid;
-        page-break-inside: avoid;
-      }
-    }
-  `;
 
   // Initialize GitBook panel manager
   const gitbookPanel = createGitbookPanel(saveFileState, getFileState, isMobile, {
@@ -618,7 +590,7 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
       return Promise.resolve();
     },
   });
-  const { generateGitbookPanel, setupResponsivePanel, getGitbookNavItems, getGitbookBookTitle } = gitbookPanel;
+  const { generateGitbookPanel, setupResponsivePanel, getGitbookNavItems, getGitbookBookTitle, getGitbookBookExportName } = gitbookPanel;
 
   // Get the raw markdown content.
   // When the page is a rendered HTML document the html-to-markdown content
@@ -937,12 +909,38 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
         return { success: false, error: 'No book pages found' };
       }
       const bookTitle = getGitbookBookTitle();
+      const exportName = getGitbookBookExportName();
       return exportBookToDocx({
         pages,
         bookTitle,
-        filename: bookTitle || getDocumentFilename(),
+        filename: exportName || getDocumentFilename(),
         fetchPage: fetchBookPage,
         renderer: pluginRenderer,
+        onProgress,
+      });
+    },
+    onExportBookEpub: async ({ onProgress }) => {
+      const pages = getGitbookNavItems();
+      if (pages.length === 0) {
+        return { success: false, error: 'No book pages found' };
+      }
+      const bookTitle = getGitbookBookTitle();
+      const exportName = getGitbookBookExportName();
+      const [tableLayout, imageLayout, diagramLayout] = await Promise.all([
+        getTableLayout(platform),
+        getImageLayout(platform),
+        getDiagramLayout(platform),
+      ]);
+      return exportBookToEpub({
+        pages,
+        bookTitle,
+        filename: exportName || getDocumentFilename(),
+        fetchPage: fetchBookPage,
+        renderer: pluginRenderer,
+        translate,
+        tableLayout,
+        imageLayout,
+        diagramLayout,
         onProgress,
       });
     },
@@ -951,11 +949,19 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
       if (pages.length === 0) {
         return { success: false, error: 'No book pages found' };
       }
+      const [tableLayout, imageLayout, diagramLayout] = await Promise.all([
+        getTableLayout(platform),
+        getImageLayout(platform),
+        getDiagramLayout(platform),
+      ]);
       const rendered = await renderBookForPrint({
         pages,
         fetchPage: fetchBookPage,
         renderer: pluginRenderer,
         translate,
+        tableLayout,
+        imageLayout,
+        diagramLayout,
         onProgress,
       });
       try {
