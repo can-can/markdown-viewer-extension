@@ -4,6 +4,8 @@
  * Unified types for settings management across all platforms.
  */
 
+import { DEFAULT_RENDER_SETTINGS } from '../config/defaults';
+
 /**
  * All available setting keys
  */
@@ -42,21 +44,23 @@ export interface SettingTypes {
 }
 
 /**
- * Default values for all settings
+ * Default values for all settings.
+ * Render/layout defaults come from the shared config (also used by the
+ * documd CLI) so every consumer agrees on the same defaults.
  */
 export const DEFAULT_SETTINGS: SettingTypes = {
-  themeId: 'default',
-  tableMergeEmpty: true,
-  tableLayout: 'center',
-  imageLayout: 'left',
-  diagramLayout: 'center',
+  themeId: DEFAULT_RENDER_SETTINGS.theme,
+  tableMergeEmpty: DEFAULT_RENDER_SETTINGS.tableMergeEmpty,
+  tableLayout: DEFAULT_RENDER_SETTINGS.tableLayout,
+  imageLayout: DEFAULT_RENDER_SETTINGS.imageLayout,
+  diagramLayout: DEFAULT_RENDER_SETTINGS.diagramLayout,
   swapPanelSide: false,
   readerSidebarWidth: 280,
-  frontmatterDisplay: 'hide',
+  frontmatterDisplay: DEFAULT_RENDER_SETTINGS.frontmatterDisplay,
   preferredLocale: 'auto',
   docxHrDisplay: 'hide',
   docxEmojiStyle: 'system',
-  firstLineIndent: 2,
+  firstLineIndent: DEFAULT_RENDER_SETTINGS.firstLineIndent,
 };
 
 /**

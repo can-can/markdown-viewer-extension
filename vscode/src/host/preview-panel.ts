@@ -1235,14 +1235,10 @@ export class MarkdownPreviewPanel {
   <link rel="stylesheet" href="${tocStyleUri}">
   <title>Markdown Preview</title>
   <style>
-    /* Hide Chrome extension specific UI elements */
-    #toolbar,
-    #table-of-contents,
-    #toc-overlay {
-      display: none !important;
-    }
-    
-    /* VS Code webview layout - use markdown wrapper scroll */
+    /* VS Code webview layout - use markdown wrapper scroll.
+       Layout overrides (no toolbar / card, flush content) live in the shared
+       stylesheet under body.mv-embed.mv-panel — this block only maps the
+       theme variables and sizes the VS Code-specific shell. */
     html, body {
       height: 100%;
       margin: 0;
@@ -1283,21 +1279,6 @@ export class MarkdownPreviewPanel {
     #vscode-content {
       height: 100%;
     }
-    
-    /* Reset wrapper for VS Code (no sidebar offset / no toolbar gap) */
-    #markdown-wrapper {
-      margin-left: 0 !important;
-      margin-top: 0 !important;
-      margin-right: 0 !important;
-      height: 100vh !important;
-      overflow-y: auto !important;
-      overflow-x: hidden !important;
-    }
-    
-    /* Full width content for VS Code */
-    #markdown-page {
-      max-width: none !important;
-    }
 
     @media print {
       html, body,
@@ -1319,7 +1300,7 @@ export class MarkdownPreviewPanel {
     }
   </style>
 </head>
-<body>
+<body class="mv-embed mv-panel">
   <div id="vscode-root">
     <div id="vscode-content">
       <div id="markdown-wrapper">

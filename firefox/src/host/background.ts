@@ -608,9 +608,14 @@ initGlobalCacheStorage();
 // Handle dynamic content script injection.
 // `fromContextMenu` is true when triggered by the right-click menu so we
 async function handleElementRuntimeInjection(tabId: number): Promise<void> {
-  // Element runtime renders into an iframe, so the host page does not need
-  // ui/styles.css. Injecting it would set global side effects (e.g.
-  // body{overflow:hidden}) on unrelated websites.
+  // Inline element mode renders into the host page DOM, so it needs the
+  // shared content styles — injected as a FILTERED copy (content selectors
+  // only, no global html/body rules) so the host page itself is unaffected.
+  // iframe mode does not need this: viewer-embed.html loads ui/styles.css.
+  await browser.scripting.executeScript({
+    target: { tabId },
+    files: ['/core/inject-element-styles.js'],
+  });
   await browser.scripting.executeScript({
     target: { tabId },
     files: ['/core/element-runtime.js'],

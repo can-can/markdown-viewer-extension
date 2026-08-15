@@ -31,7 +31,16 @@ export function buildPrintCss(element: HTMLElement, extraCss = ''): string {
   const pageBackgroundColor = markdownContent
     ? getComputedStyle(markdownContent).backgroundColor
     : (getComputedStyle(document.body).backgroundColor || '');
+  return buildPrintCssRules(pageBackgroundColor, extraCss);
+}
 
+/**
+ * Pure-string variant of buildPrintCss (no DOM access) so the rules can be
+ * unit-tested in Node. The page background color is resolved by the caller.
+ * @param pageBackgroundColor - Theme background color for @page / html / body
+ * @param extraCss - Additional CSS appended after the rules
+ */
+export function buildPrintCssRules(pageBackgroundColor: string, extraCss = ''): string {
   return `
     @page {
       margin: 12mm;
@@ -51,6 +60,19 @@ export function buildPrintCss(element: HTMLElement, extraCss = ''): string {
       }
       body {
         background-color: ${pageBackgroundColor} !important;
+      }
+      /* The shared screen rule gives #markdown-page a 40px card padding +
+         shadow + surface background. In print the @page margin already spaces
+         the content, so strip the card chrome — otherwise every PDF gets an
+         extra 40px gutter and the printed shadow/background (page.pdf with
+         printBackground: true) looks like a box on the page. */
+      #markdown-page {
+        margin: 0 auto !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        max-width: none !important;
+        overflow: visible !important;
       }
       #remark-sidebar,
       #gitbook-sidebar-header,

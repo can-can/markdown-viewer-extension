@@ -23,13 +23,12 @@ import { resolveTocPresentation, type ViewerContainerMode } from '../../../src/c
 import {
   createViewerScrollSync,
   createPluginRenderer,
-  setCurrentFileKey,
-  renderMarkdownFlow,
   handleThemeSwitchFlow,
   exportDocxFlow,
   exportEpubFlow,
   exportHtmlFlow,
 } from '../../../src/core/viewer/viewer-host';
+import { createPanelViewer, type PanelViewerController } from '../../../src/core/viewer/panel-viewer';
 
 // VSCode-specific UI components
 import { createSettingsPanel, type SettingsPanel, type ThemeOption, type LocaleOption } from './settings-panel';
@@ -77,9 +76,9 @@ const currentDocument: CurrentDocumentState = {
 };
 
 let currentThemeId = 'default';
-let currentTaskManager: AsyncTaskManager | null = null;
 let currentZoomLevel = 1;
 let isSlidevMode = false;  // Whether currently showing a Slidev presentation
+let panelViewer: PanelViewerController | null = null;
 
 // Render queue for serializing updates (prevents concurrent update bugs)
 let renderQueue: Promise<void> = Promise.resolve();
@@ -136,6 +135,35 @@ async function initialize(): Promise<void> {
 
     // Initialize toolbar and settings panel (after theme is loaded)
     initializeUI();
+
+    // Shared panel viewer: the document state machine over the unified
+    // renderMarkdownFlow (same controller as <markdown-viewer> elements and
+    // Obsidian). Slidev files are taken over by the hooks below; scroll
+    // persistence is handled by the external createViewerScrollSync.
+    const contentContainer = document.getElementById('markdown-content');
+    if (contentContainer) {
+      panelViewer = createPanelViewer({
+        container: contentContainer,
+        platform,
+        renderer: pluginRenderer,
+        translate: (key: string, subs?: string[]) => Localization.translate(key, subs),
+        persistScroll: false,
+        scrollController: scrollSyncController,
+        deferAsyncRenderUntilFirstPaint: window.VSCODE_CONFIG?.deferAsyncRenderUntilFirstPaint === true,
+        onHeadings: (headings) => {
+          tocPanel?.setHeadings(headings as HeadingInfo[]);
+          updateActiveTocHeading();
+          vscodeBridge.postMessage('HEADINGS_UPDATED', headings);
+        },
+        onProgress: (completed, total) => {
+          vscodeBridge.postMessage('RENDER_PROGRESS', { completed, total });
+        },
+        applyTheme: (themeId) => loadAndApplyTheme(themeId),
+        saveTheme: (themeId) => themeManager.saveSelectedTheme(themeId),
+        isSlidevFile: (filename) => filename.toLowerCase().endsWith('.slides.md'),
+        onSlidevFile: handleSlidevFile,
+      });
+    }
 
     // Pre-initialize render iframe in background to reduce first diagram/html render latency
     platform.renderer.ensureReady().catch((error: Error) => {
@@ -323,68 +351,99 @@ async function handleDocumentUpdate(
     currentDocument.baseUri = documentBaseUri;
   }
 
-  // Update DocumentService with document path and base URI
-  // This enables rehype-image-uri plugin to rewrite relative image paths
-  if (filename && platform.document) {
-    platform.document.setDocumentPath(filename, currentDocument.baseUri);
-  }
-
   // Check if file changed
   const newFilename = filename || 'document.md';
   const newDocumentKey = payload.documentKey || newFilename;
-  const fileChanged = forceOpenDocument
-    || currentDocument.documentKey !== newDocumentKey
-    || currentDocument.filename !== newFilename;
 
   currentDocument.sourceContent = content;
   currentDocument.filename = newFilename;
   currentDocument.documentKey = newDocumentKey;
 
-  // ── Slidev mode: .slides.md files render as presentations ────────────
-  const lowerFilename = newFilename.toLowerCase();
-  const isSlidevByExtension = lowerFilename.endsWith('.slides.md');
-  if (isSlidevByExtension) {
-    try {
-      isSlidevMode = true;
-      tocPanel?.setHeadings([]);
+  // Restore normal layout if switching from slidev mode
+  if (isSlidevMode) {
+    isSlidevMode = false;
+    const slidevContainer = document.getElementById('slidev-container');
+    if (slidevContainer) slidevContainer.remove();
+    const wrapper = document.getElementById('markdown-wrapper');
+    if (wrapper) wrapper.style.display = '';
+    const contentArea = document.getElementById('vscode-content');
+    if (contentArea) contentArea.style.display = '';
+    const root = document.getElementById('vscode-root');
+    if (root) root.style.cssText = '';
+    document.documentElement.style.cssText = '';
+    document.body.style.cssText = '';
+  }
 
-      // Hide normal markdown wrapper and content container,
-      // use vscode-root directly as the slidev viewport
-      const wrapper = document.getElementById('markdown-wrapper');
-      if (wrapper) wrapper.style.display = 'none';
-      const contentArea = document.getElementById('vscode-content');
-      if (contentArea) contentArea.style.display = 'none';
+  // Keep the wrapped copy for export flows (the panel viewer wraps the same
+  // content internally when rendering).
+  currentDocument.renderedMarkdown = wrapFileContent(content, newFilename);
 
-      const root = document.getElementById('vscode-root')!;
-      root.style.cssText = 'margin:0;padding:0;width:100%;height:100%;overflow:hidden';
-      document.documentElement.style.cssText = 'margin:0;padding:0;width:100%;height:100%;overflow:hidden';
-      document.body.style.cssText = 'margin:0;padding:0;width:100%;height:100%;overflow:hidden';
+  // Render through the shared panel viewer (document state machine +
+  // wrapFileContent + renderMarkdownFlow). Slidev files are taken over by
+  // the isSlidevFile/onSlidevFile hooks below.
+  if (!panelViewer) {
+    console.error('[VSCode Webview] panel viewer not initialized');
+    return;
+  }
+  const updateOptions = {
+    documentKey: newDocumentKey,
+    scrollLine,
+    forceRender: forceRender ?? false,
+    documentBaseUri,
+  };
+  if (forceOpenDocument) {
+    await panelViewer.openDocument(content, newFilename, updateOptions);
+  } else {
+    await panelViewer.updateContent(content, newFilename, updateOptions);
+  }
+}
 
-      // Reuse or create a slidev container
-      let slidevContainer = document.getElementById('slidev-container');
-      if (!slidevContainer) {
-        slidevContainer = document.createElement('div');
-        slidevContainer.id = 'slidev-container';
-        slidevContainer.style.cssText = 'width:100%;height:100%';
-        root.appendChild(slidevContainer);
+/**
+ * Slidev hook: .slides.md files render as presentations instead of markdown.
+ * Called by the shared panel viewer via isSlidevFile/onSlidevFile.
+ */
+async function handleSlidevFile(filename: string, content: string): Promise<void> {
+  try {
+    isSlidevMode = true;
+    tocPanel?.setHeadings([]);
+
+    // Hide normal markdown wrapper and content container,
+    // use vscode-root directly as the slidev viewport
+    const wrapper = document.getElementById('markdown-wrapper');
+    if (wrapper) wrapper.style.display = 'none';
+    const contentArea = document.getElementById('vscode-content');
+    if (contentArea) contentArea.style.display = 'none';
+
+    const root = document.getElementById('vscode-root')!;
+    root.style.cssText = 'margin:0;padding:0;width:100%;height:100%;overflow:hidden';
+    document.documentElement.style.cssText = 'margin:0;padding:0;width:100%;height:100%;overflow:hidden';
+    document.body.style.cssText = 'margin:0;padding:0;width:100%;height:100%;overflow:hidden';
+
+    // Reuse or create a slidev container
+    let slidevContainer = document.getElementById('slidev-container');
+    if (!slidevContainer) {
+      slidevContainer = document.createElement('div');
+      slidevContainer.id = 'slidev-container';
+      slidevContainer.style.cssText = 'width:100%;height:100%';
+      root.appendChild(slidevContainer);
+    }
+
+    const baseUri = window.VSCODE_WEBVIEW_BASE_URI;
+    const nonce = window.VSCODE_NONCE;
+
+    // Cache theme bundles for reuse between getThemeCode and onThemeReady
+    let themeBundles: Record<string, { code: string; fonts: Record<string, string>; fontUrl?: string; colorSchema?: string }> | null = null;
+    async function fetchBundles() {
+      if (!themeBundles) {
+        const resp = await fetch(`${baseUri}/slidev-theme-bundles.json`);
+        if (resp.ok) themeBundles = await resp.json();
       }
+      return themeBundles;
+    }
 
-      const baseUri = window.VSCODE_WEBVIEW_BASE_URI;
-      const nonce = window.VSCODE_NONCE;
-
-      // Cache theme bundles for reuse between getThemeCode and onThemeReady
-      let themeBundles: Record<string, { code: string; fonts: Record<string, string>; fontUrl?: string; colorSchema?: string }> | null = null;
-      async function fetchBundles() {
-        if (!themeBundles) {
-          const resp = await fetch(`${baseUri}/slidev-theme-bundles.json`);
-          if (resp.ok) themeBundles = await resp.json();
-        }
-        return themeBundles;
-      }
-
-      const SLIDEV_TIMEOUT_MS = 15000;
-      await Promise.race([
-        initSlidevViewer({
+    const SLIDEV_TIMEOUT_MS = 15000;
+    await Promise.race([
+      initSlidevViewer({
         rawContent: content,
         container: slidevContainer,
         mode: 'list',
@@ -417,34 +476,14 @@ async function handleDocumentUpdate(
           return bundles?.[name]?.code;
         },
       }),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error(`Slidev init timed out after ${SLIDEV_TIMEOUT_MS}ms`)), SLIDEV_TIMEOUT_MS)
-        ),
-      ]);
-      return;
-    } catch (err) {
-      console.error('[Slidev] Failed to initialize:', err);
-      // Restore normal layout and fall through to regular markdown rendering
-      isSlidevMode = false;
-      const wrapper = document.getElementById('markdown-wrapper');
-      if (wrapper) wrapper.style.display = '';
-      const contentArea = document.getElementById('vscode-content');
-      if (contentArea) contentArea.style.display = '';
-      const root = document.getElementById('vscode-root');
-      if (root) root.style.cssText = '';
-      document.documentElement.style.cssText = '';
-      document.body.style.cssText = '';
-      const sc = document.getElementById('slidev-container');
-      if (sc) sc.remove();
-    }
-  }
-
-  // ── Normal markdown mode ─────────────────────────────────────────────
-  // Restore normal layout if switching from slidev mode
-  if (isSlidevMode) {
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`Slidev init timed out after ${SLIDEV_TIMEOUT_MS}ms`)), SLIDEV_TIMEOUT_MS)
+      ),
+    ]);
+  } catch (err) {
+    console.error('[Slidev] Failed to initialize:', err);
+    // Restore normal layout and fall through to regular markdown rendering
     isSlidevMode = false;
-    const slidevContainer = document.getElementById('slidev-container');
-    if (slidevContainer) slidevContainer.remove();
     const wrapper = document.getElementById('markdown-wrapper');
     if (wrapper) wrapper.style.display = '';
     const contentArea = document.getElementById('vscode-content');
@@ -453,42 +492,18 @@ async function handleDocumentUpdate(
     if (root) root.style.cssText = '';
     document.documentElement.style.cssText = '';
     document.body.style.cssText = '';
+    const sc = document.getElementById('slidev-container');
+    if (sc) sc.remove();
+    // Fall through to normal markdown rendering for this document
+    if (panelViewer) {
+      await panelViewer.openDocument(content, filename || 'document.md', {
+        documentKey: currentDocument.documentKey || undefined,
+        scrollLine: undefined,
+        forceRender: true,
+        documentBaseUri: currentDocument.baseUri || undefined,
+      });
+    }
   }
-
-  // Wrap non-markdown file content (mermaid, vega, graphviz, infographic)
-  const wrappedContent = wrapFileContent(content, newFilename);
-  
-  currentDocument.renderedMarkdown = wrappedContent;
-
-  // Set file key for scroll position persistence (consistent with Chrome/Mobile)
-  setCurrentFileKey(currentDocument.documentKey || newFilename);
-
-  // Render using shared flow
-  // VSCode: targetLine is passed as scrollLine for anchor navigation and theme switch,
-  // or set via SYNC_HOST_NAVIGATION for normal editor scroll sync
-  await renderMarkdownFlow({
-    markdown: wrappedContent,
-    container: container as HTMLElement,
-    fileChanged,
-    forceRender: forceRender ?? false,
-    zoomLevel: currentZoomLevel,
-    scrollController: scrollSyncController,
-    renderer: pluginRenderer,
-    translate: (key: string, subs?: string[]) => Localization.translate(key, subs),
-    platform,
-    currentTaskManagerRef: { current: currentTaskManager },
-    targetLine: scrollLine,
-    deferAsyncRenderUntilFirstPaint: window.VSCODE_CONFIG?.deferAsyncRenderUntilFirstPaint === true,
-    onHeadings: (headings) => {
-      tocPanel?.setHeadings(headings as HeadingInfo[]);
-      updateActiveTocHeading();
-      vscodeBridge.postMessage('HEADINGS_UPDATED', headings);
-    },
-    onProgress: (completed, total) => {
-      vscodeBridge.postMessage('RENDER_PROGRESS', { completed, total });
-    },
-  });
-
 }
 
 function updateActiveTocHeading(): void {

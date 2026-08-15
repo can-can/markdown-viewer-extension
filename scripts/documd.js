@@ -10,6 +10,8 @@ import { fileURLToPath } from 'node:url';
 
 import { chromium } from 'playwright-core';
 
+import { DEFAULT_RENDER_SETTINGS } from '../src/config/defaults.ts';
+
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 // When installed/published from dist/cli, the renderer assets live next to
 // this file; in development the script runs from scripts/ and the built
@@ -49,10 +51,11 @@ Options:
       --title <text>        Override the document title
       --language <code>     Document language code (default: en)
       --frontmatter <mode>  hide, table, or raw (default: hide)
-      --table-layout <mode> left, center, or center-full-width
-      --image-layout <mode> left or center (default: center)
+      --table-layout <mode> left, center, or center-full-width (default: center)
+      --image-layout <mode> left or center (default: left)
       --diagram-layout <mode> left or center (default: center)
-      --merge-empty-cells   Merge empty Markdown table cells
+      --merge-empty-cells   Merge empty Markdown table cells (default: on)
+      --first-line-indent <n>  First-line indent in characters, 0-4 (default: 2)
       --chrome <path>       Explicit Chrome executable path
       --timeout <seconds>   Overall render timeout (default: 120)
   -v, --version             Print the version and exit
@@ -117,13 +120,14 @@ function inferDiagramType(inputPath) {
 
 export function parseArgs(args) {
   const options = {
-    theme: 'default',
-    language: 'en',
-    frontmatterDisplay: 'hide',
-    tableLayout: 'center',
-    imageLayout: 'center',
-    diagramLayout: 'center',
-    tableMergeEmpty: false,
+    theme: DEFAULT_RENDER_SETTINGS.theme,
+    language: DEFAULT_RENDER_SETTINGS.language,
+    frontmatterDisplay: DEFAULT_RENDER_SETTINGS.frontmatterDisplay,
+    tableLayout: DEFAULT_RENDER_SETTINGS.tableLayout,
+    imageLayout: DEFAULT_RENDER_SETTINGS.imageLayout,
+    diagramLayout: DEFAULT_RENDER_SETTINGS.diagramLayout,
+    tableMergeEmpty: DEFAULT_RENDER_SETTINGS.tableMergeEmpty,
+    firstLineIndent: DEFAULT_RENDER_SETTINGS.firstLineIndent,
     timeoutMs: 120_000,
   };
   const positional = [];
@@ -165,6 +169,13 @@ export function parseArgs(args) {
       i += 1;
     } else if (arg === '--merge-empty-cells') {
       options.tableMergeEmpty = true;
+    } else if (arg === '--first-line-indent') {
+      const chars = Number(takeValue(args, i, arg));
+      if (!Number.isInteger(chars) || chars < 0 || chars > 4) {
+        throw new Error('--first-line-indent must be an integer between 0 and 4 (characters)');
+      }
+      options.firstLineIndent = chars;
+      i += 1;
     } else if (arg === '--chrome') {
       options.chromePath = takeValue(args, i, arg);
       i += 1;
@@ -537,6 +548,7 @@ export async function renderMarkdownFile(options) {
       tableLayout: options.tableLayout,
       imageLayout: options.imageLayout,
       diagramLayout: options.diagramLayout,
+      firstLineIndent: options.firstLineIndent,
       documentPath: inputPath,
       documentDir: path.dirname(inputPath),
       documentBaseUrl: server.documentBaseUrl,
@@ -586,6 +598,9 @@ export async function snapshotMarkdownFile(options) {
       frontmatterDisplay: options.frontmatterDisplay,
       tableMergeEmpty: options.tableMergeEmpty,
       tableLayout: options.tableLayout,
+      imageLayout: options.imageLayout,
+      diagramLayout: options.diagramLayout,
+      firstLineIndent: options.firstLineIndent,
       documentPath: inputPath,
       documentDir: path.dirname(inputPath),
       documentBaseUrl: server.documentBaseUrl,
@@ -657,6 +672,7 @@ export async function exportMarkdownEpub(options) {
       tableLayout: options.tableLayout,
       imageLayout: options.imageLayout,
       diagramLayout: options.diagramLayout,
+      firstLineIndent: options.firstLineIndent,
       documentPath: inputPath,
       documentDir: path.dirname(inputPath),
       documentBaseUrl: server.documentBaseUrl,
@@ -811,7 +827,7 @@ export async function exportMarkdownDocx(options) {
       tableLayout: options.tableLayout,
       imageLayout: options.imageLayout,
       diagramLayout: options.diagramLayout,
-      firstLineIndent: options.firstLineIndent ?? 0,
+      firstLineIndent: options.firstLineIndent,
       documentPath: inputPath,
       documentDir: path.dirname(inputPath),
       documentBaseUrl: server.documentBaseUrl,
@@ -890,7 +906,7 @@ export async function exportMarkdownBook(options) {
       tableLayout: options.tableLayout,
       imageLayout: options.imageLayout,
       diagramLayout: options.diagramLayout,
-      firstLineIndent: 0,
+      firstLineIndent: options.firstLineIndent,
       documentPath: inputPath,
       documentDir: summaryDir,
       documentBaseUrl: server.documentBaseUrl,
@@ -974,7 +990,7 @@ export async function exportMarkdownPdf(options) {
       tableLayout: options.tableLayout,
       imageLayout: options.imageLayout,
       diagramLayout: options.diagramLayout,
-      firstLineIndent: options.firstLineIndent ?? 0,
+      firstLineIndent: options.firstLineIndent,
       documentPath: inputPath,
       documentDir: path.dirname(inputPath),
       documentBaseUrl: server.documentBaseUrl,
@@ -1050,7 +1066,7 @@ export async function exportMarkdownBookPdf(options) {
       tableLayout: options.tableLayout,
       imageLayout: options.imageLayout,
       diagramLayout: options.diagramLayout,
-      firstLineIndent: 0,
+      firstLineIndent: options.firstLineIndent,
       documentPath: inputPath,
       documentDir: summaryDir,
       documentBaseUrl: server.documentBaseUrl,

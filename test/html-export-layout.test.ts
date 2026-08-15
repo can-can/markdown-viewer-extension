@@ -9,6 +9,7 @@
 
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
+import fs from 'node:fs';
 import path from 'node:path';
 
 import {
@@ -178,7 +179,11 @@ describe('HTML export layout contract (single CSS source)', () => {
     const page = firstOf(m, '#markdown-page');
     const content = firstOf(m, '#markdown-content');
     assert.equal(content.paddingTop, '0px', 'Content root must be pure content (no padding)');
-    assert.equal(page.paddingTop, '40px', 'Page container must carry the card padding');
+    assert.equal(
+      page.paddingTop,
+      '20px',
+      'Page container must carry a modest card gutter (20px, matching the panel layouts)',
+    );
   });
 
   it('preserves the live content-root state in the exported HTML', async () => {
@@ -247,5 +252,37 @@ describe('HTML export layout contract (single CSS source)', () => {
         'the warning must not include a stack trace',
       );
     }
+  });
+
+  it('defines the embedded/panel modes once in the shared CSS (mv-embed)', () => {
+    // <markdown-viewer> elements, the iframe embed and editor panels all opt
+    // into the shared .mv-embed (and .mv-panel) layout — platforms must not
+    // re-implement these rules in their own style sheets.
+    const css = fs.readFileSync(path.resolve('src/ui/styles.css'), 'utf8');
+    assert.match(
+      css,
+      /\.mv-embed #toolbar\s*\{[^}]*display:\s*none !important/s,
+      'embedded mode must hide the toolbar',
+    );
+    assert.match(
+      css,
+      /\.mv-embed #markdown-page\s*\{[^}]*padding:\s*0 !important/s,
+      'embedded mode must drop the card gutter',
+    );
+    assert.match(
+      css,
+      /\.mv-embed #markdown-page\s*\{[^}]*box-shadow:\s*none !important/s,
+      'embedded mode must drop the card shadow',
+    );
+    assert.match(
+      css,
+      /\.mv-embed #markdown-content\s*\{[^}]*padding:\s*20px/s,
+      'embedded mode must pin the content gutter to 20px',
+    );
+    assert.match(
+      css,
+      /\.mv-embed\.mv-panel #table-of-contents[^{]*\{[^}]*display:\s*none !important/s,
+      'panel variant must hide the TOC',
+    );
   });
 });

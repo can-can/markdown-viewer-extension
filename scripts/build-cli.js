@@ -67,11 +67,23 @@ try {
   if (error?.code !== 'ENOENT') throw error;
 }
 
-// ── Publishable CLI entry: copy documd.js next to its assets and emit a
+// ── Publishable CLI entry: bundle documd.js next to its assets and emit a
 // package.json so dist/cli is a standalone, installable directory. The entry
 // locates its assets relative to itself when run from dist/cli (see the
-// existsSync detection in documd.js).
-await fs.copyFile(path.join(projectRoot, 'scripts', 'documd.js'), path.join(outputDir, 'documd.js'));
+// existsSync detection in documd.js). Bundling lets documd.js import shared
+// TS sources (src/config/defaults.ts) while staying a self-contained file.
+await build({
+  entryPoints: [path.join(projectRoot, 'scripts', 'documd.js')],
+  outfile: path.join(outputDir, 'documd.js'),
+  bundle: true,
+  format: 'esm',
+  platform: 'node',
+  target: ['node18'],
+  // playwright-core stays a runtime dependency of the published package;
+  // node: builtins are external automatically. The source shebang is
+  // preserved by esbuild automatically.
+  external: ['playwright-core'],
+});
 
 const rootPackage = JSON.parse(await fs.readFile(path.join(projectRoot, 'package.json'), 'utf8'));
 const cliPackage = {

@@ -134,8 +134,8 @@ const COLLECT_CSS_JS = `() => {
   return chunks.join('\\n');
 }`;
 
-const WAIT_IMAGES_JS = `() => {
-  const images = Array.from(document.querySelectorAll('#markdown-content img'));
+const waitImagesJs = (rootSel: string) => `() => {
+  const images = Array.from(document.querySelectorAll('${rootSel} img'));
   return Promise.all(images.map((img) => {
     if (typeof img.decode === 'function') return img.decode().catch(() => undefined);
     return new Promise((resolve) => {
@@ -145,6 +145,7 @@ const WAIT_IMAGES_JS = `() => {
     });
   })).then(() => true);
 }`;
+const WAIT_IMAGES_JS = waitImagesJs('#markdown-content');
 
 const WAIT_RENDERED_JS = `() => {
   const c = document.getElementById('markdown-content');
@@ -190,6 +191,7 @@ describe('installed Chrome extension (three open modes × full fixture matrix)',
   let standalonePage: Page;
   let embedPage: Page;
   let workspacePage: Page;
+  let inlinePage: Page;
 
   before(async () => {
     await fs.promises.access(path.join(EXT_DIR, 'manifest.json')).catch(() => {
@@ -215,6 +217,13 @@ describe('installed Chrome extension (three open modes × full fixture matrix)',
 
     standalonePage = await context.newPage();
     embedPage = await context.newPage();
+
+    // Inline <markdown-viewer> element mode: the demo page hosts the element;
+    // the background injects the element runtime after content detection.
+    inlinePage = await context.newPage();
+    await inlinePage.goto('file://' + path.resolve('demo/demo.html'), { waitUntil: 'load' });
+    await waitFor(inlinePage, `() => Boolean(customElements.get('markdown-viewer'))`);
+    await inlinePage.waitForTimeout(800);
 
     // Workspace page: mock the directory picker with ALL layout fixtures so
     // the tree contains every fixture and tests switch files by clicking.
@@ -303,6 +312,7 @@ describe('installed Chrome extension (three open modes × full fixture matrix)',
   const modeTarget = (mode: string): Target => {
     if (mode === 'standalone') return standalonePage;
     if (mode === 'embed') return embedPage;
+    if (mode === 'inline') return inlinePage;
     return workspaceFrame();
   };
 
@@ -310,14 +320,31 @@ describe('installed Chrome extension (three open modes × full fixture matrix)',
     await ensureSettings(overrides);
     if (mode === 'standalone') await openStandalone(fixtureName);
     else if (mode === 'embed') await openEmbed(fixtureName);
+    else if (mode === 'inline') await openInline(fixtureName);
     else await openWorkspace(fixtureName);
+  };
+
+  const openInline = async (fixtureName: string) => {
+    const content = fs.readFileSync(path.join(LAYOUT_DIR, fixtureName), 'utf8');
+    await evalJs(inlinePage, `(markdown) => {
+      const el = document.getElementById('viewer');
+      return el.render(markdown).then(() => true);
+    }`, content);
+    await waitFor(inlinePage, `() => {
+      const c = document.querySelector('#viewer .markdown-viewer-content, #viewer #markdown-content');
+      return Boolean(c && c.children.length > 0);
+    }`);
+    await waitFor(inlinePage, waitImagesJs('.markdown-viewer-content'));
   };
 
   const measure = (mode: string, selectors: string[]) => evalJs(modeTarget(mode), MEASURE_JS, selectors);
 
-  /** Wait until a selector exists inside #markdown-content (async rendering). */
+  /** Selector for the content root in the given mode. */
+  const contentSel = (mode: string) => (mode === 'inline' ? '.markdown-viewer-content' : '#markdown-content');
+
+  /** Wait until a selector exists inside the content root (async rendering). */
   const waitForContent = (mode: string, selector: string) =>
-    waitFor(modeTarget(mode), `() => Boolean(document.querySelector('#markdown-content ${selector}'))`);
+    waitFor(modeTarget(mode), `() => Boolean(document.querySelector('${contentSel(mode)} ${selector}'))`);
 
   const collectCss = (mode: string) => evalJs<string>(modeTarget(mode), COLLECT_CSS_JS);
 
@@ -332,8 +359,8 @@ describe('installed Chrome extension (three open modes × full fixture matrix)',
     {
       await openFixture(mode, 'image-center-data.md');
       await waitForContent(mode, 'img');
-      const m = await measure(mode, ['#markdown-content img']);
-      const img = firstOf(m, '#markdown-content img');
+      const m = await measure(mode, [`${contentSel(mode)} img`]);
+      const img = firstOf(m, `${contentSel(mode)} img`);
       assert.equal(img.display, 'block', ctx('centered image should be block'));
       assert.equal(img.marginLeft, img.marginRight, ctx('centered image needs symmetric margins'));
       assert.ok(px(img.marginLeft) > 0, ctx('centered image needs a positive centering margin'));
@@ -341,8 +368,8 @@ describe('installed Chrome extension (three open modes × full fixture matrix)',
     {
       await openFixture(mode, 'image-left-data.md', { imageLayout: 'left' });
       await waitForContent(mode, 'img');
-      const m = await measure(mode, ['#markdown-content img']);
-      const img = firstOf(m, '#markdown-content img');
+      const m = await measure(mode, [`${contentSel(mode)} img`]);
+      const img = firstOf(m, `${contentSel(mode)} img`);
       assert.equal(img.marginLeft, '0px', ctx('left image must have zero margin-left'));
       assert.equal(img.display, 'block', ctx('left image should be block'));
     }
@@ -369,23 +396,23 @@ describe('installed Chrome extension (three open modes × full fixture matrix)',
     {
       await openFixture(mode, 'table-center.md');
       await waitForContent(mode, 'table');
-      const m = await measure(mode, ['#markdown-content table']);
-      const table = firstOf(m, '#markdown-content table');
+      const m = await measure(mode, [`${contentSel(mode)} table`]);
+      const table = firstOf(m, `${contentSel(mode)} table`);
       assert.ok(Math.abs(px(table.marginLeft) - px(table.marginRight)) < 1, ctx('centered table margins symmetric within 1px'));
       assert.ok(px(table.marginLeft) > 0, ctx('centered table needs a positive centering margin'));
     }
     {
       await openFixture(mode, 'table-left.md', { tableLayout: 'left' });
       await waitForContent(mode, 'table');
-      const m = await measure(mode, ['#markdown-content table']);
-      const table = firstOf(m, '#markdown-content table');
+      const m = await measure(mode, [`${contentSel(mode)} table`]);
+      const table = firstOf(m, `${contentSel(mode)} table`);
       assert.equal(table.marginLeft, '0px', ctx('left table must have zero margin-left'));
     }
     {
       await openFixture(mode, 'table-full.md', { tableLayout: 'center-full-width' });
       await waitForContent(mode, 'table');
-      const m = await measure(mode, ['#markdown-content table']);
-      const table = firstOf(m, '#markdown-content table');
+      const m = await measure(mode, [`${contentSel(mode)} table`]);
+      const table = firstOf(m, `${contentSel(mode)} table`);
       assert.equal(table.display, 'table', ctx('full-width table should be a real table layout box'));
       // Workspace preview iframe is narrower than the 1440px baseline; the
       // semantic is "spans the content width", so require a wide table but
@@ -420,8 +447,8 @@ describe('installed Chrome extension (three open modes × full fixture matrix)',
     {
       await openFixture(mode, 'body-text.md');
       await waitForContent(mode, 'p');
-      const m = await measure(mode, ['#markdown-content p']);
-      const p = firstOf(m, '#markdown-content p');
+      const m = await measure(mode, [`${contentSel(mode)} p`]);
+      const p = firstOf(m, `${contentSel(mode)} p`);
       assert.equal(p.fontSize, '16px', ctx('body font size should stay 16px'));
       assert.equal(p.lineHeight, '24px', ctx('body line-height should stay 1.5 (24px)'));
       assert.notEqual(p.color, 'rgba(0, 0, 0, 0)', ctx('body text color should be set'));
@@ -432,9 +459,9 @@ describe('installed Chrome extension (three open modes × full fixture matrix)',
     {
       await openFixture(mode, 'headings.md');
       await waitForContent(mode, 'h1');
-      const m = await measure(mode, ['#markdown-content h1', '#markdown-content h2']);
-      const h1 = firstOf(m, '#markdown-content h1');
-      const h2 = firstOf(m, '#markdown-content h2');
+      const m = await measure(mode, [`${contentSel(mode)} h1`, `${contentSel(mode)} h2`]);
+      const h1 = firstOf(m, `${contentSel(mode)} h1`);
+      const h2 = firstOf(m, `${contentSel(mode)} h2`);
       assert.ok(px(h1.marginTop) > 0 && px(h1.marginBottom) > 0, ctx('h1 should keep block spacing'));
       assert.ok(px(h2.marginTop) > 0 && px(h2.marginBottom) > 0, ctx('h2 should keep block spacing'));
       assert.equal(h1.fontSize, '24px', ctx('h1 should stay 24px'));
@@ -455,14 +482,14 @@ describe('installed Chrome extension (three open modes × full fixture matrix)',
     {
       await openFixture(mode, 'text-format.md');
       await waitForContent(mode, 'strong');
-      const m = await measure(mode, ['strong', 'em', 'del', 'a', '#markdown-content code']);
+      const m = await measure(mode, ['strong', 'em', 'del', 'a', `${contentSel(mode)} code`]);
       assert.equal(firstOf(m, 'strong').fontWeight, '700', ctx('strong should render bold'));
       assert.equal(firstOf(m, 'em').fontStyle, 'italic', ctx('em should render italic'));
       assert.equal(firstOf(m, 'del').textDecorationLine, 'line-through', ctx('del should render struck through'));
       const link = firstOf(m, 'a');
       assert.notEqual(link.color, 'rgb(23, 23, 23)', ctx('links should use an accent color, not body color'));
       assert.equal(link.textDecorationLine, 'none', ctx('links should not be underlined'));
-      const code = firstOf(m, '#markdown-content code');
+      const code = firstOf(m, `${contentSel(mode)} code`);
       assert.notEqual(code.backgroundColor, 'rgba(0, 0, 0, 0)', ctx('inline code should have a background'));
       assert.ok(px(code.paddingLeft) > 0, ctx('inline code should keep horizontal padding'));
       assert.ok(px(code.fontSize) < 16, ctx('inline code should be smaller than body text'));
@@ -484,8 +511,8 @@ describe('installed Chrome extension (three open modes × full fixture matrix)',
     {
       await openFixture(mode, 'code-block.md');
       await waitForContent(mode, 'pre');
-      const m = await measure(mode, ['#markdown-content pre']);
-      const pre = firstOf(m, '#markdown-content pre');
+      const m = await measure(mode, [`${contentSel(mode)} pre`]);
+      const pre = firstOf(m, `${contentSel(mode)} pre`);
       assert.equal(pre.overflowX, 'visible', ctx('pre must not be a horizontal scroll container (pagination)'));
       assert.equal(pre.overflowY, 'visible', ctx('pre must not be a vertical scroll container (pagination)'));
       assert.notEqual(pre.backgroundColor, 'rgba(0, 0, 0, 0)', ctx('pre should have a background'));
@@ -510,7 +537,7 @@ describe('installed Chrome extension (three open modes × full fixture matrix)',
     }
   };
 
-  const runCollectionContract = async (mode: string, expectFontFace: boolean) => {
+  const runCollectionContract = async (mode: string) => {
     await openFixture(mode, 'diagram-center.md');
     const css = await collectCss(mode);
 
@@ -528,20 +555,22 @@ describe('installed Chrome extension (three open modes × full fixture matrix)',
     );
     assert.ok(css.includes('.katex'), `[${mode}] collected stylesheet must carry KaTeX rules`);
     assert.ok(css.includes('#markdown-page'), `[${mode}] collected stylesheet must carry page-level rules`);
-    if (expectFontFace) {
+    // standalone/inline host pages load a FILTERED stylesheet (no @font-face)
+    // while workspace/embed load the full ui/styles.css (same-origin fonts).
+    if (mode === 'workspace' || mode === 'embed') {
       assert.ok(css.includes('@font-face'), `[${mode}] collected stylesheet must keep @font-face (same-origin fonts)`);
     }
   };
 
-  for (const mode of ['standalone', 'workspace', 'embed']) {
+  for (const mode of ['standalone', 'workspace', 'embed', 'inline']) {
     describe(mode, () => {
       it('layout classes live on the render target only (single layer)', async () => {
         await openFixture(mode, 'image-center-data.md');
         await waitForContent(mode, 'img');
         const result = await evalJs<{ targetHasLayout: boolean; holders: number; single: boolean }>(modeTarget(mode), `() => {
-          const root = document.getElementById('markdown-content');
+          const root = document.querySelector('#markdown-content, .markdown-viewer-content');
           const cls = (el) => Array.from((el.className || '').split(' ')).filter((x) => x.includes('-layout-'));
-          // Hosts either render into #markdown-content itself or into a child
+          // Hosts either render into the content root itself or into a child
           // .markdown-viewer-content (content-script takeover, embed, etc.).
           const target = root.querySelector(':scope > .markdown-viewer-content') || root;
           const holders = [root, ...Array.from(root.querySelectorAll('*'))]
@@ -563,10 +592,7 @@ describe('installed Chrome extension (three open modes × full fixture matrix)',
       });
 
       it('collects the full shared export stylesheet (diagram rule present)', async () => {
-        // standalone: file:// page — @font-face urls resolve against the
-        // file URL, so fonts are dropped by the collector (known boundary);
-        // structural rules must still survive.
-        await runCollectionContract(mode, mode !== 'standalone');
+        await runCollectionContract(mode);
       });
 
       it('renders the full fixture matrix', async () => {
@@ -574,4 +600,21 @@ describe('installed Chrome extension (three open modes × full fixture matrix)',
       });
     });
   }
+
+  // Inline-specific concerns on top of the shared matrix above: the host page
+  // must receive the shared content stylesheet in FILTERED form only.
+  it('inline mode injects a filtered content stylesheet (host page untouched)', async () => {
+    await openFixture('inline', 'diagram-center.md');
+    const hasStyles = await evalJs<boolean>(inlinePage, `() => {
+      const style = document.getElementById('mv-content-styles');
+      return Boolean(style && style.textContent.includes('.diagram-block'));
+    }`);
+    assert.ok(hasStyles, 'inline mode must inject the shared content styles (diagram rule present)');
+    // The host page itself must not be restyled by global rules.
+    const hostClean = await evalJs<boolean>(inlinePage, `() => {
+      const wrap = document.querySelector('.viewer-wrap');
+      return Boolean(wrap && getComputedStyle(wrap).overflowY !== 'hidden');
+    }`);
+    assert.ok(hostClean, 'the filtered stylesheet must not leak global body rules into the host page');
+  });
 });

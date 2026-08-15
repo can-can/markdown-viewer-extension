@@ -26,13 +26,12 @@ import { resolveTocPresentation, type ViewerContainerMode } from '../../../src/c
 import {
   createViewerScrollSync,
   createPluginRenderer,
-  setCurrentFileKey,
-  renderMarkdownFlow,
   handleThemeSwitchFlow,
   exportDocxFlow,
   exportEpubFlow,
   exportHtmlFlow,
 } from '../../../src/core/viewer/viewer-host';
+import { createPanelViewer, type PanelViewerController } from '../../../src/core/viewer/panel-viewer';
 
 // Settings panel (reused from VSCode)
 import { createSettingsPanel, type SettingsPanel, type ThemeOption, type LocaleOption } from '../../../vscode/src/webview/settings-panel';
@@ -118,6 +117,7 @@ const pluginRenderer = createPluginRenderer(platform);
 
 // Scroll sync controller (created after DOM ready)
 let scrollSyncController: ScrollSyncController | null = null;
+let panelViewer: PanelViewerController | null = null;
 
 const RIGHT_OVERLAY_TOP = 40;
 const RIGHT_OVERLAY_RIGHT_MARGIN = 13;
@@ -162,6 +162,10 @@ function applyNormalLayoutStyles(container: HTMLElement): void {
  */
 export async function initializeViewer(container: HTMLElement): Promise<void> {
   rootContainer = container;
+
+  // Panel layout (no toolbar/card, flush content) comes from the shared
+  // stylesheet via the .mv-embed.mv-panel classes.
+  container.classList.add('mv-embed', 'mv-panel');
 
   // Build DOM structure inside the container
   container.innerHTML = `
@@ -241,6 +245,33 @@ export async function initializeViewer(container: HTMLElement): Promise<void> {
       });
     } catch {
       // Container may not exist yet
+    }
+
+    // Shared panel viewer: the document state machine over the unified
+    // renderMarkdownFlow (same controller as <markdown-viewer> elements and
+    // VS Code). Slidev files are taken over by the hooks below.
+    if (contentContainer) {
+      panelViewer = createPanelViewer({
+        container: contentContainer,
+        platform,
+        renderer: pluginRenderer,
+        translate: (key, subs) => Localization.translate(key, subs),
+        // The external createViewerScrollSync below already persists scroll
+        // lines to fileState — the panel viewer must not write them again.
+        persistScroll: false,
+        scrollController: scrollSyncController,
+        onHeadings: (headings) => {
+          tocPanel?.setHeadings(headings as HeadingInfo[]);
+          updateActiveTocHeading();
+        },
+        onProgress: (completed, total) => {
+          obsidianBridge.postMessage('RENDER_PROGRESS', { completed, total });
+        },
+        applyTheme: (themeId) => loadAndApplyTheme(themeId),
+        saveTheme: (themeId) => themeManager.saveSelectedTheme(themeId),
+        isSlidevFile: (filename) => filename.toLowerCase().endsWith('.slides.md'),
+        onSlidevFile: handleSlidevFile,
+      });
     }
 
     // Notify host that viewer is ready
@@ -436,10 +467,9 @@ async function handleDocumentUpdate(
     return;
   }
 
-  // Update document service path with resource base URI
-  if (documentPath && platform.document) {
-    platform.setDocumentPath(documentPath, documentBaseUri);
-  }
+  // NOTE: relative-path resolution is handled by the shared panel viewer
+  // (it calls platform.document.setDocumentPath with the document key, which
+  // carries the full document path here).
 
   const newFilename = filename || 'document.md';
   const nextDocumentPath = documentPath || '';
@@ -450,79 +480,12 @@ async function handleDocumentUpdate(
   currentDocument.filename = newFilename;
   currentDocument.documentPath = nextDocumentPath;
   currentDocument.baseUri = documentBaseUri || '';
-  currentDocument.renderedMarkdown = content;
+  // Keep the wrapped copy for export flows (the panel viewer wraps the same
+  // content internally when rendering).
+  currentDocument.renderedMarkdown = wrapFileContent(content, newFilename);
 
-  // ── Slidev mode: .slides.md files render as presentations ────────────
-  const lowerFilename = newFilename.toLowerCase();
-  const isSlidevByExtension = lowerFilename.endsWith('.slides.md');
-  if (isSlidevByExtension) {
-    isSlidevMode = true;
-    tocPanel?.setHeadings([]);
-
-    // Hide normal markdown wrapper
-    const wrapper = rootContainer?.querySelector('#markdown-wrapper') as HTMLElement;
-    if (wrapper) wrapper.style.display = 'none';
-
-    const root = rootContainer?.querySelector('#vscode-root') as HTMLElement;
-    if (root) root.style.cssText = 'margin:0;padding:0;width:100%;height:100%;overflow:hidden';
-    if (rootContainer) rootContainer.style.cssText = 'margin:0;padding:0;width:100%;height:100%;overflow:hidden';
-
-    // Reuse or create a slidev container
-    let slidevContainer = rootContainer?.querySelector('#slidev-container') as HTMLElement;
-    if (!slidevContainer) {
-      slidevContainer = document.createElement('div');
-      slidevContainer.id = 'slidev-container';
-      slidevContainer.style.cssText = 'width:100%;height:100%';
-      (root || rootContainer)?.appendChild(slidevContainer);
-    }
-
-    // Cache theme bundles for reuse
-    let themeBundles: Record<string, { code: string; fonts: Record<string, string>; fontUrl?: string; colorSchema?: string }> | null = null;
-    async function fetchBundles() {
-      if (!themeBundles) {
-        const json = await platform.resource.fetch('slidev-theme-bundles.json');
-        themeBundles = JSON.parse(json);
-      }
-      return themeBundles;
-    }
-
-    await initSlidevViewer({
-      rawContent: content,
-      container: slidevContainer,
-      mode: 'list',
-      renderDiagram: (type, code) =>
-        platform.renderer.render(type, code).then((r) => ({
-          base64: r.base64!,
-          width: r.width,
-          height: r.height,
-        })),
-      onThemeReady: async (name) => {
-        const bundles = await fetchBundles();
-        const entry = bundles?.[name];
-        if (entry?.fonts) {
-          platform.renderer.setThemeConfig({
-            ...platform.renderer.getThemeConfig(),
-            fontFamily: entry.fonts.sans || entry.fonts.serif || undefined,
-            fontUrl: entry.fontUrl,
-            colorSchema: entry.colorSchema as 'light' | 'dark' | 'both' | undefined,
-          });
-        }
-      },
-      getShellSource: async () => {
-        const html = await platform.resource.fetch('slidev-shell-inline.html');
-        const blob = new Blob([html], { type: 'text/html' });
-        return URL.createObjectURL(blob);
-      },
-      getThemeCode: async (name) => {
-        const bundles = await fetchBundles();
-        return bundles?.[name]?.code;
-      },
-    });
-    return;
-  }
-
-  // ── Normal markdown mode ─────────────────────────────────────────────
-  // Restore normal layout if switching from slidev mode
+  // Restore normal layout if switching from slidev mode (slidev files are
+  // taken over by the panel viewer's isSlidevFile/onSlidevFile hooks).
   if (isSlidevMode) {
     isSlidevMode = false;
     const slidevContainer = rootContainer?.querySelector('#slidev-container');
@@ -534,55 +497,105 @@ async function handleDocumentUpdate(
     }
   }
 
-  const wrappedContent = wrapFileContent(content, newFilename);
-  currentDocument.renderedMarkdown = wrappedContent;
-
-  setCurrentFileKey(documentKey);
-
-  // Create scroll controller lazily
-  if (!scrollSyncController) {
-    try {
-      scrollSyncController = createViewerScrollSync({
-        containerId: 'markdown-content',
-        scrollContainerId: 'markdown-wrapper',
-        platform,
-      });
-    } catch { /* container may not be ready */ }
-  }
-
   // Override scroll position with heading line if navigating via anchor link
   let targetScrollLine = scrollLine;
   if (pendingFragment) {
-    const headingLine = findHeadingLine(wrappedContent, pendingFragment);
+    const headingLine = findHeadingLine(currentDocument.renderedMarkdown, pendingFragment);
     if (typeof headingLine === 'number') {
       targetScrollLine = headingLine;
     }
     pendingFragment = null;
   }
 
-  await renderMarkdownFlow({
-    markdown: wrappedContent,
-    container: container as HTMLElement,
-    fileChanged,
+  // Render through the shared panel viewer (document state machine +
+  // wrapFileContent + renderMarkdownFlow + scroll sync).
+  if (!panelViewer) {
+    console.error('[MV Viewer] panel viewer not initialized');
+    return;
+  }
+  const updateOptions = {
+    documentKey,
+    scrollLine: targetScrollLine,
     forceRender: forceRender ?? false,
-    zoomLevel: currentZoomLevel,
-    scrollController: scrollSyncController,
-    renderer: pluginRenderer,
-    translate: (key, subs) => Localization.translate(key, subs),
-    platform,
-    currentTaskManagerRef: { current: currentTaskManager },
-    targetLine: targetScrollLine,
-    onHeadings: (headings) => {
-      tocPanel?.setHeadings(headings as HeadingInfo[]);
-      updateActiveTocHeading();
-    },
-    onProgress: (completed, total) => {
-      obsidianBridge.postMessage('RENDER_PROGRESS', { completed, total });
-    },
-  });
+    documentBaseUri,
+  };
+  if (treatAsNewDocument) {
+    await panelViewer.openDocument(content, newFilename, updateOptions);
+  } else {
+    await panelViewer.updateContent(content, newFilename, updateOptions);
+  }
 
   // Post-render: inline local images as data URLs
   await inlineLocalImages(container as HTMLElement);
+}
+
+/**
+ * Slidev hook: .slides.md files render as presentations instead of markdown.
+ * Called by the shared panel viewer via isSlidevFile/onSlidevFile.
+ */
+async function handleSlidevFile(filename: string, content: string): Promise<void> {
+  isSlidevMode = true;
+  tocPanel?.setHeadings([]);
+
+  // Hide normal markdown wrapper
+  const wrapper = rootContainer?.querySelector('#markdown-wrapper') as HTMLElement;
+  if (wrapper) wrapper.style.display = 'none';
+
+  const root = rootContainer?.querySelector('#vscode-root') as HTMLElement;
+  if (root) root.style.cssText = 'margin:0;padding:0;width:100%;height:100%;overflow:hidden';
+  if (rootContainer) rootContainer.style.cssText = 'margin:0;padding:0;width:100%;height:100%;overflow:hidden';
+
+  // Reuse or create a slidev container
+  let slidevContainer = rootContainer?.querySelector('#slidev-container') as HTMLElement;
+  if (!slidevContainer) {
+    slidevContainer = document.createElement('div');
+    slidevContainer.id = 'slidev-container';
+    slidevContainer.style.cssText = 'width:100%;height:100%';
+    (root || rootContainer)?.appendChild(slidevContainer);
+  }
+
+  // Cache theme bundles for reuse
+  let themeBundles: Record<string, { code: string; fonts: Record<string, string>; fontUrl?: string; colorSchema?: string }> | null = null;
+  async function fetchBundles() {
+    if (!themeBundles) {
+      const json = await platform.resource.fetch('slidev-theme-bundles.json');
+      themeBundles = JSON.parse(json);
+    }
+    return themeBundles;
+  }
+
+  await initSlidevViewer({
+    rawContent: content,
+    container: slidevContainer,
+    mode: 'list',
+    renderDiagram: (type, code) =>
+      platform.renderer.render(type, code).then((r) => ({
+        base64: r.base64!,
+        width: r.width,
+        height: r.height,
+      })),
+    onThemeReady: async (name) => {
+      const bundles = await fetchBundles();
+      const entry = bundles?.[name];
+      if (entry?.fonts) {
+        platform.renderer.setThemeConfig({
+          ...platform.renderer.getThemeConfig(),
+          fontFamily: entry.fonts.sans || entry.fonts.serif || undefined,
+          fontUrl: entry.fontUrl,
+          colorSchema: entry.colorSchema as 'light' | 'dark' | 'both' | undefined,
+        });
+      }
+    },
+    getShellSource: async () => {
+      const html = await platform.resource.fetch('slidev-shell-inline.html');
+      const blob = new Blob([html], { type: 'text/html' });
+      return URL.createObjectURL(blob);
+    },
+    getThemeCode: async (name) => {
+      const bundles = await fetchBundles();
+      return bundles?.[name]?.code;
+    },
+  });
 }
 
 function updateActiveTocHeading(): void {

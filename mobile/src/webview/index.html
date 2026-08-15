@@ -38,29 +38,10 @@
       background-color: var(--color-bg-surface);
     }
 
-    /* Override desktop styles - mobile has no toolbar/TOC */
-    #markdown-wrapper {
-      margin-left: 0;
-      margin-top: 0;
-      margin-right: 0;
-      height: 100%;
-      min-height: auto;
-      overflow-y: auto;
-      overflow-x: hidden;
-    }
-
-    #markdown-page {
-      max-width: 100%;
-      min-height: auto;
-      overflow: hidden; /* Contain transform: scale() child */
-    }
-
-    #markdown-content {
-      box-shadow: none;
-      min-height: auto;
-      padding: 16px;  /* Smaller padding for mobile */
-      margin: 0;  /* No centering needed at 100% width */
-    }
+    /* Mobile is a panel: no toolbar/TOC, flush content. The layout rules
+       (wrapper/page/content) live in the shared stylesheet under
+       body.mv-embed.mv-panel; only the #render-root offscreen helper is
+       mobile-specific. */
 
     /* Offscreen render root (kept out of visible flow) */
     #render-root {
@@ -75,7 +56,7 @@
     }
   </style>
 </head>
-<body>
+<body class="mv-embed mv-panel">
   <!-- Main content container (same structure as Chrome/VSCode) -->
   <div id="markdown-wrapper">
     <div id="markdown-page">

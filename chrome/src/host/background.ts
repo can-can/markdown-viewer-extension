@@ -989,9 +989,14 @@ async function ensureOffscreenDocument(): Promise<void> {
 // whether the page is HTML via document.contentType and bails out early
 // if it's a raw text file).
 async function handleElementRuntimeInjection(tabId: number): Promise<void> {
-  // Element runtime renders into an iframe, so the host page does not need
-  // ui/styles.css. Injecting it would set global side effects (e.g.
-  // body{overflow:hidden}) on unrelated websites.
+  // Inline element mode renders into the host page DOM, so it needs the
+  // shared content styles — injected as a FILTERED copy (content selectors
+  // only, no global html/body rules) so the host page itself is unaffected.
+  // iframe mode does not need this: viewer-embed.html loads ui/styles.css.
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ['core/inject-element-styles.js'],
+  });
   await chrome.scripting.executeScript({
     target: { tabId },
     files: ['core/element-runtime.js'],

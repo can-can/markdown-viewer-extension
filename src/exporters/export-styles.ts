@@ -33,6 +33,12 @@ const CONTENT_SELECTOR_TOKENS = [
 
 function shouldKeepSelector(selector: string): boolean {
   const lower = selector.toLowerCase();
+  // .mv-embed / .mv-panel are host-environment modes (<markdown-viewer>
+  // elements, iframe embeds, editor panels). Exported documents are always
+  // plain Web documents with no such host, so those rules must not leak
+  // into HTML / EPUB stylesheets (e.g. the embed card-strip would zero out
+  // the EPUB content gutter).
+  if (lower.includes('.mv-embed')) return false;
   return CONTENT_SELECTOR_TOKENS.some((token) => lower.includes(token));
 }
 

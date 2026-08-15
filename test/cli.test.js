@@ -6,6 +6,7 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 
 import { ensureOutputDirectory, parseArgs, parseSummaryPages } from '../scripts/documd.js';
+import { DEFAULT_RENDER_SETTINGS } from '../src/config/defaults.ts';
 
 describe('Markdown HTML CLI arguments', () => {
   it('uses stable defaults', () => {
@@ -15,6 +16,17 @@ describe('Markdown HTML CLI arguments', () => {
     assert.equal(options.frontmatterDisplay, 'hide');
     assert.equal(options.tableLayout, 'center');
     assert.equal(options.timeoutMs, 120_000);
+  });
+
+  it('shares the extension default render/layout settings (single source)', () => {
+    const options = parseArgs(['notes.md']);
+    for (const key of ['theme', 'language', 'frontmatterDisplay', 'tableLayout', 'imageLayout', 'diagramLayout', 'tableMergeEmpty', 'firstLineIndent']) {
+      assert.equal(
+        options[key],
+        DEFAULT_RENDER_SETTINGS[key],
+        `parseArgs default for ${key} must come from the shared config`,
+      );
+    }
   });
 
   it('parses rendering options', () => {
@@ -41,6 +53,16 @@ describe('Markdown HTML CLI arguments', () => {
       () => parseArgs(['notes.md', '--frontmatter', 'show']),
       /--frontmatter must be hide, table, or raw/,
     );
+    assert.throws(
+      () => parseArgs(['notes.md', '--first-line-indent', '9']),
+      /--first-line-indent must be an integer between 0 and 4/,
+    );
+    assert.throws(
+      () => parseArgs(['notes.md', '--first-line-indent', 'abc']),
+      /--first-line-indent must be an integer between 0 and 4/,
+    );
+    assert.equal(parseArgs(['notes.md', '--first-line-indent', '0']).firstLineIndent, 0);
+    assert.equal(parseArgs(['notes.md', '--first-line-indent', '4']).firstLineIndent, 4);
   });
 
   it('accepts an output file directly under an existing filesystem root', async () => {

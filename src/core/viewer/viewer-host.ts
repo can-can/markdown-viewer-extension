@@ -160,6 +160,14 @@ export interface MountedViewerOptions {
   onScrollLineChange?: (line: number) => void;
   applyTheme?: (themeId: string) => Promise<void>;
   saveTheme?: (themeId: string) => Promise<void>;
+  /**
+   * External scroll sync controller (hosts with editor↔preview sync such as
+   * VS Code provide their own createViewerScrollSync instance). When omitted
+   * the mounted viewer creates an internal one.
+   */
+  scrollController?: ScrollSyncController | null;
+  /** Passed through to renderMarkdownFlow (first-screen responsiveness). */
+  deferAsyncRenderUntilFirstPaint?: boolean;
 }
 
 export interface MountedViewerController extends MountedViewer {
@@ -194,13 +202,14 @@ export function createMountedViewer(options: MountedViewerOptions): MountedViewe
     onScrollLineChange,
     applyTheme,
     saveTheme,
+    deferAsyncRenderUntilFirstPaint = false,
   } = options;
 
   const currentTaskManagerRef: { current: AsyncTaskManager | null } = { current: null };
   let currentMarkdown = '';
   let zoomLevel = initialZoomLevel;
 
-  const scrollController = createScrollSyncController({
+  const scrollController = options.scrollController ?? createScrollSyncController({
     container,
     scrollContainer,
     getLineMapper: getDocument,
@@ -212,7 +221,9 @@ export function createMountedViewer(options: MountedViewerOptions): MountedViewe
     },
     topOffset,
   });
-  scrollController.start();
+  if (!options.scrollController) {
+    scrollController.start();
+  }
 
   const render = async (markdown: string, renderOptions?: MountedViewerRenderOptions): Promise<void> => {
     currentMarkdown = markdown;
@@ -246,6 +257,7 @@ export function createMountedViewer(options: MountedViewerOptions): MountedViewe
       platform,
       currentTaskManagerRef,
       targetLine: renderOptions?.targetLine,
+      deferAsyncRenderUntilFirstPaint,
       onHeadingPresenceKnown,
       onHeadings,
       onProgress,

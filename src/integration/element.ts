@@ -1,4 +1,5 @@
-import { createMountedViewer, type TranslateFn } from '../core/viewer/viewer-host';
+import type { TranslateFn } from '../core/viewer/viewer-host';
+import { createPanelViewer } from '../core/viewer/panel-viewer';
 import { createViewerAssembler } from '../core/viewer/viewer-assembler';
 import { createPersistedStateHostBridge } from '../core/viewer/viewer-host-bridge';
 import { createViewerSession } from '../core/viewer/viewer-session';
@@ -121,57 +122,10 @@ markdown-viewer {
   position: relative;
 }
 
-markdown-viewer > #markdown-content,
-markdown-viewer > .markdown-viewer-content {
-  box-sizing: border-box;
-  padding: 40px;
-}
-
-/* Scope shared viewer shell to the element box instead of the viewport. */
-markdown-viewer #page-shell {
-  position: relative;
-  top: auto;
-  left: auto;
-  right: auto;
-  bottom: auto;
-  min-height: 420px;
-}
-
-markdown-viewer #page-content {
-  position: relative;
-  min-height: 0;
-}
-
-markdown-viewer #table-of-contents {
-  position: absolute;
-  top: 50px;
-  left: 0;
-  height: calc(100% - 50px);
-}
-
-markdown-viewer #toc-overlay {
-  position: absolute;
-}
-
-markdown-viewer #markdown-wrapper {
-  height: 100%;
-  max-height: min(70vh, 680px);
-}
-
-@media screen and (max-width: 768px) {
-  markdown-viewer > #markdown-content,
-  markdown-viewer > .markdown-viewer-content {
-    padding: 20px;
-  }
-
-  markdown-viewer #page-shell {
-    min-height: 360px;
-  }
-
-  markdown-viewer #markdown-wrapper {
-    max-height: min(60vh, 520px);
-  }
-}
+/* Embedded layout (no toolbar, no card, TOC docked in the container) lives
+   in the shared stylesheet under .mv-embed — attachMarkdownViewerElementRuntime
+   adds that class to the element. This style only covers the element box
+   itself, which the shared CSS cannot express. */
 `;
   document.head.appendChild(style);
 }
@@ -198,6 +152,9 @@ export function attachMarkdownViewerElementRuntime(
   const { platform, renderer, translate } = options;
 
   ensureElementBaseStyle();
+  // Embedded layout (no toolbar / card) is defined once in the shared
+  // stylesheet under .mv-embed; the element just opts in.
+  target.classList.add('mv-embed');
 
   const resolveThemeId = async (themeId: string): Promise<string> => {
     if (themeId === 'auto' || themeId === 'light' || themeId === 'dark' || !themeId) {
@@ -395,8 +352,12 @@ export function attachMarkdownViewerElementRuntime(
     container.className = 'markdown-viewer-content';
     target.appendChild(container);
   }
-  if (container.id === 'markdown-content') {
-    container.removeAttribute('id');
+  // The content root KEEPS id="markdown-content" so every shared content rule
+  // (#markdown-content ...) applies in inline mode too. The id lives inside
+  // the element box, and viewer code addresses the container by reference
+  // (not by document-wide id lookup), so it cannot collide with the host page.
+  if (!container.id) {
+    container.id = 'markdown-content';
   }
 
   if (!container) {
@@ -434,12 +395,15 @@ export function attachMarkdownViewerElementRuntime(
 
   };
 
-  const mountedViewer = createMountedViewer({
+  const panelViewer = createPanelViewer({
     container,
     scrollContainer: scrollContainer ?? undefined,
     platform,
     renderer,
     translate,
+    // The element manages its own scroll-line attribute; no fileState
+    // persistence under a shared key (multiple elements on one page).
+    persistScroll: false,
     onHeadings: () => {
       void generateTOC().then(() => {
         updateActiveTocItem();
@@ -528,28 +492,31 @@ export function attachMarkdownViewerElementRuntime(
     render: async (effect) => {
       const shouldShow = hasRenderableContent(effect.renderModel.markdown);
       setMountedReaderVisible(shouldShow);
-      await mountedViewer.render(effect.renderModel.markdown, {
-        fileChanged: !effect.preserveViewport,
-        forceRender: false,
-        targetLine: effect.targetLine,
-      });
+      // The shared panel document state machine: a viewport-preserving
+      // update vs a fresh document (same semantics as editor panels).
+      const update = { scrollLine: effect.targetLine } as const;
+      if (effect.preserveViewport) {
+        await panelViewer.updateContent(effect.renderModel.markdown, 'document.md', update);
+      } else {
+        await panelViewer.openDocument(effect.renderModel.markdown, 'document.md', update);
+      }
       await generateTOC();
       applyUiAttributes();
       updateActiveTocItem();
     },
     applyTheme: async (themeId) => {
       const resolvedThemeId = await resolveThemeId(themeId);
-      await mountedViewer.switchTheme(resolvedThemeId);
+      await panelViewer.switchTheme(resolvedThemeId);
     },
     applyPresentation: (effect) => {
       applyResolvedModePresentation(effect.resolvedMode, effect.tocVisible);
     },
-    readCurrentLine: () => mountedViewer.getCurrentLine(),
+    readCurrentLine: () => panelViewer.getCurrentLine(),
     scrollToLine: (line) => {
-      mountedViewer.setScrollLine(line);
+      panelViewer.setScrollLine(line);
     },
     scrollToAnchor: (anchor) => {
-      mountedViewer.scrollToAnchor(anchor);
+      panelViewer.scrollToAnchor(anchor);
     },
   });
 
@@ -695,14 +662,14 @@ export function attachMarkdownViewerElementRuntime(
     switchTheme,
     scrollToAnchor,
     getCurrentLine(): number | null {
-      return viewerAssembler.getSnapshot().currentLine ?? mountedViewer.getCurrentLine();
+      return viewerAssembler.getSnapshot().currentLine ?? panelViewer.getCurrentLine();
     },
     setScrollLine,
     destroy(): void {
       attributeObserver.disconnect();
       target.removeEventListener(RENDER_REQUEST_EVENT, onRenderRequest as EventListener);
       target.removeEventListener(ANCHOR_REQUEST_EVENT, onAnchorRequest as EventListener);
-      mountedViewer.destroy();
+      panelViewer.destroy();
     },
   };
 }

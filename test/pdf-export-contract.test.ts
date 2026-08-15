@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
 import path from 'node:path';
 
+import { buildPrintCssRules } from '../src/ui/print-utils.ts';
 import {
   createBrowserRenderHarness,
   type BrowserRenderHarness,
@@ -61,6 +62,22 @@ describe('PDF export contract (headless Chrome print)', () => {
     assert.ok(
       pdfPageCount(pdf) >= 2,
       'book PDF must start every chapter on a new page (got ' + pdfPageCount(pdf) + ' pages)',
+    );
+  });
+
+  it('strips the card chrome from #markdown-page in print CSS', () => {
+    // The shared screen rule gives #markdown-page a card padding + shadow
+    // + surface background. With page.pdf(printBackground: true) that would
+    // print an extra gutter and a visible box around the content, so the
+    // injected print stylesheet must reset it (the @page margin spaces the
+    // content instead).
+    const css = buildPrintCssRules('#ffffff');
+    assert.match(css, /#markdown-page\s*\{[^}]*padding: 0 !important/s, 'print CSS must drop the card padding');
+    assert.match(css, /#markdown-page\s*\{[^}]*box-shadow: none !important/s, 'print CSS must drop the card shadow');
+    assert.match(
+      css,
+      /#markdown-page\s*\{[^}]*background: transparent !important/s,
+      'print CSS must drop the card background',
     );
   });
 });

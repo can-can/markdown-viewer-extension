@@ -92,6 +92,8 @@ documd SUMMARY.md --book --format pdf    # one page per chapter
 | `--table-layout <mode>` | left, center, center-full-width |
 | `--image-layout <mode>` | left, center |
 | `--diagram-layout <mode>` | left, center |
+| `--merge-empty-cells` | Merge empty table cells (on by default) |
+| `--first-line-indent <n>` | First-line indent in characters, 0-4 (default 2) |
 | `--merge-empty-cells` | Merge empty Markdown table cells |
 | `--chrome <path>` | Explicit Chrome executable path |
 | `--timeout <seconds>` | Render timeout (default 120) |

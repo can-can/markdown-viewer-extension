@@ -82,23 +82,14 @@ async function waitForViewerMainRuntime(): Promise<NonNullable<ReturnType<typeof
 }
 
 // Inject embed-mode CSS when loaded with ?embed=1 (from element.ts custom element iframe).
-// This hides the toolbar and shifts the TOC panel up so it fills the full iframe height.
-// In workspace-preview context (no ?embed=1 param) nothing is injected and the native
-// toolbar + TOC layout is preserved.
+// In embed mode (from element.ts custom element iframe) the layout is the
+// shared .mv-embed embedded mode: no toolbar, no card, TOC docked in the
+// container. The classes below opt in; all the actual rules live in the
+// shared stylesheet so every embed/panel looks the same.
 if (EMBED_MODE) {
   // Mark body so that internal TOC manager skips its saved-state restoration.
   document.body.dataset.mvEmbed = '1';
-
-  const style = document.createElement('style');
-  style.id = 'embed-mode-styles';
-  style.textContent = [
-    '#page-header { display: none !important; }',
-    '#table-of-contents { top: 0 !important; height: 100vh !important; }',
-    'body.toc-hidden #markdown-wrapper { margin-left: 0 !important; margin-right: 0 !important; }',
-    'body:not(.toc-hidden) #markdown-wrapper { margin-left: 280px !important; margin-right: 0 !important; }',
-    'body.toc-position-right:not(.toc-hidden) #markdown-wrapper { margin-left: 0 !important; margin-right: 280px !important; }',
-  ].join('\n');
-  (document.head || document.documentElement).appendChild(style);
+  document.body.classList.add('mv-embed');
 }
 
 // ── Restore pending content after Slidev→normal file switch reload ──────
