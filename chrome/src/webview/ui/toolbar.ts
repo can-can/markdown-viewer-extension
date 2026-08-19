@@ -21,6 +21,7 @@ import type {
 import type { BookExportPhase } from '../../../../src/types/book-export';
 import { createRemarkMode } from '../../../../src/ui/remark-mode';
 import type { RemarkModeController } from '../../../../src/ui/remark-mode';
+import { BookExportProgressModel } from './book-export-progress';
 
 // SVG icons for different layouts
 export const layoutIcons: Record<string, string> = {
@@ -642,25 +643,10 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
   // Whole-book export (GitBook SUMMARY panel)
   // ========================================================================
 
-  /**
-   * Update the book export button's progress ring for a pipeline phase.
-   * Fetch: 0-40%, render: 0-95%, convert: 40-95%, pack: 95%.
-   */
-  function updateBookExportProgress(btn: HTMLElement, phase: BookExportPhase, done: number, total: number): void {
+  function setBookExportProgressRatio(btn: HTMLElement, ratio: number): void {
     const circle = btn.querySelector('.download-progress-circle');
     if (!circle) {
       return;
-    }
-
-    let ratio = 0;
-    if (phase === 'fetch') {
-      ratio = total > 0 ? (done / total) * 0.4 : 0;
-    } else if (phase === 'render') {
-      ratio = total > 0 ? (done / total) * 0.95 : 0.4;
-    } else if (phase === 'convert') {
-      ratio = total > 0 ? 0.4 + (done / total) * 0.55 : 0.4;
-    } else if (phase === 'pack') {
-      ratio = 0.95;
     }
 
     const clamped = Math.max(0, Math.min(1, ratio));
@@ -703,18 +689,24 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
                 stroke-dasharray="43.98" stroke-dashoffset="43.98" transform="rotate(-90 9 9)"/>
       </svg>
     `;
+    let timerId: number | null = null;
 
     try {
       btn.disabled = true;
       btn.classList.add('downloading');
       btn.innerHTML = progressHTML;
+      const progressModel = new BookExportProgressModel(kind);
+      timerId = window.setInterval(() => {
+        setBookExportProgressRatio(btn, progressModel.tick(performance.now()));
+      }, 100);
 
       const onProgress = (phase: BookExportPhase, done: number, total: number): void => {
-        updateBookExportProgress(btn, phase, done, total);
+        setBookExportProgressRatio(btn, progressModel.onPhaseProgress(phase, done, total, performance.now()));
       };
 
       if (kind === 'docx') {
         const result = await onExportBookDocx!({ onProgress });
+        setBookExportProgressRatio(btn, progressModel.complete());
         if (!result.success) {
           const detail = result.error ? `: ${result.error}` : '';
           alert(translate('book_export_failed', [detail]));
@@ -725,6 +717,7 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
         }
       } else if (kind === 'epub') {
         const result = await onExportBookEpub!({ onProgress });
+        setBookExportProgressRatio(btn, progressModel.complete());
         if (!result.success) {
           const detail = result.error ? `: ${result.error}` : '';
           alert(translate('book_export_failed', [detail]));
@@ -735,6 +728,7 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
         }
       } else {
         const result = await onExportBookPdf!({ onProgress });
+        setBookExportProgressRatio(btn, progressModel.complete());
         if (!result.success) {
           const detail = result.error ? `: ${result.error}` : '';
           alert(translate('book_export_failed', [detail]));
@@ -749,6 +743,9 @@ export function createToolbarManager(options: ToolbarManagerOptions): ToolbarMan
         alert(translate('book_export_failed', [`: ${errMsg}`]));
       }
     } finally {
+      if (timerId !== null) {
+        window.clearInterval(timerId);
+      }
       btn.innerHTML = originalContent;
       btn.disabled = false;
       btn.classList.remove('downloading');

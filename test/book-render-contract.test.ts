@@ -19,6 +19,7 @@ import JSZip from 'jszip';
 
 import {
   createBrowserRenderHarness,
+  type BookTocEntryInput,
   type BrowserRenderHarness,
 } from './helpers/browser-render-harness.ts';
 
@@ -28,6 +29,13 @@ const PAGES = [
   { href: 'chapter1.md', title: 'Chapter One' },
   { href: 'chapter2.md', title: 'Chapter Two' },
 ] as const;
+
+const GROUPED_TOC: BookTocEntryInput[] = [
+  { type: 'heading', title: 'Guide', depth: 0 },
+  { type: 'page', href: 'chapter1.md', title: 'Chapter One', depth: 1 },
+  { type: 'heading', title: 'Reference', depth: 0 },
+  { type: 'page', href: 'chapter2.md', title: 'Chapter Two', depth: 1 },
+];
 
 const FIXED_PARAMS = {
   theme: 'default',
@@ -160,6 +168,20 @@ describe('whole-book EPUB contract (real pipeline)', () => {
     }
   });
 
+  it('groups the EPUB nav under summary headings', async () => {
+    const { base64 } = await harness.renderBookEpub([...PAGES], {
+      ...FIXED_PARAMS,
+      tocEntries: GROUPED_TOC,
+    });
+    const zip = await JSZip.loadAsync(Buffer.from(base64, 'base64'));
+    const nav = await zip.files['OEBPS/nav.xhtml'].async('string');
+    const ncx = await zip.files['OEBPS/toc.ncx'].async('string');
+
+    assert.match(nav, /<span>Guide<\/span>[\s\S]*<a href="00-Chapter-One.xhtml">Chapter One<\/a>/);
+    assert.match(nav, /<span>Reference<\/span>[\s\S]*<a href="01-Chapter-Two.xhtml">Chapter Two<\/a>/);
+    assert.match(ncx, /<navLabel><text>Guide<\/text><\/navLabel>[\s\S]*<content src="00-Chapter-One.xhtml"\/>/);
+  });
+
   it('carries the shared stylesheet in the whole-book EPUB', async () => {
     const { base64 } = await harness.renderBookEpub([...PAGES], FIXED_PARAMS);
     const zip = await JSZip.loadAsync(Buffer.from(base64, 'base64'));
@@ -187,5 +209,17 @@ describe('whole-book EPUB contract (real pipeline)', () => {
       documentXml.includes('Second chapter body'),
       'merged document must carry the second chapter content',
     );
+  });
+
+  it('exports DOCX TOC structure with summary group headings', async () => {
+    const { base64 } = await harness.renderBookDocx([...PAGES], {
+      ...FIXED_PARAMS,
+      tocEntries: GROUPED_TOC,
+    });
+    const zip = await JSZip.loadAsync(Buffer.from(base64, 'base64'));
+    const documentXml = await zip.files['word/document.xml'].async('string');
+
+    assert.match(documentXml, /Guide[\s\S]*Chapter One/, 'DOCX must include the first summary group heading before its chapter');
+    assert.match(documentXml, /Reference[\s\S]*Chapter Two/, 'DOCX must include the second summary group heading before its chapter');
   });
 });

@@ -17,6 +17,7 @@
  */
 
 import type { DocumentService } from '../types/platform';
+import type { BookTocEntry } from '../types/book-export';
 import JSZip from 'jszip';
 import { collectEpubCss } from './export-styles';
 import { downloadBlob } from './docx-download';
@@ -43,6 +44,7 @@ export interface EpubProgressHandler {
 export interface ExportToEpubOptions {
   container?: HTMLElement;
   chapters?: EpubRenderedChapterInput[];
+  tocEntries?: BookTocEntry[];
   /** Book title (EPUB metadata + fallback filename) */
   title: string;
   /** Output filename (may include or omit the .epub extension) */
@@ -91,6 +93,14 @@ interface EpubChapterFile {
   href: string;
   title: string;
   xhtml: string;
+}
+
+interface EpubTocNode {
+  type: 'heading' | 'page';
+  title: string;
+  href: string | null;
+  depth: number;
+  children: EpubTocNode[];
 }
 
 async function renderSingleDocumentChapter(options: ExportToEpubOptions): Promise<RenderedChapter> {
@@ -314,10 +324,86 @@ function buildChapterXhtml(lang: string, title: string, contentRootHtml: string)
 </html>`;
 }
 
-function buildNavDocument(lang: string, title: string, chapters: EpubChapterFile[]): string {
-  const items = chapters
-    .map((chapter) => `      <li><a href="${escapeXml(chapter.href)}">${escapeXml(chapter.title)}</a></li>`)
-    .join('\n');
+function mapTocEntriesToChapterFiles(tocEntries: BookTocEntry[] | undefined, chapters: EpubChapterFile[]): BookTocEntry[] {
+  const sourceEntries = tocEntries && tocEntries.length > 0
+    ? tocEntries
+    : chapters.map((chapter) => ({ type: 'page' as const, title: chapter.title, href: chapter.href, depth: 0 }));
+
+  let pageIndex = 0;
+  return sourceEntries.flatMap((entry) => {
+    if (entry.type === 'heading') {
+      return [entry];
+    }
+
+    const chapter = chapters[pageIndex];
+    pageIndex += 1;
+    if (!chapter) {
+      return [];
+    }
+
+    return [{ ...entry, href: chapter.href }];
+  });
+}
+
+function buildTocTree(entries: BookTocEntry[]): EpubTocNode[] {
+  const root: EpubTocNode = {
+    type: 'heading',
+    title: '',
+    href: null,
+    depth: -1,
+    children: [],
+  };
+  const stack: EpubTocNode[] = [root];
+
+  for (const entry of entries) {
+    const node: EpubTocNode = {
+      type: entry.type,
+      title: entry.title,
+      href: entry.type === 'page' ? entry.href : null,
+      depth: entry.depth,
+      children: [],
+    };
+
+    while (stack.length > 1 && stack[stack.length - 1].depth >= entry.depth) {
+      stack.pop();
+    }
+
+    stack[stack.length - 1].children.push(node);
+    stack.push(node);
+  }
+
+  const assignFallbackHref = (nodes: EpubTocNode[]): string | null => {
+    let firstHref: string | null = null;
+    for (const node of nodes) {
+      const childHref = assignFallbackHref(node.children);
+      if (!node.href) {
+        node.href = childHref;
+      }
+      if (!firstHref && node.href) {
+        firstHref = node.href;
+      }
+    }
+    return firstHref;
+  };
+
+  assignFallbackHref(root.children);
+  return root.children;
+}
+
+function renderNavList(nodes: EpubTocNode[], indent = '      '): string {
+  return nodes.map((node) => {
+    const label = node.type === 'page' && node.href
+      ? `<a href="${escapeXml(node.href)}">${escapeXml(node.title)}</a>`
+      : `<span>${escapeXml(node.title)}</span>`;
+    const children = node.children.length > 0
+      ? `\n${indent}  <ol>\n${renderNavList(node.children, `${indent}    `)}\n${indent}  </ol>`
+      : '';
+    return `${indent}<li>${label}${children}</li>`;
+  }).join('\n');
+}
+
+function buildNavDocument(lang: string, title: string, tocTree: EpubTocNode[]): string {
+  const items = renderNavList(tocTree);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html>
@@ -338,19 +424,37 @@ ${items}
 </html>`;
 }
 
-function buildNcxDocument(lang: string, title: string, bookId: string, chapters: EpubChapterFile[]): string {
-  const navPoints = chapters
-    .map((chapter, index) => `    <navPoint id="navPoint-${index + 1}" playOrder="${index + 1}">
-      <navLabel><text>${escapeXml(chapter.title)}</text></navLabel>
-      <content src="${escapeXml(chapter.href)}"/>
-    </navPoint>`)
-    .join('\n');
+function buildNcxDocument(lang: string, title: string, bookId: string, tocTree: EpubTocNode[]): { document: string; depth: number } {
+  let playOrder = 1;
+  let maxDepth = 1;
 
-  return `<?xml version="1.0" encoding="UTF-8"?>
+  const renderNodes = (nodes: EpubTocNode[], level: number, indent: string): string => {
+    if (nodes.length === 0) {
+      return '';
+    }
+
+    maxDepth = Math.max(maxDepth, level);
+    return nodes.map((node) => {
+      const pointId = `navPoint-${playOrder}`;
+      const pointOrder = playOrder;
+      playOrder += 1;
+      const children = renderNodes(node.children, level + 1, `${indent}  `);
+      const childBlock = children ? `\n${children}\n${indent}` : '';
+      return `${indent}<navPoint id="${pointId}" playOrder="${pointOrder}">
+${indent}  <navLabel><text>${escapeXml(node.title)}</text></navLabel>
+${indent}  <content src="${escapeXml(node.href || '')}"/>${childBlock}</navPoint>`;
+    }).join('\n');
+  };
+
+  const navPoints = renderNodes(tocTree.filter((node) => Boolean(node.href)), 1, '    ');
+
+  return {
+    depth: maxDepth,
+    document: `<?xml version="1.0" encoding="UTF-8"?>
 <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1" xml:lang="${escapeXml(lang)}">
   <head>
     <meta name="dtb:uid" content="${escapeXml(bookId)}"/>
-    <meta name="dtb:depth" content="1"/>
+    <meta name="dtb:depth" content="${escapeXml(String(maxDepth))}"/>
     <meta name="dtb:totalPageCount" content="0"/>
     <meta name="dtb:maxPageNumber" content="0"/>
   </head>
@@ -358,7 +462,8 @@ function buildNcxDocument(lang: string, title: string, bookId: string, chapters:
   <navMap>
 ${navPoints}
   </navMap>
-</ncx>`;
+</ncx>`,
+  };
 }
 
 function buildContentOpf(options: {
@@ -367,8 +472,9 @@ function buildContentOpf(options: {
   lang: string;
   chapters: EpubChapterFile[];
   images: PackagedImage[];
+  tocDepth: number;
 }): string {
-  const { bookId, title, lang, chapters, images } = options;
+  const { bookId, title, lang, chapters, images, tocDepth } = options;
   const now = getCurrentIsoDate();
   const year = getCurrentYear();
 
@@ -420,6 +526,7 @@ async function packageEpub(options: {
   lang: string;
   styles: string;
   chapters: RenderedChapter[];
+  tocEntries?: BookTocEntry[];
   onProgress?: EpubProgressHandler;
   signal?: AbortSignal;
 }): Promise<Blob> {
@@ -466,15 +573,18 @@ async function packageEpub(options: {
     imagesFolder.file(image.href.replace(/^images\//, ''), image.data);
   });
 
+  const tocTree = buildTocTree(mapTocEntriesToChapterFiles(options.tocEntries, chapterFiles));
   const bookId = createBookId();
-  oebps.file('nav.xhtml', buildNavDocument(lang, title, chapterFiles));
-  oebps.file('toc.ncx', buildNcxDocument(lang, title, bookId, chapterFiles));
+  const ncx = buildNcxDocument(lang, title, bookId, tocTree);
+  oebps.file('nav.xhtml', buildNavDocument(lang, title, tocTree));
+  oebps.file('toc.ncx', ncx.document);
   oebps.file('content.opf', buildContentOpf({
     bookId,
     title,
     lang,
     chapters: chapterFiles,
     images: Array.from(imagesByHref.values()),
+    tocDepth: ncx.depth,
   }));
 
   return zip.generateAsync({
@@ -516,6 +626,7 @@ export async function exportToEpub(options: ExportToEpubOptions): Promise<EpubEx
       lang: (typeof document !== 'undefined' && document.documentElement?.lang) || 'en',
       styles,
       chapters: rendered,
+      tocEntries: options.tocEntries,
       onProgress,
       signal,
     });

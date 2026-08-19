@@ -13,6 +13,7 @@ import {
   findFirstHeadingLevel,
   BOOK_PAGE_BREAK_MARKER,
 } from '../src/exporters/book-exporter.ts';
+import type { BookTocEntry } from '../src/types/book-export.ts';
 
 const BASE = 'https://raw.githubusercontent.com/owner/repo/refs/heads/main/docs/page.md';
 
@@ -140,6 +141,30 @@ describe('buildMergedMarkdown', () => {
       ['fetch', 2, 3],
       ['fetch', 3, 3],
     ]);
+  });
+
+  it('inserts summary group headings before grouped chapters', async () => {
+    const navEntries: BookTocEntry[] = [
+      { type: 'heading', title: 'Guide', depth: 0 },
+      { type: 'page', title: 'Intro', href: `${BASE}#intro`, depth: 1 },
+      { type: 'page', title: 'Install', href: `${BASE}#install`, depth: 1 },
+      { type: 'heading', title: 'API', depth: 0 },
+      { type: 'page', title: 'Reference', href: `${BASE}#reference`, depth: 1 },
+    ];
+
+    const result = await buildMergedMarkdown({
+      pages: navEntries.filter((entry) => entry.type === 'page').map(({ href, title, depth }) => ({ href, title, depth })),
+      navEntries,
+      fetchPage: async (href: string): Promise<string> => {
+        if (href.endsWith('#intro')) return '# Intro';
+        if (href.endsWith('#install')) return '# Install';
+        return '# Reference';
+      },
+    });
+
+    assert.match(result.markdown, /# Guide\s+## Intro/);
+    assert.match(result.markdown, /# API\s+## Reference/);
+    assert.doesNotMatch(result.markdown, /# Guide\s+# Guide/);
   });
 
   it('aborts on an aborted signal', async () => {

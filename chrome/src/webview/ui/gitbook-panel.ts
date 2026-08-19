@@ -1,6 +1,8 @@
 // GitBook Navigation Panel Manager
 // Handles GitBook SUMMARY.md discovery and navigation panel functionality
 
+import type { BookPage, BookTocEntry, BookTocHeading, BookTocPage } from '../../../../src/types/book-export';
+
 interface FileState {
   gitbookPanelVisible?: boolean;
   [key: string]: unknown;
@@ -15,17 +17,13 @@ interface GitbookPanelOptions {
   onNavigateFile?: (url: string, content: string) => Promise<void>;
 }
 
-interface GitbookNavItem {
-  title: string;
-  href: string;
-  depth: number;
-}
-
 interface GitbookPanel {
   generateGitbookPanel(): Promise<void>;
   setupResponsivePanel(): Promise<void>;
   /** Get the parsed SUMMARY.md navigation items (empty when no book found) */
-  getGitbookNavItems(): GitbookNavItem[];
+  getGitbookNavItems(): BookPage[];
+  /** Get the parsed SUMMARY.md outline including group headings. */
+  getGitbookNavEntries(): BookTocEntry[];
   /** Derive a book title from the SUMMARY.md location (null when unknown) */
   getGitbookBookTitle(): string | null;
   /** Preferred export filename base for the detected book */
@@ -151,32 +149,81 @@ function extractSummaryBookTitle(summaryContent: string): string | null {
   return null;
 }
 
-function parseGitbookSummary(summaryContent: string, summaryUrl: string): GitbookNavItem[] {
-  const items: GitbookNavItem[] = [];
+function isSummaryTitleBlocklisted(title: string): boolean {
+  return SUMMARY_TITLE_BLOCKLIST.has(title.trim().toLowerCase());
+}
+
+function toIndentDepth(indent: string): number {
+  return Math.floor(indent.replace(/\t/g, '  ').length / 2);
+}
+
+function isPageEntry(entry: BookTocEntry): entry is BookTocPage {
+  return entry.type === 'page';
+}
+
+export function parseGitbookSummary(summaryContent: string, summaryUrl: string): BookTocEntry[] {
+  const items: BookTocEntry[] = [];
   const lines = summaryContent.split(/\r?\n/);
+  let markdownHeadingBaseDepth: number | null = null;
 
   for (const line of lines) {
-    const match = line.match(/^(\s*)(?:[-*+]|\d+\.)\s+\[([^\]]+)\]\(([^)]+)\)\s*$/);
-    if (!match) {
+    const headingMatch = line.match(/^\s*(#{2,6})\s+(.+?)\s*#*\s*$/);
+    if (headingMatch) {
+      const title = headingMatch[2].trim();
+      const depth = Math.max(0, headingMatch[1].length - 2);
+      if (!title || isSummaryTitleBlocklisted(title)) {
+        continue;
+      }
+      items.push({
+        type: 'heading',
+        title,
+        depth,
+      });
+      markdownHeadingBaseDepth = depth;
       continue;
     }
 
-    const indent = match[1] || '';
-    const title = match[2].trim();
-    const target = normalizeSummaryLinkTarget(match[3]);
-    if (!target || /^(?:mailto:|javascript:|#)/i.test(target)) {
+    const linkMatch = line.match(/^(\s*)(?:[-*+]|\d+\.)\s+\[([^\]]+)\]\(([^)]+)\)\s*$/);
+    if (linkMatch) {
+      const indent = linkMatch[1] || '';
+      const title = linkMatch[2].trim();
+      const target = normalizeSummaryLinkTarget(linkMatch[3]);
+      if (!target || /^(?:mailto:|javascript:|#)/i.test(target)) {
+        continue;
+      }
+
+      let href = '';
+      try {
+        href = new URL(target, summaryUrl).href;
+      } catch {
+        continue;
+      }
+
+      items.push({
+        type: 'page',
+        title,
+        href,
+        depth: toIndentDepth(indent) + (markdownHeadingBaseDepth === null ? 0 : markdownHeadingBaseDepth + 1),
+      });
       continue;
     }
 
-    let href = '';
-    try {
-      href = new URL(target, summaryUrl).href;
-    } catch {
+    const listHeadingMatch = line.match(/^(\s*)(?:[-*+]|\d+\.)\s+(.+?)\s*$/);
+    if (!listHeadingMatch) {
       continue;
     }
 
-    const depth = Math.floor(indent.replace(/\t/g, '  ').length / 2);
-    items.push({ title, href, depth });
+    const title = listHeadingMatch[2].trim();
+    if (!title || /^\[[ xX]\]\s+/.test(title) || isSummaryTitleBlocklisted(title)) {
+      continue;
+    }
+
+    items.push({
+      type: 'heading',
+      title,
+      depth: toIndentDepth(listHeadingMatch[1] || ''),
+    });
+    markdownHeadingBaseDepth = null;
   }
 
   return items;
@@ -221,7 +268,7 @@ async function readSummaryByRelativePath(
 async function loadGitbookNavigation(
   currentUrl: string,
   readRelativeFile?: (relativePath: string) => Promise<string>
-): Promise<{ items: GitbookNavItem[]; summaryUrl: string; bookTitle: string | null } | null> {
+): Promise<{ entries: BookTocEntry[]; items: BookPage[]; summaryUrl: string; bookTitle: string | null } | null> {
   if (!isMarkdownDocumentUrl(currentUrl)) {
     return null;
   }
@@ -269,9 +316,11 @@ async function loadGitbookNavigation(
           continue;
         }
 
-        const navItems = parseGitbookSummary(loaded.content, loaded.summaryUrl);
+        const navEntries = parseGitbookSummary(loaded.content, loaded.summaryUrl);
+        const navItems = navEntries.filter(isPageEntry).map(({ title, href, depth }) => ({ title, href, depth }));
         if (navItems.length > 0) {
           return {
+            entries: navEntries,
             items: navItems,
             summaryUrl: loaded.summaryUrl,
             bookTitle: extractSummaryBookTitle(loaded.content),
@@ -320,7 +369,8 @@ export function createGitbookPanel(
   options: GitbookPanelOptions = {}
 ): GitbookPanel {
   // Cached book data for whole-book export (export menu reads these)
-  let cachedNavItems: GitbookNavItem[] = [];
+  let cachedNavItems: BookPage[] = [];
+  let cachedNavEntries: BookTocEntry[] = [];
   let cachedSummaryUrl: string | null = null;
   let cachedBookTitle: string | null = null;
 
@@ -376,6 +426,7 @@ export function createGitbookPanel(
     const bookNav = await loadGitbookNavigation(currentUrl, options.readRelativeFile);
     if (!bookNav || bookNav.items.length === 0) {
       cachedNavItems = [];
+      cachedNavEntries = [];
       cachedSummaryUrl = null;
       cachedBookTitle = null;
       setPanelVisibility(false);
@@ -383,20 +434,26 @@ export function createGitbookPanel(
     }
 
     cachedNavItems = bookNav.items;
+  cachedNavEntries = bookNav.entries;
     cachedSummaryUrl = bookNav.summaryUrl;
     cachedBookTitle = bookNav.bookTitle;
-    const navItems = bookNav.items;
+    const navEntries = bookNav.entries;
 
     // Build TOC style list structure
     let panelHTML = '<ul class="gitbook-nav-list">';
-    for (const item of navItems) {
+    for (const item of navEntries) {
       const escapedTitle = item.title
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
-      const escapedHref = item.href.replace(/"/g, '&quot;');
       const indent = item.depth * 20;
+      if (item.type === 'heading') {
+        panelHTML += `<li class="gitbook-nav-heading" style="margin-left: ${indent}px"><span class="gitbook-nav-heading-text">${escapedTitle}</span></li>`;
+        continue;
+      }
+
+      const escapedHref = item.href.replace(/"/g, '&quot;');
       panelHTML += `<li style="margin-left: ${indent}px"><a href="${escapedHref}" data-href="${escapedHref}" data-title="${escapedTitle}">${escapedTitle}</a></li>`;
     }
     panelHTML += '</ul>';
@@ -490,8 +547,12 @@ export function createGitbookPanel(
   /**
    * Get the parsed SUMMARY.md navigation items (empty when no book found).
    */
-  function getGitbookNavItems(): GitbookNavItem[] {
+  function getGitbookNavItems(): BookPage[] {
     return cachedNavItems;
+  }
+
+  function getGitbookNavEntries(): BookTocEntry[] {
+    return cachedNavEntries;
   }
 
   /**
@@ -517,6 +578,7 @@ export function createGitbookPanel(
     generateGitbookPanel,
     setupResponsivePanel,
     getGitbookNavItems,
+    getGitbookNavEntries,
     getGitbookBookTitle,
     getGitbookBookExportName,
   };

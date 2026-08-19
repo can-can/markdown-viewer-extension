@@ -590,7 +590,7 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
       return Promise.resolve();
     },
   });
-  const { generateGitbookPanel, setupResponsivePanel, getGitbookNavItems, getGitbookBookTitle, getGitbookBookExportName } = gitbookPanel;
+  const { generateGitbookPanel, setupResponsivePanel, getGitbookNavItems, getGitbookNavEntries, getGitbookBookTitle, getGitbookBookExportName } = gitbookPanel;
 
   // Get the raw markdown content.
   // When the page is a rendered HTML document the html-to-markdown content
@@ -912,6 +912,7 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
       const exportName = getGitbookBookExportName();
       return exportBookToDocx({
         pages,
+        navEntries: getGitbookNavEntries(),
         bookTitle,
         filename: exportName || getDocumentFilename(),
         fetchPage: fetchBookPage,
@@ -933,6 +934,7 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
       ]);
       return exportBookToEpub({
         pages,
+        navEntries: getGitbookNavEntries(),
         bookTitle,
         filename: exportName || getDocumentFilename(),
         fetchPage: fetchBookPage,

@@ -578,6 +578,23 @@ body.sidebar-resizing {
   margin: 0;
 }
 
+#gitbook-panel .gitbook-nav-heading {
+  margin-top: 10px;
+}
+
+#gitbook-panel .gitbook-nav-heading:first-child {
+  margin-top: 2px;
+}
+
+#gitbook-panel .gitbook-nav-heading-text {
+  color: var(--color-text-primary);
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 4px 8px;
+}
+
 #gitbook-panel a {
   color: var(--color-text-secondary);
   text-decoration: none;

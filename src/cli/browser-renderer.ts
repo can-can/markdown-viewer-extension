@@ -48,6 +48,17 @@ export interface CliBookPageInput {
   depth?: number;
 }
 
+interface CliBookExportProgressSample {
+  phase: 'fetch' | 'render' | 'convert' | 'pack';
+  done: number;
+  total: number;
+  elapsedMs: number;
+}
+
+export type CliBookTocEntryInput =
+  | { type: 'heading'; title: string; depth?: number }
+  | { type: 'page'; href: string; title: string; depth?: number };
+
 export interface CliBookDomSnapshot {
   /** Every chapter's content-root outerHTML (the book wrapper contract). */
   chapters: Array<{ href: string; html: string }>;
@@ -80,13 +91,13 @@ type CliBrowserApi = {
   renderEpub(request: CliBrowserRenderRequest): Promise<{ filename: string; base64: string }>;
   renderBookDom(request: CliBrowserRenderRequest & { pages: CliBookPageInput[] }): Promise<CliBookDomSnapshot>;
   renderBookEpub(
-    request: CliBrowserRenderRequest & { pages: CliBookPageInput[]; bookTitle?: string },
-  ): Promise<{ filename: string; base64: string }>;
+    request: CliBrowserRenderRequest & { pages: CliBookPageInput[]; tocEntries?: CliBookTocEntryInput[]; bookTitle?: string; captureProgressTrace?: boolean },
+  ): Promise<{ filename: string; base64: string; progressTrace?: CliBookExportProgressSample[]; totalElapsedMs?: number }>;
   renderDiagram(request: CliDiagramRequest & { theme?: string }): Promise<CliDiagramResult>;
   renderDocx(request: CliBrowserRenderRequest): Promise<{ filename: string; base64: string }>;
   renderBookDocx(
-    request: CliBrowserRenderRequest & { pages: CliBookPageInput[]; bookTitle?: string },
-  ): Promise<{ filename: string; base64: string }>;
+    request: CliBrowserRenderRequest & { pages: CliBookPageInput[]; tocEntries?: CliBookTocEntryInput[]; bookTitle?: string; captureProgressTrace?: boolean },
+  ): Promise<{ filename: string; base64: string; progressTrace?: CliBookExportProgressSample[]; totalElapsedMs?: number }>;
   /** Prepare the page for a headless PDF: render + inject print styles. */
   renderPdf(request: CliBrowserRenderRequest): Promise<void>;
   renderBookPdf(request: CliBrowserRenderRequest & { pages: CliBookPageInput[] }): Promise<void>;
@@ -118,6 +129,15 @@ function bytesToBase64(bytes: Uint8Array): string {
 
 function normalizeRelativePath(value: string): string {
   return value.replace(/\\/g, '/').replace(/^\.\//, '');
+}
+
+function mapCliBookTocEntries(entries: CliBookTocEntryInput[] | undefined) {
+  return entries?.map((entry) => {
+    if (entry.type === 'heading') {
+      return { type: 'heading' as const, title: entry.title, depth: entry.depth ?? 0 };
+    }
+    return { type: 'page' as const, href: entry.href, title: entry.title, depth: entry.depth ?? 0 };
+  });
 }
 
 function createDocumentService(request: CliBrowserRenderRequest): DocumentService {
@@ -449,11 +469,13 @@ async function renderBookDom(
  * exportToEpub with chapter containers) and return the generated .epub.
  */
 async function renderBookEpub(
-  request: CliBrowserRenderRequest & { pages: CliBookPageInput[]; bookTitle?: string },
-): Promise<{ filename: string; base64: string }> {
+  request: CliBrowserRenderRequest & { pages: CliBookPageInput[]; tocEntries?: CliBookTocEntryInput[]; bookTitle?: string; captureProgressTrace?: boolean },
+): Promise<{ filename: string; base64: string; progressTrace?: CliBookExportProgressSample[]; totalElapsedMs?: number }> {
   configurePlatform(request);
   await loadAndApplyTheme(request.theme || 'default');
   capturedDownload = null;
+  const startedAt = performance.now();
+  const progressTrace: CliBookExportProgressSample[] = [];
 
   const { exportBookToEpub } = await import('../exporters/book-exporter');
   const platform = globalThis.platform as PlatformAPI;
@@ -462,6 +484,7 @@ async function renderBookEpub(
 
   const result = await exportBookToEpub({
     pages: request.pages.map((p) => ({ href: p.href, title: p.title, depth: p.depth })),
+    navEntries: mapCliBookTocEntries(request.tocEntries),
     bookTitle: request.bookTitle || request.title,
     filename: request.filename,
     fetchPage: async (href) => platform.document.readRelativeFile(href),
@@ -471,7 +494,9 @@ async function renderBookEpub(
     tableLayout: request.tableLayout || 'center',
     imageLayout: request.imageLayout || 'center',
     diagramLayout: request.diagramLayout || 'center',
-    onProgress: () => {},
+    onProgress: (phase, done, total) => {
+      progressTrace.push({ phase, done, total, elapsedMs: performance.now() - startedAt });
+    },
   });
 
   if (!result.success || !result.filename) {
@@ -483,7 +508,12 @@ async function renderBookEpub(
   }
 
   const bytes = new Uint8Array(await capturedDownload.arrayBuffer());
-  return { filename: resultFilename, base64: bytesToBase64(bytes) };
+  return {
+    filename: resultFilename,
+    base64: bytesToBase64(bytes),
+    progressTrace: request.captureProgressTrace ? progressTrace : undefined,
+    totalElapsedMs: request.captureProgressTrace ? performance.now() - startedAt : undefined,
+  };
 }
 
 /**
@@ -560,21 +590,26 @@ async function renderDocx(request: CliBrowserRenderRequest): Promise<{ filename:
  * and return the generated .docx bytes.
  */
 async function renderBookDocx(
-  request: CliBrowserRenderRequest & { pages: CliBookPageInput[]; bookTitle?: string },
-): Promise<{ filename: string; base64: string }> {
+  request: CliBrowserRenderRequest & { pages: CliBookPageInput[]; tocEntries?: CliBookTocEntryInput[]; bookTitle?: string; captureProgressTrace?: boolean },
+): Promise<{ filename: string; base64: string; progressTrace?: CliBookExportProgressSample[]; totalElapsedMs?: number }> {
   configurePlatform(request);
   await loadAndApplyTheme(request.theme || 'default');
   capturedDownload = null;
+  const startedAt = performance.now();
+  const progressTrace: CliBookExportProgressSample[] = [];
 
   const { exportBookToDocx } = await import('../exporters/book-exporter');
   const platform = globalThis.platform as PlatformAPI;
   const result = await exportBookToDocx({
     pages: request.pages.map((p) => ({ href: p.href, title: p.title, depth: p.depth })),
+    navEntries: mapCliBookTocEntries(request.tocEntries),
     bookTitle: request.bookTitle || request.title,
     filename: request.filename,
     fetchPage: async (href) => platform.document.readRelativeFile(href),
     renderer: platform.renderer,
-    onProgress: () => {},
+    onProgress: (phase, done, total) => {
+      progressTrace.push({ phase, done, total, elapsedMs: performance.now() - startedAt });
+    },
   });
 
   if (!result.success) {
@@ -585,7 +620,12 @@ async function renderBookDocx(
   }
 
   const bytes = new Uint8Array(await capturedDownload.arrayBuffer());
-  return { filename: result.filename || toDocxFilename(request.filename), base64: bytesToBase64(bytes) };
+  return {
+    filename: result.filename || toDocxFilename(request.filename),
+    base64: bytesToBase64(bytes),
+    progressTrace: request.captureProgressTrace ? progressTrace : undefined,
+    totalElapsedMs: request.captureProgressTrace ? performance.now() - startedAt : undefined,
+  };
 }
 
 /**

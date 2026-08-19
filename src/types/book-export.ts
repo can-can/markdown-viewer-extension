@@ -13,6 +13,19 @@ export interface BookPage {
   depth: number;
 }
 
+export interface BookTocHeading {
+  type: 'heading';
+  title: string;
+  /** Book-tree depth (0 = top level) */
+  depth: number;
+}
+
+export interface BookTocPage extends BookPage {
+  type: 'page';
+}
+
+export type BookTocEntry = BookTocHeading | BookTocPage;
+
 /**
  * Export pipeline phases for progress reporting
  * - fetch:   downloading page markdown files

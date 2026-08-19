@@ -16,6 +16,9 @@ import type {
   BookExportEpubResult,
   BookExportProgressHandler,
   BookPage,
+  BookTocEntry,
+  BookTocHeading,
+  BookTocPage,
 } from '../types/book-export';
 import type { PluginRenderer } from '../types/plugin';
 import type { TranslateFunction } from '../types/core';
@@ -142,6 +145,7 @@ export function preprocessPage(markdown: string, pageUrl: string, options: Prepr
 
 export interface BuildMergedMarkdownOptions {
   pages: BookPage[];
+  navEntries?: BookTocEntry[];
   fetchPage: (href: string) => Promise<string>;
   onProgress?: BookExportProgressHandler;
   signal?: AbortSignal;
@@ -154,31 +158,80 @@ export interface BookMergedMarkdownResult {
   totalPages: number;
 }
 
+function toBookTocEntries(pages: BookPage[]): BookTocPage[] {
+  return pages.map((page) => ({ type: 'page', title: page.title, href: page.href, depth: page.depth }));
+}
+
+function isBookTocPage(entry: BookTocEntry): entry is BookTocPage {
+  return entry.type === 'page';
+}
+
+function headingLineForDepth(depth: number, title: string): string {
+  const level = Math.max(1, Math.min(6, depth + 1));
+  return `${'#'.repeat(level)} ${title}`;
+}
+
+function diffHeadingPath(nextPath: BookTocHeading[], currentPath: BookTocHeading[]): string {
+  let shared = 0;
+  while (
+    shared < nextPath.length
+    && shared < currentPath.length
+    && nextPath[shared].depth === currentPath[shared].depth
+    && nextPath[shared].title === currentPath[shared].title
+  ) {
+    shared += 1;
+  }
+
+  return nextPath
+    .slice(shared)
+    .map((heading) => headingLineForDepth(heading.depth, heading.title))
+    .join('\n\n');
+}
+
 /**
  * Fetch every book page in SUMMARY order, preprocess it, and join the pages
  * with [pagebreak] markers so each source file starts on a new page.
  * Individual page failures are collected and do not abort the export.
  */
 export async function buildMergedMarkdown(options: BuildMergedMarkdownOptions): Promise<BookMergedMarkdownResult> {
-  const { pages, fetchPage, onProgress, signal } = options;
+  const { pages, navEntries = toBookTocEntries(pages), fetchPage, onProgress, signal } = options;
   const parts: string[] = [];
   const skipped: { href: string; error: string }[] = [];
   const total = pages.length;
+  const activeHeadingPath: BookTocHeading[] = [];
+  let emittedHeadingPath: BookTocHeading[] = [];
+  let processedPages = 0;
 
-  for (let i = 0; i < total; i++) {
+  for (const entry of navEntries) {
     signal?.throwIfAborted();
-    const page = pages[i];
+    if (!isBookTocPage(entry)) {
+      activeHeadingPath[entry.depth] = entry;
+      activeHeadingPath.length = entry.depth + 1;
+      continue;
+    }
+
+    const page = entry;
     try {
       const raw = await fetchPage(page.href);
       const processed = preprocessPage(raw, page.href, { depth: page.depth, chapterTitle: page.title });
-      if (i > 0 && parts.length > 0) {
+      const pageHeadingPath = activeHeadingPath
+        .filter((heading) => heading.depth < page.depth)
+        .map((heading) => ({ type: 'heading', title: heading.title, depth: heading.depth }));
+      const headingBlock = diffHeadingPath(pageHeadingPath, emittedHeadingPath);
+
+      if (processedPages > 0 && parts.length > 0) {
         parts.push(`\n\n${BOOK_PAGE_BREAK_MARKER}\n\n`);
       }
+      if (headingBlock) {
+        parts.push(`${headingBlock}\n\n`);
+      }
       parts.push(processed.trim());
+      emittedHeadingPath = pageHeadingPath;
+      processedPages += 1;
     } catch (error) {
       skipped.push({ href: page.href, error: error instanceof Error ? error.message : String(error) });
     }
-    onProgress?.('fetch', i + 1, total);
+    onProgress?.('fetch', processedPages + skipped.length, total);
   }
 
   return { markdown: parts.join('\n'), skipped, totalPages: total };
@@ -190,6 +243,7 @@ export async function buildMergedMarkdown(options: BuildMergedMarkdownOptions): 
 
 export interface ExportBookToDocxOptions {
   pages: BookPage[];
+  navEntries?: BookTocEntry[];
   /**
    * Book title rendered as the title-page heading. Only used when non-empty:
    * the title page is omitted entirely when there is no suitable title
@@ -228,9 +282,9 @@ export function buildBookDocumentMarkdown(bookTitle: string | null | undefined, 
  * highlighting, tables, footnotes, images).
  */
 export async function exportBookToDocx(options: ExportBookToDocxOptions): Promise<BookExportDocxResult> {
-  const { pages, bookTitle = null, filename: filenameOption, fetchPage, renderer = null, onProgress, signal } = options;
+  const { pages, navEntries, bookTitle = null, filename: filenameOption, fetchPage, renderer = null, onProgress, signal } = options;
 
-  const merged = await buildMergedMarkdown({ pages, fetchPage, onProgress, signal });
+  const merged = await buildMergedMarkdown({ pages, navEntries, fetchPage, onProgress, signal });
 
   const markdown = buildBookDocumentMarkdown(bookTitle, merged.markdown);
 
@@ -256,6 +310,7 @@ export async function exportBookToDocx(options: ExportBookToDocxOptions): Promis
 
 export interface ExportBookToEpubOptions {
   pages: BookPage[];
+  navEntries?: BookTocEntry[];
   /**
    * Book title (EPUB metadata + fallback filename). Used when non-empty;
    * otherwise the filename option (or a generic name) is used.
@@ -287,6 +342,7 @@ export interface ExportBookToEpubOptions {
 export async function exportBookToEpub(options: ExportBookToEpubOptions): Promise<BookExportEpubResult> {
   const {
     pages,
+    navEntries = toBookTocEntries(pages),
     bookTitle = null,
     filename: filenameOption,
     fetchPage,
@@ -326,6 +382,7 @@ export async function exportBookToEpub(options: ExportBookToEpubOptions): Promis
         title: pages[index]?.title || `Chapter ${index + 1}`,
         container: element as HTMLElement,
       })),
+      tocEntries: navEntries,
       title,
       filename,
       onProgress: (phase, done, total) => {

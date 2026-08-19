@@ -16,6 +16,10 @@ export interface BookPageInput {
   depth?: number;
 }
 
+export type BookTocEntryInput =
+  | { type: 'heading'; title: string; depth?: number }
+  | { type: 'page'; href: string; title: string; depth?: number };
+
 export interface BookDomSnapshot {
   chapters: Array<{ href: string; html: string }>;
 }
@@ -317,7 +321,7 @@ export interface BrowserRenderHarness {
   ): Promise<BookDomSnapshot>;
   renderBookEpub(
     pages: BookPageInput[],
-    overrides?: Partial<BrowserRenderRequest> & { bookTitle?: string; timeoutMs?: number },
+    overrides?: Partial<BrowserRenderRequest> & { bookTitle?: string; tocEntries?: BookTocEntryInput[]; timeoutMs?: number },
   ): Promise<{ filename: string; base64: string }>;
   /**
    * Render a diagram source through the shared renderer registry
@@ -342,7 +346,7 @@ export interface BrowserRenderHarness {
   /** Run the REAL whole-book DOCX export pipeline and return the .docx bytes. */
   renderBookDocx(
     pages: BookPageInput[],
-    overrides?: Partial<BrowserRenderRequest> & { bookTitle?: string; timeoutMs?: number },
+    overrides?: Partial<BrowserRenderRequest> & { bookTitle?: string; tocEntries?: BookTocEntryInput[]; timeoutMs?: number },
   ): Promise<{ filename: string; base64: string }>;
   /** Prepare + print a single document to PDF (headless Chrome). */
   renderPdf(
@@ -628,6 +632,7 @@ export async function createBrowserRenderHarness(options: { inputPath: string; c
         fileReadUrl: server.fileReadUrl,
         resourceBaseUrl: server.resourceBaseUrl,
         pages,
+        tocEntries: overrides.tocEntries,
       }), timeoutMs);
     },
     async renderPdf(targetPath: string, overrides = {}) {
@@ -706,6 +711,7 @@ export async function createBrowserRenderHarness(options: { inputPath: string; c
         fileReadUrl: server.fileReadUrl,
         resourceBaseUrl: server.resourceBaseUrl,
         pages,
+        tocEntries: overrides.tocEntries,
       }), timeoutMs);
     },
     async renderDocx(targetPath: string, overrides = {}) {
