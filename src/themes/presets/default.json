@@ -2,8 +2,8 @@
   "id": "default",
   "name": "标准文档",
   "name_en": "Standard",
-  "description": "小四仿宋正文、黑体/楷体标题、首行缩进，适合通用文档与内部材料",
-  "description_en": "FangSong body with Hei/Kai headings and first-line indent for general documents",
+  "description": "四号仿宋正文、黑体/楷体标题、首行缩进，适合通用文档与内部材料",
+  "description_en": "14pt FangSong body with Hei/Kai headings and first-line indent for general documents",
   "author": "docu.md Markdown Viewer",
   "version": "1.0.0",
   "fontScheme": {
