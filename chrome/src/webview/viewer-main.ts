@@ -144,10 +144,6 @@ interface IncomingBroadcastMessage {
 export async function initializeViewerMain(options: ViewerMainOptions): Promise<void> {
   const { platform, pluginRenderer, themeConfigRenderer } = options;
 
-  // Bundled asset URLs go through platform.resource, so that the desktop app,
-  // which has no WebExtension runtime, can resolve them too. This handle stays
-  // for the extension-only storage listener further down.
-  const webExtensionApi = getWebExtensionApi();
   const isMobile = platform.platform === 'mobile';
   const MIN_SIDEBAR_WIDTH = 160;
   const MAX_SIDEBAR_WIDTH = 560;
@@ -1598,7 +1594,19 @@ export async function initializeViewerMain(options: ViewerMainOptions): Promise<
     // Content scripts do not receive runtime.sendMessage broadcasts sent from
     // extension pages (Chrome), so also react to locale changes via storage.
     // This keeps the standalone injected viewer in sync without reloading.
-    if (webExtensionApi.storage?.onChanged) {
+    //
+    // Resolved here rather than at the top of this function. getWebExtensionApi
+    // throws where no extension runtime exists, such as the desktop app, and an
+    // eager call would stop the viewer from starting there at all.
+    const webExtensionApi = (() => {
+      try {
+        return getWebExtensionApi();
+      } catch {
+        return null;
+      }
+    })();
+
+    if (webExtensionApi?.storage?.onChanged) {
       webExtensionApi.storage.onChanged.addListener((changes, areaName) => {
         if (areaName !== 'local' || !changes.markdownViewerSettings) {
           return;
